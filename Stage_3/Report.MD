@@ -25,23 +25,24 @@ The project focuses on a complete and understandable auction workflow, from list
 
 ### 2.1 Prioritized User Stories (MoSCoW)
 
-Mezyad provides a single standard account for both selling and bidding. A registered user can submit an asset, create an auction after approval, and participate in auctions created by other users. An administrator reviews submitted listings. The stories below describe the platform's main features, required behavior, and related interface screens.
+| Priority | Role | User Story |
+|---|---|---|
+| **Must Have** | User | As a new user, I want to create an account with my name, email and password so that I can list assets and participate in auctions. |
+| **Must Have** | User / Admin | As an account holder, I want to log in securely so that I can access the features available to my account. |
+| **Must Have** | User | As a user, I want to browse public auctions and view asset details, current prices and auction schedules so that I can choose an auction to follow. |
+| **Must Have** | User (asset owner) | As a user, I want to submit an asset listing with details and images so that it can be reviewed before being offered at auction. |
+| **Must Have** | Admin | As an administrator, I want to approve or reject submitted listings so that only reviewed assets can be auctioned. |
+| **Must Have** | User (asset owner) | As an asset owner, I want to create a public or private auction for my approved listing and set its starting price, bid increment and schedule. |
+| **Must Have** | User | As a user, I want to join a private auction using an access code so that I can view and participate in an invited auction. |
+| **Must Have** | User | As a user, I want to complete the Bid Commitment step through the banking sandbox flow so that I can participate in an auction. |
+| **Must Have** | User | As a user, I want to bid on auctions created by other users and receive confirmation when my bid is accepted or rejected. |
+| **Must Have** | User | As a user, I want to see updated auction prices, bidding history and remaining time so that I can follow an active auction. |
+| **Must Have** | User | As a user, I want to see the final auction result so that I know whether my bid won or another bidder won. |
+| **Should Have** | User | As a user, I want to view my own listings, the auctions I created and the auctions I joined in one place so that I can follow my activity. |
+| **Should Have** | Admin | As an administrator, I want to view auction statuses so that I can monitor the auctions available on the platform. |
+| **Could Have** | User (asset owner) | As a user creating a listing, I want a suggested description based on the asset details I entered so that I can write a clear listing more easily. |
 
-| ID | Priority | Feature | Actor | User Story / Main Action | System Behavior and Acceptance Criteria | Expected Result | Screen |
-|---|---|---|---|---|---|---|---|
-| US-01 | Must Have | Register | User | Create an account with name, email and password. | Validate fields and unique email; hash password; assign USER automatically. | Account created; duplicate email rejected. | Register |
-| US-02 | Must Have | Login | User / Admin | Sign in with registered credentials and log out securely. | Verify password and session; use account role to authorize features. | Authenticated session or clear error. | Login |
-| US-03 | Must Have | Submit listing | User (owner) | Create an asset listing with category, description and images. | Save owner ID and PENDING_REVIEW; validate required information. | Listing appears in My Activity. | Create Listing |
-| US-04 | Must Have | Review listing | Admin | Approve or reject submitted asset listings. | Only ADMIN reviews; save decision and rejection reason. | Approved listings can be auctioned. | Admin Review |
-| US-05 | Must Have | Create auction | User (owner) | Create a public or private auction for an approved asset. | Validate ownership, approval, dates, prices and visibility; generate private access code. | Auction created with correct visibility. | Create Auction |
-| US-06 | Must Have | Browse auctions | Public / User | Find and view public auctions. | List public auctions with current price, status and item details; exclude private listings. | Public auction details are visible. | Home |
-| US-07 | Must Have | Private access | User | Enter the invitation code to join a private auction. | Validate code on server; grant access only to signed-in user. | Authorized user can view private auction. | Private Access |
-| US-08 | Must Have | Bid commitment | User | Complete the required banking-related commitment before bidding. | Process Saudi Open Banking sandbox interaction and store outcome; no real-money transfer. | Eligible commitment is recorded. | Commitment |
-| US-09 | Must Have | Place bid | User | Bid on another user's active auction. | Check not owner, auction time, access, commitment and minimum increment; save atomically. | Accepted bid changes price; invalid bid rejected. | Auction Details |
-| US-10 | Must Have | Track auction | Public / User | See auction price, bid history and remaining time. | Refresh authorized auction details every few seconds; use server state for bid validity. | Auction view shows latest accepted data. | Auction Details |
-| US-11 | Must Have | Auction result | User | See the final winning bid or no-bid outcome. | Close auction consistently and reject late bids. | Final result appears. | Auction Result |
-| US-12 | Should Have | My Activity | User | See listings and auctions I created alongside auctions I bid in. | Filter listings and bids by signed-in user; show both activities in one account. | User can manage selling and bidding together. | My Activity |
-| US-13 | Could Have | Description suggestion | User | Generate an editable listing description from entered asset details. | Use existing form values; no external AI service or invented claims. | Editable description appears in form. | Create Listing |
+Registration creates a standard User account. The same account can create listings and bid in other users' auctions. A user cannot bid on an auction they own. Admin accounts are used for listing review and platform administration.
 
 ### 2.2 Account Types
 
@@ -164,68 +165,148 @@ BidService handles database transactions for bid acceptance, while BidValidator 
 
 ---
 
-## 5. Database Design (PostgreSQL Only)
+## 5. Database Design
+
+PostgreSQL stores user accounts, asset listings, auctions, private access permissions, bid commitments, bids and auction results. Each auction belongs to one approved asset, and each accepted bid is linked to the user who submitted it. The database also records the relationship between an auction and its final result.
 
 ### 5.1 Entity Relationship Diagram
 
+The ER diagram is divided into three connected areas: accounts and listings, auction access and participation, and bids and results. The `users` table represents both account types through the `role` field (`USER` or `ADMIN`). A standard user can be an asset owner in one auction and a bidder in another.
+
 ```mermaid
 erDiagram
-  users ||--o{ user_sessions : owns
-  users ||--o{ items : sells
-  categories ||--o{ items : classifies
-  items ||--o{ item_images : has
-  items ||--o| auctions : auctioned_as
-  users ||--o{ auctions : creates
-  auctions ||--o{ private_auction_access : authorizes
-  users ||--o{ private_auction_access : receives
-  auctions ||--o{ bid_commitments : requires
-  users ||--o{ bid_commitments : completes
-  auctions ||--o{ bids : receives
-  users ||--o{ bids : places
-  auctions ||--o| auction_results : produces
-  users ||--o{ auction_results : wins
+    users {
+        uuid id PK
+        varchar name
+        varchar email UK
+        varchar password_hash
+        varchar role
+        timestamp created_at
+    }
+
+    user_sessions {
+        uuid id PK
+        uuid user_id FK
+        varchar token_hash
+        timestamp expires_at
+    }
+
+    categories {
+        uuid id PK
+        varchar name UK
+    }
+
+    items {
+        uuid id PK
+        uuid seller_id FK
+        uuid category_id FK
+        varchar title
+        text description
+        jsonb category_fields
+        varchar status
+        text review_reason
+        uuid reviewed_by FK
+        timestamp reviewed_at
+    }
+
+    item_images {
+        uuid id PK
+        uuid item_id FK
+        text image_url
+    }
+
+    auctions {
+        uuid id PK
+        uuid item_id FK,UK
+        uuid seller_id FK
+        varchar visibility
+        varchar access_code_hash
+        numeric starting_price
+        numeric current_price
+        numeric minimum_increment
+        timestamp start_time
+        timestamp end_time
+        varchar status
+    }
+
+    private_auction_access {
+        uuid auction_id PK,FK
+        uuid user_id PK,FK
+        timestamp granted_at
+    }
+
+    bid_commitments {
+        uuid id PK
+        uuid auction_id FK
+        uuid user_id FK
+        varchar status
+        varchar sandbox_reference
+        timestamp created_at
+    }
+
+    bids {
+        uuid id PK
+        uuid auction_id FK
+        uuid bidder_id FK
+        numeric amount
+        uuid request_id UK
+        timestamp created_at
+    }
+
+    auction_results {
+        uuid auction_id PK,FK
+        uuid winner_bid_id FK
+        timestamp closed_at
+    }
+
+    users ||--o{ user_sessions : has
+    users ||--o{ items : lists
+    categories ||--o{ items : categorizes
+    items ||--o{ item_images : includes
+    items ||--o| auctions : offered_in
+    users ||--o{ auctions : creates
+    auctions ||--o{ private_auction_access : grants
+    users ||--o{ private_auction_access : receives
+    auctions ||--o{ bid_commitments : requires
+    users ||--o{ bid_commitments : completes
+    auctions ||--o{ bids : receives
+    users ||--o{ bids : places
+    auctions ||--o| auction_results : produces
+    bids |o--o| auction_results : wins
 ```
 
-### 5.2 Tables and essential fields
+### 5.2 Database Tables
 
-| Table | Essential fields | Purpose |
+| Table | Main Fields | Purpose |
 |---|---|---|
-| `users` | id, role (USER or ADMIN), name, email UNIQUE, password_hash, created_at | Standard and administrator accounts |
-| `user_sessions` | id, user_id, token_hash, expires_at | Session tracking; may simplify if secure auth approach differs |
-| `categories` | id, name UNIQUE | Initial categories e.g. vehicles, real_estate |
-| `items` | id, seller_id, category_id, title, description, category_fields JSONB, status, review_reason, reviewed_by, reviewed_at | Listing and one current review decision |
-| `item_images` | id, item_id, image_url | Image references |
-| `auctions` | id, item_id UNIQUE, seller_id, visibility, access_code_hash NULLABLE, starting_price, current_price, minimum_increment, start_time, end_time, status | Auction rules/state in one table |
-| `private_auction_access` | auction_id, bidder_id, granted_at, UNIQUE(auction_id,bidder_id) | Access grants |
-| `bid_commitments` | id, auction_id, bidder_id, status, sandbox_reference, created_at, UNIQUE(auction_id,bidder_id) | Sandbox-related participation record; exact fields pending provider |
-| `bids` | id, auction_id, bidder_id, amount, request_id UNIQUE, created_at | Accepted bids and idempotency |
-| `auction_results` | auction_id UNIQUE, winner_bid_id NULLABLE, closed_at | Final result; NULL when no bids |
+| `users` | `id`, `name`, `email`, `password_hash`, `role` | Stores User and Admin accounts. The same User account can sell and bid. |
+| `user_sessions` | `id`, `user_id`, `token_hash`, `expires_at` | Tracks authenticated sessions. |
+| `categories` | `id`, `name` | Defines the categories available when creating an asset listing. |
+| `items` | `id`, `seller_id`, `category_id`, `title`, `description`, `category_fields`, `status`, `review_reason`, `reviewed_by`, `reviewed_at` | Stores asset information, its owner and the administrator's review decision. |
+| `item_images` | `id`, `item_id`, `image_url` | Stores references to uploaded asset images. |
+| `auctions` | `id`, `item_id`, `seller_id`, `visibility`, `access_code_hash`, `starting_price`, `current_price`, `minimum_increment`, `start_time`, `end_time`, `status` | Stores auction settings, current price and timing. |
+| `private_auction_access` | `auction_id`, `user_id`, `granted_at` | Records which users have been granted access to a private auction. |
+| `bid_commitments` | `id`, `auction_id`, `user_id`, `status`, `sandbox_reference`, `created_at` | Stores each user's commitment status for an auction. |
+| `bids` | `id`, `auction_id`, `bidder_id`, `amount`, `request_id`, `created_at` | Records accepted bids and prevents duplicate bid requests. |
+| `auction_results` | `auction_id`, `winner_bid_id`, `closed_at` | Stores the final result; `winner_bid_id` is empty when no bids were accepted. |
 
-**Total: 10 tables.** The schema stores account details, listings, auctions, access permissions, commitments, accepted bids and results.
+### 5.3 Relationships and Data Integrity
 
-### 5.3 Constraints and integrity
+**Account ownership.** `items.seller_id` identifies the user who submitted the asset. `auctions.seller_id` identifies the auction owner, while `bids.bidder_id` identifies the user who submitted each bid. The backend verifies that a bidder is not the owner of the auction.
 
-| Rule | Database/backend enforcement |
-|---|---|
-| Email unique | UNIQUE(email) |
-| One auction per asset | UNIQUE(auctions.item_id) |
-| One access grant per bidder and private auction | Composite UNIQUE |
-| One commitment record per bidder/auction | Composite UNIQUE |
-| Duplicate bid request | UNIQUE(request_id) |
-| Valid positive money values | NUMERIC/DECIMAL with CHECK amount > 0; avoid floating point |
-| Valid time range | CHECK end_time > start_time |
-| Allowed states | CHECK or validated enum values |
-| Owner/role checks | Express authorization + referenced seller ID |
-| Private auction access | Server check on **every** protected detail/bid request |
-| Bid race condition | PostgreSQL transaction and auction row lock |
-| Closed auction | Reject bids when server time >= end_time, even if status has not yet been refreshed |
+**Listing approval.** A listing starts with `PENDING_REVIEW`. An admin can change it to `APPROVED` or `REJECTED`. Only an approved listing can be used to create an auction.
 
-**State model:** SCHEDULED / ACTIVE / CLOSED. Define ACTIVE based on server time and stored status consistently; closure can be finalized idempotently when the auction is accessed or by a simple scheduled job if the course requires proactive closure. A React timer must never determine the winner.
+**Auction settings.** Each asset can be linked to one auction. The starting price and minimum increment must be positive, and the end time must be later than the start time. The visibility value is `PUBLIC` or `PRIVATE`. Private auction codes are stored as hashes.
 
-The auction's minimum increment is stored in `auctions`, and review information is stored with the asset listing. Bid history is maintained in the `bids` table.
+**Private access.** The pair `(auction_id, user_id)` is unique in `private_auction_access`. Private auction details and bidding endpoints verify the user's access before returning protected data.
+
+**Bid commitment.** A user has one commitment record per auction. The pair `(auction_id, user_id)` is unique. Its status is checked before a bid is accepted.
+
+**Bid consistency.** The `request_id` value is unique for each submitted bid request. When accepting a bid, Express starts a PostgreSQL transaction and locks the auction row using `SELECT ... FOR UPDATE`. It then checks the current price, deadline, access, commitment and ownership before saving the bid and updating the auction price together.
+
+**Auction closure.** An auction stops accepting bids at its end time. The highest accepted bid determines the winning result. If no bids were accepted, `winner_bid_id` remains empty. A unique result per auction prevents duplicate closure records.
 
 ---
-
 ## 6. Sequence Diagrams
 
 ### Flow 1 — Registration and Login
