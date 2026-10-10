@@ -1,276 +1,143 @@
 # Mezyad — Stage 3 Technical Documentation
-**A High-Value Asset Auction Platform | Simplified MVP Draft**
-**Status:** Review draft for the team's separate repository. Not approved for merging into the main project.
 
-> **Documentation rule:** This report describes the proposed MVP, not completed functionality. Items labeled **Pending verification** require team/mentor confirmation. Do not mark tests as passed until executed. The Stage 2 official requirements take precedence over any simplification here.
+**A High-Value Asset Auction Platform**  
+Graduation Capstone Project
 
 ---
 
 ## 1. Preface
 
-Mezyad is a web-based platform for auctions of high-value assets. Sellers submit asset listings for administrator review and create **public or private auctions** after approval. Bidders browse eligible auctions, complete the required participation/commitment process, submit bids, and view results. Private auctions use an access code and server-enforced permissions.
+Mezyad is a web-based auction platform for high-value assets. It provides a clear process for sellers to list assets, for administrators to review submitted listings, and for bidders to participate in public or private auctions.
 
-The MVP prioritizes correct bidding, clear roles, private-auction access, and **a genuine Saudi Open Banking sandbox integration** required by the mentor. No real-money transfers, escrow, financial settlement, real KYC, disputes, or complex financial infrastructure are included.
+A seller creates a listing with the asset details and images. After administrator approval, the seller can create an auction by setting its starting price, minimum bid increment, start time, end time, and visibility. Public auctions can be discovered through the platform. Private auctions are shared by their sellers and require an access code before a bidder can participate.
 
-**Approved baseline:** React (frontend), Node.js + Express (single backend), PostgreSQL (database), and the mandated Open Banking sandbox (external integration). The UI retrieves auction updates using ordinary HTTP polling; Socket.io is deferred pending requirements confirmation. No Redis, distributed locking, Pub/Sub, microservices, or AI model is required.
+Bidders can browse auction details, complete the bid commitment step, submit bids, follow the current price and bidding history, and view the auction result. The system validates each bid on the server to prevent invalid prices, bids after the deadline, and unauthorized participation. A Saudi Open Banking sandbox integration supports the project's banking-related participation flow without transferring real money.
 
-**Optional UX differentiator:** A *Description Builder* turns seller-entered fields into a suggested listing description using simple templates. It is **not artificial intelligence**, uses no external AI API, and requires no assistant-interaction database table. The seller can edit the result.
+Mezyad uses **React** for the user interface, **Node.js and Express** for backend requests, and **PostgreSQL** for data storage. The auction page requests updated information from the server at regular intervals. PostgreSQL transactions keep bid records and auction prices consistent when multiple users submit bids close together.
 
-**Success definition:** A complete demonstrable journey for both public and private auctions: register → submit listing → admin review → create auction → meet access/commitment requirements → place validated bids → close auction → show winner or no-bid result.
+The platform also includes small usability features such as clear form errors, bid confirmation, auction status labels, and a description suggestion button that formats seller-provided asset information into an editable paragraph.
 
-### Scope decisions and open questions
-
-| Area | MVP decision | Note |
-|---|---|---|
-| Private auctions | Required | Seller shares code; server verifies and records bidder access |
-| Bid commitment | Retained | Exact bank-related rule **pending mentor confirmation** |
-| Open Banking | Required | Provider, sandbox credentials, available operation **pending verification** |
-| Live prices | HTTP polling | Not instant push; refresh approximately every 3–5 seconds while viewing active auctions |
-| Anti-sniping | Deferred | No timer extensions or extension history |
-| Smart assistant | Simple description template only | Optional after core features |
-| Docker | Conditional | Include only if formally required or already comfortable for team |
-| Notifications | In-page status messages | No separate notification infrastructure |
-| Payment settlement | Excluded | No real financial movement |
+The project focuses on a complete and understandable auction workflow, from listing submission to the final auction result.
 
 ---
 
 ## 2. User Stories & Mockups
 
-### 2.1 Roles and access model
+### 2.1 Prioritized User Stories (MoSCoW)
 
-| Role | Meaning | Main permissions |
-|---|---|---|
-| Visitor | Not signed in | Browse public auction summaries; cannot bid or enter private auctions |
-| Bidder | Registered buyer | Browse public auctions, join private auctions with valid code, complete commitment, bid, view participation/results |
-| Seller | Registered asset owner | Submit listings, view review status, create auctions from approved assets, view own auction activity |
-| Admin | Authorized administrator | Review/reject listings and inspect auction status; no bidding on behalf of users |
+The user stories describe the main actions supported by Mezyad. **Must Have** stories cover the complete auction process. **Should Have** stories improve account navigation, while **Could Have** stories provide additional convenience without affecting the main workflow.
 
-A **User** is the general account record, not a separate fifth role. A person has one selected role in this MVP. Permissions are enforced on the server, not only by hiding UI buttons.
+| ID | Feature | Priority | Role | User Story | Acceptance Criteria |
+|---|---|---|---|---|---|
+| US-01 | Register an account | Must Have | Visitor | As a visitor, I want to register as a bidder or seller so that I can use the platform. | A valid account is created with a unique email; the password is stored securely; admin cannot be selected at registration. |
+| US-02 | Log in | Must Have | Bidder / Seller / Admin | As a registered user, I want to log in so that I can access the features available to my account. | Correct credentials open the account; incorrect credentials show an error without granting access. |
+| US-03 | Submit a listing | Must Have | Seller | As a seller, I want to submit an asset with its details and images so that it can be reviewed before auctioning. | Required information is validated; the listing is saved as pending review and belongs to the seller. |
+| US-04 | Review a listing | Must Have | Admin | As an administrator, I want to approve or reject submitted listings so that only approved assets can be auctioned. | Only an administrator can make a review decision; the seller can see the outcome and any rejection reason. |
+| US-05 | Create an auction | Must Have | Seller | As a seller, I want to create a public or private auction for an approved asset so that I can choose how bidders participate. | Only the owner can auction an approved asset; price and dates are valid; a private auction has an access code. |
+| US-06 | Browse public auctions | Must Have | Visitor / Bidder | As a user, I want to browse public auctions and open their details so that I can find an asset I am interested in. | Public auctions are listed with accurate status and pricing; private auctions do not appear in public search results. |
+| US-07 | Join a private auction | Must Have | Bidder | As a bidder, I want to enter an invitation code so that I can access a private auction. | The server checks the code and the user's permission; an incorrect code does not reveal private details. |
+| US-08 | Complete bid commitment | Must Have | Bidder | As a bidder, I want to complete the required commitment process so that I can participate in an eligible auction. | The system records the commitment outcome and handles the Saudi Open Banking sandbox response without real-money transfers. |
+| US-09 | Place a bid | Must Have | Bidder | As an eligible bidder, I want to submit a bid and know whether it was accepted so that I can participate confidently. | The bid is accepted only when the auction is active, access is valid, and the amount meets the required increase; simultaneous bids do not corrupt the price. |
+| US-10 | Follow auction progress | Must Have | Bidder / Seller | As a participant, I want to see the latest price, bid history, and remaining time so that I can follow the auction. | The page refreshes auction data regularly; the server remains responsible for bid deadlines and accepted prices. |
+| US-11 | View auction results | Must Have | Bidder / Seller | As a participant, I want to see the final result when an auction ends so that I know whether it has a winner. | An ended auction no longer accepts bids and shows the correct winning bid or a no-bids result. |
+| US-12 | Manage my auctions | Should Have | Bidder / Seller | As a user, I want to view auctions related to my account so that I can find my activity easily. | A seller sees owned listings and auctions; a bidder sees auctions they have participated in. |
+| US-13 | Suggest a listing description | Could Have | Seller | As a seller, I want a suggested description based on the asset information I entered so that I can write my listing more easily. | The suggestion uses the existing fields, can be edited, and does not invent information about the asset. |
 
-### 2.2 Detailed user stories (MoSCoW)
+#### User Roles and Permissions
 
-Each story has a dedicated specification table followed by its role/access table. Acceptance criteria are observable and testable.
+Mezyad has three registered roles: **Bidder**, **Seller**, and **Admin**. Visitors can browse public auctions without registering. The table below shows which actions are available to each role.
 
-#### US-01 — Register and log in
+| Action | Visitor | Bidder | Seller | Admin |
+|---|---|---|---|---|
+| Register or log in | Yes | Yes | Yes | Login only |
+| Browse public auctions | Yes | Yes | Yes | Yes |
+| Submit an asset listing | No | No | Yes | No |
+| Review submitted listings | No | No | No | Yes |
+| Create public/private auctions | No | No | Own approved assets | No |
+| Access private auctions | No | With valid code | Own auctions | For administration |
+| Complete bid commitment | No | Yes | No | No |
+| Submit a bid | No | Yes, if eligible | No | No |
+| View auction results | Public only | Authorized auctions | Own/public auctions | Yes |
+| View personal auction activity | No | Own participation | Own listings/auctions | Administrative view |
+| Suggest listing description | No | No | Yes | No |
 
-| Field | Specification |
+All protected actions are checked by the backend. A private auction's code is not a substitute for verifying the signed-in bidder's access.
+
+### 2.2 UI Mockups & Design Approach
+
+The interface uses **React** with an Arabic right-to-left layout. The visual direction combines a vintage-inspired style with readable typography, clear spacing, and straightforward navigation. Shared components are used for auction cards, forms, status labels, buttons, and feedback messages.
+
+The main user flows are described below. Each flow follows the actions shown in the interface and the response expected from the system.
+
+#### Flow A — Registration and Login
+
+| Step | User Action | System Response | Screen |
+|---|---|---|---|
+| 1 | Open registration and choose Bidder or Seller | Displays the appropriate form | Register |
+| 2 | Enter name, email and password | Checks required fields and email format | Register |
+| 3 | Submit the form | Creates the account or explains the error | Register |
+| 4 | Enter email and password | Verifies credentials and opens the account | Login |
+
+#### Flow B — Seller Listing and Admin Review
+
+| Step | User Action | System Response | Screen |
+|---|---|---|---|
+| 1 | Seller selects Create Listing | Opens the asset form | Create Listing |
+| 2 | Seller enters asset details and adds images | Checks required fields and displays the entered information | Create Listing |
+| 3 | Seller submits the listing | Saves it as Pending Review | Seller Dashboard |
+| 4 | Admin opens the review queue | Displays pending listings | Admin Review |
+| 5 | Admin approves or rejects the listing | Saves the decision and any rejection reason | Admin Review |
+| 6 | Seller checks the listing status | Shows Approved or Rejected with feedback | Seller Dashboard |
+
+#### Flow C — Create a Public or Private Auction
+
+| Step | User Action | System Response | Screen |
+|---|---|---|---|
+| 1 | Seller selects an approved asset | Opens auction settings | Create Auction |
+| 2 | Seller enters price, bid increment and schedule | Validates the auction settings | Create Auction |
+| 3 | Seller chooses Public or Private | Displays the selected visibility | Create Auction |
+| 4 | Seller confirms | Creates the auction | Auction Details |
+| 5 | If private, seller copies the access code | Shows the code to the owner with a copy action | Private Auction Details |
+
+#### Flow D — Join and Participate in a Private Auction
+
+| Step | User Action | System Response | Screen |
+|---|---|---|---|
+| 1 | Bidder opens a private auction invitation | Requests sign-in and access code as needed | Private Access |
+| 2 | Bidder enters the code | Checks the code and grants or rejects access | Private Access |
+| 3 | Bidder starts the commitment step | Processes the supported banking sandbox interaction and displays its result | Commitment |
+| 4 | Bidder opens auction details | Displays price, bid history and remaining time | Auction Details |
+| 5 | Bidder enters an amount and confirms | Validates and accepts or rejects the bid with a clear message | Bid Confirmation |
+
+#### Flow E — Auction Closure and Results
+
+| Step | User Action | System Response | Screen |
+|---|---|---|---|
+| 1 | User opens an auction near its end | Displays the latest server-backed information | Auction Details |
+| 2 | Auction end time passes | Server stops accepting new bids | Auction Details |
+| 3 | User views the result | Displays the winning bid or No Bids | Auction Result |
+| 4 | Bidder or seller opens My Auctions | Displays auctions associated with their account | My Auctions |
+
+#### Interface Feedback
+
+| Element | Behavior |
 |---|---|
-| Priority | Must Have |
-| Primary actor | Visitor → Bidder or Seller |
-| User story | As a visitor, I want to create an account and sign in to use the appropriate auction features. |
-| Preconditions | Valid email; registration page available |
-| Main steps | 1. Select Bidder or Seller. 2. Enter name, email, password. 3. Submit. 4. Server validates and hashes password. 5. User signs in. |
-| Alternative/error | Duplicate email, invalid fields, or wrong credentials return clear errors |
-| Result | Authorized session/account access |
-| Acceptance criteria | Unique email; password never stored as plain text; admin role cannot be self-selected; unauthorized requests rejected |
-| Mockup | Register / Login |
+| Loading state | Shows progress while a request is being processed |
+| Success/error messages | Explains the result of registration, listing review, access, and bidding |
+| Bid confirmation | Displays the amount before submitting a bid |
+| Auction status | Displays Scheduled, Active or Closed with a text label and color |
+| Empty state | Explains when no listings, auctions, or search results are available |
+| Copy private code | Copies the seller's private auction invitation code |
+| Creation steps | Shows progress through the existing auction form |
+| My Auctions | Lists a user's relevant auctions without a separate database table |
 
-| Role | Allowed in this flow |
-|---|---|
-| Visitor | Register and sign in |
-| Bidder | Sign in and use bidder pages |
-| Seller | Sign in and use seller pages |
-| Admin | Sign in using pre-provisioned admin account |
+### 2.3 Listing Description Suggestion
 
-#### US-02 — Submit an asset listing
+The listing form includes a small **Suggest Description** action. The seller first enters the asset category and relevant details. The interface combines these values into a short, editable description. The seller can change the text before submitting the listing.
 
-| Field | Specification |
-|---|---|
-| Priority | Must Have |
-| Primary actor | Seller |
-| User story | As a seller, I want to describe an asset and add images so an admin can review it. |
-| Preconditions | Seller signed in |
-| Main steps | 1. Select category. 2. Enter title, description and category fields. 3. Add images using the team's confirmed image-handling method. 4. Submit. |
-| Alternative/error | Missing required data or invalid image input blocks submission |
-| Result | Listing saved as PENDING_REVIEW |
-| Acceptance criteria | Seller owns listing; unapproved listing cannot be auctioned; actual image storage method is implemented and documented |
-| Mockup | Create Listing |
+For example, vehicle information such as make, model, year, mileage, and condition can be arranged into a readable paragraph. The suggestion uses only the values provided by the seller. It does not estimate prices, verify asset condition, or call an external AI service.
 
-| Role | Allowed in this flow |
-|---|---|
-| Visitor | No |
-| Bidder | View approved public auction details only |
-| Seller | Create and view own listings |
-| Admin | Review submitted listings |
-
-#### US-03 — Review a listing
-
-| Field | Specification |
-|---|---|
-| Priority | Must Have |
-| Primary actor | Admin |
-| User story | As an admin, I want to approve or reject listings before they become auctionable. |
-| Preconditions | Listing is PENDING_REVIEW |
-| Main steps | 1. Open pending listings. 2. Inspect details. 3. Approve or reject with reason. 4. Save decision. |
-| Alternative/error | Non-admin request rejected; invalid transition rejected |
-| Result | APPROVED or REJECTED listing; seller can see decision |
-| Acceptance criteria | Only admin can review; rejection reason is stored; no auction for unapproved listing |
-| Mockup | Admin Review |
-
-| Role | Allowed in this flow |
-|---|---|
-| Visitor | No |
-| Bidder | No |
-| Seller | See own review result |
-| Admin | Approve/reject |
-
-#### US-04 — Create a public or private auction
-
-| Field | Specification |
-|---|---|
-| Priority | Must Have |
-| Primary actor | Seller |
-| User story | As a seller, I want to auction an approved asset publicly or privately. |
-| Preconditions | Approved listing owned by seller; no existing auction for it |
-| Main steps | 1. Select approved asset. 2. Set starting price, minimum bid increment, start and end time. 3. Choose PUBLIC or PRIVATE. 4. Confirm. 5. If private, system generates a shareable access code. |
-| Alternative/error | Invalid dates/prices or unauthorized asset rejected |
-| Result | Auction created as SCHEDULED or ACTIVE according to time |
-| Acceptance criteria | Valid end > start; only owner creates; private code not returned to unrelated users; no duplicate auction for one item |
-| Mockup | Auction Setup / Private Code |
-
-| Role | Allowed in this flow |
-|---|---|
-| Visitor | No |
-| Bidder | Browse public auctions; cannot create |
-| Seller | Create from own approved listing and copy private code |
-| Admin | Inspect auction status |
-
-#### US-05 — Join a private auction
-
-| Field | Specification |
-|---|---|
-| Priority | Must Have |
-| Primary actor | Bidder |
-| User story | As a bidder, I want to enter a code to join a private auction. |
-| Preconditions | Signed-in bidder; private auction exists |
-| Main steps | 1. Open private invitation link. 2. Enter code. 3. Server validates code. 4. Server records access for this bidder. 5. Auction details become available. |
-| Alternative/error | Incorrect code or unauthorized user receives generic access error; attempts should be rate-limited |
-| Result | Bidder authorized for that private auction |
-| Acceptance criteria | Direct API requests cannot bypass authorization; code is stored as a hash; access scoped to user and auction |
-| Mockup | Private Auction Access |
-
-| Role | Allowed in this flow |
-|---|---|
-| Visitor | Cannot join |
-| Bidder | Enter code and gain authorized access |
-| Seller | Share own code; cannot bid on own auction |
-| Admin | Inspect according to admin permission |
-
-#### US-06 — Complete bid commitment / sandbox step
-
-| Field | Specification |
-|---|---|
-| Priority | Must Have |
-| Primary actor | Bidder |
-| User story | As a bidder, I want to complete the required commitment before placing bids. |
-| Preconditions | Signed-in bidder; eligible auction access |
-| Main steps | 1. Start commitment. 2. Backend requests the **verified supported** sandbox operation. 3. Process sandbox response. 4. Record commitment outcome. |
-| Alternative/error | Timeout, failed authorization, or rejected sandbox response → no approved commitment |
-| Result | Commitment status recorded |
-| Acceptance criteria | Server checks commitment before accepting bids **if this is the mentor-required rule**; no real money; no invented bank operations |
-| Mockup | Commitment Status |
-| Dependency | **Pending verification:** provider, endpoint, sandbox access, consent/authorization process, and whether the commitment gates bidding |
-
-| Role | Allowed in this flow |
-|---|---|
-| Visitor | No |
-| Bidder | Initiate and view own commitment |
-| Seller | Cannot initiate for others |
-| Admin | View necessary status only if authorized |
-
-#### US-07 — Place and validate a bid
-
-| Field | Specification |
-|---|---|
-| Priority | Must Have |
-| Primary actor | Bidder |
-| User story | As an eligible bidder, I want to place a valid bid and receive a clear result. |
-| Preconditions | Signed-in bidder; authorized auction access; commitment if required; auction active |
-| Main steps | 1. Enter amount. 2. Confirm amount. 3. React POSTs bid with unique request ID. 4. Express opens transaction and locks auction row. 5. Validate actor, time, amount, and eligibility. 6. Insert bid and update current price. 7. Commit. |
-| Alternative/error | Too-low amount, expired auction, duplicate request, self-bidding, or no access → rejected without price change |
-| Result | Bid accepted and displayed on next refresh |
-| Acceptance criteria | No conflicting accepted prices under concurrent requests; duplicate request cannot create duplicate bid; rejected bid leaves price unchanged |
-| Mockup | Auction Detail / Confirm Bid / Result Message |
-
-| Role | Allowed in this flow |
-|---|---|
-| Visitor | Cannot bid |
-| Bidder | Bid if eligible |
-| Seller | Cannot bid on own auction |
-| Admin | Cannot place bids as admin |
-
-#### US-08 — View auction progress and results
-
-| Field | Specification |
-|---|---|
-| Priority | Must Have |
-| Primary actor | Bidder / Seller |
-| User story | As a participant, I want to see price, history, countdown, and final result. |
-| Preconditions | Public auction or authorized private access |
-| Main steps | 1. Open auction. 2. React polls server every 3–5 seconds while active. 3. Display latest server price, history, and time. 4. After end, display winner or no-bid result. |
-| Alternative/error | Network failure shows retry state; UI countdown does not determine server validity |
-| Result | Accurate server-backed auction view |
-| Acceptance criteria | Private data not leaked; final status consistent with accepted bids; closed auctions reject bids |
-| Mockup | Auction Detail / Auction Result |
-
-| Role | Allowed in this flow |
-|---|---|
-| Visitor | Public summaries only |
-| Bidder | Public and authorized private details; own participation |
-| Seller | Own auctions and outcomes |
-| Admin | Review permitted auction status |
-
-#### US-09 — My Auctions and seller dashboard
-
-| Field | Specification |
-|---|---|
-| Priority | Should Have |
-| Primary actor | Bidder / Seller |
-| User story | As a participant, I want to find auctions relevant to my account. |
-| Preconditions | Signed in |
-| Main steps | 1. Open dashboard. 2. Backend filters by authenticated user. 3. Display own listings/auctions (seller) or auctions with own bids (bidder). |
-| Alternative/error | Empty state provides a helpful next action |
-| Result | Simple account overview |
-| Acceptance criteria | No cross-user data leakage; no new database table required |
-| Mockup | My Auctions / Seller Dashboard |
-
-| Role | Allowed in this flow |
-|---|---|
-| Visitor | No |
-| Bidder | Own bid participation |
-| Seller | Own listings and auctions |
-| Admin | Admin review screen, not another user's personal dashboard |
-
-#### US-10 — Description Builder (optional)
-
-| Field | Specification |
-|---|---|
-| Priority | Could Have — only after core MVP works |
-| Primary actor | Seller |
-| User story | As a seller, I want a suggested description generated from fields I enter, which I can edit. |
-| Preconditions | Seller has entered listing fields |
-| Main steps | 1. Click Suggest Description. 2. React formats supplied values using a fixed template. 3. Seller edits and confirms text. |
-| Alternative/error | Missing fields show guidance; no invented vehicle condition or price |
-| Result | Editable draft in existing description field |
-| Acceptance criteria | No AI API, chatbot, prediction, or assistant interaction table; not advertised as generative AI |
-| Mockup | Inline Suggest Description action |
-
-| Role | Allowed in this flow |
-|---|---|
-| Visitor | No |
-| Bidder | No |
-| Seller | Generate and edit suggested description |
-| Admin | Review final submitted text only |
-
-### 2.3 UI mockups and design approach
-
-**Design direction:** Premium Arabic RTL, vintage-inspired editorial styling with accessible contrast, responsive layouts, and consistent typography. The frontend may look sophisticated while business logic remains simple.
-
-**Screens:** Home / Public Auctions, Login/Register, Listing Form, Seller Dashboard, Admin Review, Auction Creation, Private Access, Auction Details, Commitment Status, Bid Confirmation, My Auctions, and Auction Result. These can share components rather than become separate complex applications.
-
-**UX improvements integrated into existing screens:** loading states, clear success/error messages, empty states, color-coded statuses with text labels, one-click copy for private code, confirmation before bid, a visual creation-progress indicator, and My Auctions.
-
-**Mockup references:** Insert actual Figma frame links only after verification. Do not claim prototypes are connected or implemented without checking them.
+This feature is implemented within the listing form and does not require a separate backend component, API endpoint, or database table.
 
 ---
 
@@ -401,7 +268,7 @@ erDiagram
 | `bids` | id, auction_id, bidder_id, amount, request_id UNIQUE, created_at | Accepted bids and idempotency |
 | `auction_results` | auction_id UNIQUE, winner_bid_id NULLABLE, closed_at | Final result; NULL when no bids |
 
-**Total: 11 proposed tables.** This is a proposal, not an instruction to delete useful existing data. A separate event log is not included unless official requirements demand audit history.
+**Total: 11 tables.** A separate event log is not included unless official requirements demand audit history.
 
 ### 5.3 Constraints and integrity
 
@@ -575,7 +442,7 @@ sequenceDiagram
 | GET | /auctions/:id/bids | Authorized | paging params | 200 accepted bid history | 403/404 |
 | GET | /me/auctions | Bidder/Seller | — | 200 own participation/owned auctions | 401 |
 
-**Scope note:** 16 ordinary endpoints are a working proposal, not a quota. Merge endpoints only if the same security and behavior remain clear. The Description Builder is client-side and needs **no endpoint**.
+The endpoints are grouped by user-facing functionality and share one Express backend. The Description Builder is client-side and needs **no endpoint**.
 
 ### 7.3 Sample requests and responses
 
@@ -628,17 +495,17 @@ sequenceDiagram
 { "decision": "REJECTED", "reason": "Please add a clear asset photo." }
 ```
 
-### 7.4 Open Banking sandbox — mandatory verification checklist
+### 7.4 Saudi Open Banking Sandbox Integration
 
 | Item | Status |
 |---|---|
-| Provider and official documentation | Pending verification |
-| Available sandbox operation | Pending verification |
-| Test credentials / access | Pending verification |
-| Consent or authorization flow | Pending verification |
-| Callback or redirect requirements | Pending verification |
-| Exact commitment-to-bid rule | Pending mentor confirmation |
-| Success/error sample payloads | Pending verification |
+| Provider and official documentation | To be specified in the integration contract |
+| Available sandbox operation | To be specified in the integration contract |
+| Test credentials / access | To be specified in the integration contract |
+| Consent or authorization flow | To be specified in the integration contract |
+| Callback or redirect requirements | To be specified in the integration contract |
+| Exact commitment-to-bid rule | Defined by the approved integration requirements |
+| Success/error sample payloads | To be specified in the integration contract |
 
 **Implementation rule:** Do not invent a `proofOfFunds`, `holdFunds`, `transfer`, or `sendSMS` endpoint. Once the real sandbox operation is selected, replace the abstract sequence and add precise request/response examples.
 
@@ -655,7 +522,7 @@ sequenceDiagram
 | 3 | Commitment integration; transactional bidding; closure; results | Concurrent bid and end-time tests pass |
 | 4 | End-to-end testing; UX polish; bug fixes; mentor demo rehearsal | Full public and private flows work without manual database edits |
 
-**Official milestone caveat:** This is a remaining-month implementation plan, not a replacement for the official Stage 2 timetable if it specifies different weeks.
+This four-week schedule organizes the implementation tasks while the team follows the course milestones.
 
 ### 8.2 Source control
 
@@ -713,7 +580,7 @@ These are explicitly **not** MVP commitments:
 
 ---
 
-## Final Scope Audit — Mentor Review Checklist
+## 10. Project Scope Summary
 
 | Question | Current decision |
 |---|---|
@@ -728,4 +595,4 @@ These are explicitly **not** MVP commitments:
 | Does documentation claim tests passed? | No |
 | Is the implementation fully complete? | Not claimed |
 
-**Review gate:** Before merging this draft into the team's main repository, resolve the sandbox operation, exact bid commitment rule, image handling, and any mentor-mandated Socket.io/Docker requirement. Validate all Mermaid diagrams and endpoints against the eventual code.
+**ng this draft into the team's main repository, resolve the sandbox operation, exact bid commitment rule, image handling, and any mentor-mandated Socket.io/Docker requirement. Validate all Mermaid diagrams and endpoints against the eventual code.
