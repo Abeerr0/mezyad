@@ -229,7 +229,6 @@ erDiagram
     auctions {
         uuid id PK
         uuid item_id FK,UK
-        uuid seller_id FK
         varchar visibility
         varchar access_code_hash
         numeric starting_price
@@ -275,7 +274,6 @@ erDiagram
     categories ||--o{ items : categorizes
     items ||--o{ item_images : includes
     items ||--o| auctions : offered_in
-    users ||--o{ auctions : creates
     auctions ||--o{ private_auction_access : grants
     users ||--o{ private_auction_access : receives
     auctions ||--o{ bid_commitments : requires
@@ -295,7 +293,7 @@ erDiagram
 | `categories` | `id`, `name` | Defines the categories available when creating an asset listing. |
 | `items` | `id`, `seller_id`, `category_id`, `title`, `description`, `category_fields`, `status`, `review_reason`, `reviewed_by`, `reviewed_at` | Stores asset information, its owner and the administrator's review decision. |
 | `item_images` | `id`, `item_id`, `image_url` | Stores references to uploaded asset images. |
-| `auctions` | `id`, `item_id`, `seller_id`, `visibility`, `access_code_hash`, `starting_price`, `current_price`, `minimum_increment`, `start_time`, `end_time`, `status` | Stores auction settings, current price and timing. |
+| `auctions` | `id`, `item_id`, `visibility`, `access_code_hash`, `starting_price`, `current_price`, `minimum_increment`, `start_time`, `end_time`, `status` | Stores auction settings, current price and timing. |
 | `private_auction_access` | `auction_id`, `user_id`, `granted_at` | Records which users have been granted access to a private auction. |
 | `bid_commitments` | `id`, `auction_id`, `user_id`, `status`, `sandbox_reference`, `created_at` | Stores each user's commitment status for an auction. |
 | `bids` | `id`, `auction_id`, `bidder_id`, `amount`, `request_id`, `created_at` | Records accepted bids and prevents duplicate bid requests. |
@@ -303,19 +301,19 @@ erDiagram
 
 ### 5.3 Relationships and Data Integrity
 
-**Account ownership.** `items.seller_id` identifies the user who submitted the asset. `auctions.seller_id` identifies the auction owner, while `bids.bidder_id` identifies the user who submitted each bid. The backend verifies that a bidder is not the owner of the auction.
+**Account ownership.** `items.seller_id` identifies the user who submitted the asset. The auction owner is identified through `auctions.item_id` and `items.seller_id`, while `bids.bidder_id` identifies the user who submitted each bid. The backend verifies that a bidder is not the owner of the auction.
 
-**Listing approval.** A listing starts with `PENDING_REVIEW`. An admin can change it to `APPROVED` or `REJECTED`. Only an approved listing can be used to create an auction.
+**Listing approval.** A listing starts with `PENDING_REVIEW`. An admin can change it to `APPROVED` or `REJECTED`. The owner may edit a rejected listing and resubmit it as `PENDING_REVIEW`; an approved listing is locked against material changes once its auction is created. Only an approved listing can be used to create an auction.
 
-**Auction settings.** Each asset can be linked to one auction. The starting price and minimum increment must be positive, and the end time must be later than the start time. The visibility value is `PUBLIC` or `PRIVATE`. Private auction codes are stored as hashes.
+**Auction settings.** `current_price` starts at `starting_price` and represents the displayed price before the first accepted bid. The first bid must be at least `starting_price`; later bids must be at least the previous accepted amount plus `minimum_increment`. Each asset can be linked to one auction. The starting price and minimum increment must be positive, and the end time must be later than the start time. The visibility value is `PUBLIC` or `PRIVATE`. Private auction codes are stored as hashes.
 
 **Private access.** The pair `(auction_id, user_id)` is unique in `private_auction_access`. Private auction details and bidding endpoints verify the user's access before returning protected data.
 
-**Bid commitment.** A user has one commitment record per auction. The pair `(auction_id, user_id)` is unique. Its status is checked before a bid is accepted.
+**Bid commitment.** A user has one commitment record per auction. Add a database `UNIQUE (auction_id, user_id)` constraint to enforce this rule. Its status is checked before a bid is accepted.
 
-**Bid consistency.** The `request_id` value is unique for each submitted bid request. When accepting a bid, Express starts a PostgreSQL transaction and locks the auction row using `SELECT ... FOR UPDATE`. It then checks the current price, deadline, access, commitment and ownership before saving the bid and updating the auction price together.
+**Bid consistency.** Bid acceptance checks that the current user is not the owner through the asset relationship. The `request_id` value is unique for each submitted bid request. When accepting a bid, Express starts a PostgreSQL transaction and locks the auction row using `SELECT ... FOR UPDATE`. It then checks the current price, deadline, access, commitment and ownership before saving the bid and updating the auction price together.
 
-**Auction closure.** An auction stops accepting bids at its end time. The highest accepted bid determines the winning result. If no bids were accepted, `winner_bid_id` remains empty. A unique result per auction prevents duplicate closure records.
+**Auction closure.** The closing transaction verifies that `winner_bid_id`, when present, belongs to the same auction; the application should enforce this and the database can enforce it with a composite reference to `bids(auction_id, id)`. An auction stops accepting bids at its end time. The highest accepted bid determines the winning result. If no bids were accepted, `winner_bid_id` remains empty. A unique result per auction prevents duplicate closure records.
 
 ---
 ## 6. Sequence Diagrams
@@ -328,89 +326,121 @@ sequenceDiagram
   participant UI as React
   participant API as Express
   participant DB as PostgreSQL
-  User->>UI: Register with name, email, password
+  User->>UI: Enter registration details
   UI->>API: POST /auth/register
-  API->>API: Validate and hash password
-  API->>DB: Insert user with USER role
-  DB-->>API: Saved or duplicate email
-  API-->>UI: Success or validation error
-  User->>UI: Log in
+  API->>API: Validate fields and hash password
+  API->>DB: Insert account with USER role
+  alt Valid and unique email
+    DB-->>API: Account created
+    API-->>UI: 201 Registration successful
+  else Duplicate or invalid data
+    API-->>UI: 400 or 409 with message
+  end
+  User->>UI: Enter login credentials
   UI->>API: POST /auth/login
-  API->>DB: Find account and verify credentials
-  API-->>UI: Authenticated session or error
+  API->>DB: Find account by email
+  API->>API: Verify password hash
+  alt Correct credentials
+    API-->>UI: Authenticated session
+  else Incorrect credentials
+    API-->>UI: 401 Invalid credentials
+  end
 ```
 
-### Flow 2 — Listing, Admin Review, Auction Creation
+### Flow 2 — Listing, Review and Auction Creation
 
 ```mermaid
 sequenceDiagram
-  actor User as Asset Owner
+  actor Owner as User (Asset Owner)
   actor Admin
   participant UI as React
   participant API as Express
   participant DB as PostgreSQL
-  User->>UI: Submit listing
+  Owner->>UI: Enter asset details and images
   UI->>API: POST /items
-  API->>DB: Save PENDING_REVIEW listing
+  API->>DB: Save listing as PENDING_REVIEW
   API-->>UI: Listing submitted
-  Admin->>UI: Review listing
+  Admin->>UI: Open pending listing
   UI->>API: POST /admin/items/:id/review
-  API->>DB: Save APPROVED or REJECTED
-  API-->>UI: Review recorded
-  User->>UI: Create auction for approved listing
-  UI->>API: POST /auctions
-  API->>DB: Check owner and approval; save auction
-  API-->>UI: Auction created; private code if selected
+  alt Approved
+    API->>DB: Save APPROVED and reviewer
+    API-->>UI: Listing approved
+    Owner->>UI: Enter auction price, schedule and visibility
+    UI->>API: POST /auctions
+    API->>DB: Verify item ownership and approval
+    API->>DB: Create auction for item
+    API-->>UI: Auction created
+  else Rejected
+    API->>DB: Save REJECTED and reason
+    API-->>UI: Show rejection reason
+    Owner->>UI: Edit listing and resubmit
+    UI->>API: PATCH /items/:id
+    API->>DB: Update details and set PENDING_REVIEW
+    API-->>UI: Resubmitted for review
+  end
 ```
 
-### Flow 3 — Private Access and Bid Commitment
+### Flow 3 — Private Auction Access and Bid Commitment
 
 ```mermaid
 sequenceDiagram
-  actor User as Bid Participant
+  actor User as Bidder
   participant UI as React
   participant API as Express
   participant DB as PostgreSQL
-  participant Bank as Open Banking Sandbox
+  participant Bank as Saudi Open Banking Sandbox
   opt Private auction
-    User->>UI: Enter access code
+    User->>UI: Enter invitation code
     UI->>API: POST /auctions/:id/access
-    API->>DB: Validate code and record access
-    API-->>UI: Access granted or denied
+    API->>DB: Verify code and existing access
+    alt Valid code
+      API->>DB: Save access grant
+      API-->>UI: Access granted
+    else Invalid code
+      API-->>UI: Access denied
+    end
   end
-  User->>UI: Start commitment
-  UI->>API: POST /auctions/:id/commitment
-  API->>Bank: Banking sandbox request
-  Bank-->>API: Sandbox response
-  API->>DB: Save commitment status
-  API-->>UI: Show result
+  opt User has auction access
+    User->>UI: Start bid commitment
+    UI->>API: POST /auctions/:id/commitment
+    API->>API: Verify user is not auction owner
+    API->>Bank: Send supported sandbox request
+    alt Sandbox confirms required step
+      Bank-->>API: Successful response
+      API->>DB: Record successful commitment
+      API-->>UI: Participation enabled
+    else Sandbox rejects or fails
+      Bank-->>API: Failure or timeout
+      API->>DB: Record unsuccessful commitment
+      API-->>UI: Commitment not completed
+    end
+  end
 ```
-
-The banking interaction uses the sandbox service and stores the resulting commitment status without transferring real funds.
 
 ### Flow 4 — Place Bid (Atomic PostgreSQL Transaction)
 
 ```mermaid
 sequenceDiagram
-  actor User as Bid Participant
+  actor User as Bidder
   participant UI as React
   participant API as Express
   participant DB as PostgreSQL
-  User->>UI: Confirm bid amount
+  User->>UI: Enter amount and confirm
   UI->>API: POST /auctions/:id/bids
-  API->>DB: BEGIN; SELECT auction FOR UPDATE
-  DB-->>API: Locked auction state
-  API->>DB: Read access, owner, commitment and current bid
-  DB-->>API: Eligibility and auction data
-  API->>API: Validate not owner, access, commitment, time and amount
-  alt Valid bid
-    API->>DB: INSERT bid; UPDATE current_price; COMMIT
+  API->>DB: BEGIN; lock auction row FOR UPDATE
+  DB-->>API: Current auction state
+  API->>DB: Read asset owner, access, commitment and last bid
+  API->>API: Check request ID, ownership, access and deadline
+  API->>API: Check first bid against starting price
+  API->>API: Check later bid against last bid plus increment
+  alt All conditions valid
+    API->>DB: Insert accepted bid and update current price
+    API->>DB: COMMIT
     API-->>UI: 201 Bid accepted
-  else Invalid bid
+  else Duplicate, late or invalid bid
     API->>DB: ROLLBACK
-    API-->>UI: 4xx Rejected with reason
+    API-->>UI: 403 or 409 with reason
   end
-  UI-->>User: Display success or error
 ```
 
 ### Flow 5 — Auction Closure and Result
@@ -421,19 +451,24 @@ sequenceDiagram
   participant UI as React
   participant API as Express
   participant DB as PostgreSQL
-  User->>UI: View ended auction
+  User->>UI: Open auction after end time
   UI->>API: GET /auctions/:id
-  API->>DB: Lock auction if closure needed
-  API->>DB: Check server end time and highest accepted bid
-  alt Has accepted bids
-    API->>DB: Save winner result and CLOSED status
-  else No accepted bids
-    API->>DB: Save no-winner result and CLOSED status
+  API->>DB: BEGIN; lock auction row FOR UPDATE
+  alt Result already recorded
+    API->>DB: Read existing result
+  else Auction has ended
+    API->>DB: Read highest accepted bid for this auction
+    alt Accepted bid exists
+      API->>DB: Save winner bid ID and CLOSED status
+    else No accepted bids
+      API->>DB: Save result without winner and CLOSED status
+    end
   end
-  API-->>UI: Final status and result
+  API->>DB: COMMIT
+  API-->>UI: Closed auction and final result
 ```
 
-**Concurrency note:** Closure and bid acceptance must lock the same auction row, so they cannot both commit contradictory outcomes. Closure must be idempotent (repeated calls produce one result).
+The backend rejects bids based on server time even before the closure record is written. The same auction-row lock is used for bid acceptance and closure. The result is saved once and returned consistently on later requests.
 
 ---
 
@@ -441,7 +476,7 @@ sequenceDiagram
 
 ### 7.1 Conventions
 
-- Base prefix: `/api/v1`. Requests/responses use JSON except image upload, if applicable.
+- Base prefix: `/api/v1`. Requests/responses use JSON except listing creation and editing with images, which use `multipart/form-data`.
 - Authentication: secure session or verified token, consistently implemented.
 - All sensitive routes require server-side role and ownership checks.
 - Responses use consistent `{ "data": ... }` or `{ "error": { "code": "...", "message": "..." } }`.
@@ -455,9 +490,10 @@ sequenceDiagram
 | POST | /auth/register | Public | name,email,password | 201 user summary | 400,409 |
 | POST | /auth/login | Public | email,password | 200 session/account | 401 |
 | POST | /auth/logout | Signed in | — | 200 signed out | 401 |
-| POST | /items | User | category,title,description,category_fields,images | 201 listing | 400,403 |
-| GET | /items | User/Admin | filter by own or pending | 200 list | 401,403 |
+| POST | /items | User | multipart form: category,title,description,category_fields,images | 201 listing | 400,403 |
+| GET | /items | User/Admin | own listings or admin pending filter | 200 list | 401,403 |
 | GET | /items/:id | Owner/Admin | item ID | 200 listing | 403,404 |
+| PATCH | /items/:id | Owner | corrected fields/images for rejected listing | 200 PENDING_REVIEW | 400,403,409 |
 | POST | /admin/items/:id/review | Admin | decision,reason? | 200 updated status | 403,409 |
 | POST | /auctions | User (owner) | itemId,visibility,prices,times | 201 auction; private code to owner | 400,403,409 |
 | GET | /auctions | Public | public filters/status | 200 public list | 400 |
@@ -467,9 +503,10 @@ sequenceDiagram
 | GET | /auctions/:id/commitment | User | — | 200 own status | 403,404 |
 | POST | /auctions/:id/bids | User (not owner) | amount,requestId | 201 accepted bid | 400,403,409 |
 | GET | /auctions/:id/bids | Authorized | paging params | 200 accepted bid history | 403/404 |
-| GET | /me/auctions | User | — | 200 own participation/owned auctions | 401 |
+| GET | /me/auctions | User | — | 200 auctions owned or participated in | 401 |
+| GET | /me/items | User | — | 200 own listings and review statuses | 401 |
 
-The endpoints are grouped by user-facing functionality and share one Express backend. The Description Builder is client-side and needs **no endpoint**.
+Listing images are accepted with the listing request, validated for file type and size, stored by the backend, and referenced by `item_images.image_url`. The My Activity screen combines `/me/items` and `/me/auctions`. Auction closure is finalized when an ended auction is requested; the server rejects late bids independently of whether closure has been finalized. The endpoints are grouped by user-facing functionality and share one Express backend. The Description Builder is client-side and needs **no endpoint**.
 
 ### 7.3 Sample requests and responses
 
@@ -592,6 +629,13 @@ This four-week schedule organizes the implementation tasks while the team follow
 | QA-14 | UX | Empty list/loading/errors | Appropriate clear states | Planned |
 | QA-15 | E2E | Public auction complete journey | Correct final outcome | Planned |
 | QA-16 | E2E | Private auction complete journey | Access and bidding rules respected | Planned |
+| QA-17 | Listing | Rejected listing edited and resubmitted | Returns to PENDING_REVIEW | Planned |
+| QA-18 | Pricing | First bid equals starting price | Accepted when other rules pass | Planned |
+| QA-19 | Pricing | Later bid below last accepted bid plus increment | Rejected | Planned |
+| QA-20 | Result | Winning bid belongs to another auction | Cannot be recorded as winner | Planned |
+| QA-21 | Activity | User has own listing and bids in another auction | Both appear in My Activity | Planned |
+| QA-22 | Upload | Invalid image type or oversized file | Rejected without saving unsafe file | Planned |
+| QA-23 | Closing | Auction ends with no page visit | Late bids rejected; result finalized on next access | Planned |
 
 The test plan covers account permissions, private auction access, bid integrity and auction closure.
 
