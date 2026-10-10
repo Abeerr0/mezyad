@@ -27,31 +27,42 @@ The project focuses on a complete and understandable auction workflow, from list
 
 | Priority | Role | User Story |
 |---|---|---|
-| **Must Have** | User | As a new user, I want to create an account with my name, email and password so that I can list assets and participate in auctions. |
-| **Must Have** | User / Admin | As an account holder, I want to log in securely so that I can access the features available to my account. |
-| **Must Have** | User | As a user, I want to browse public auctions and view asset details, current prices and auction schedules so that I can choose an auction to follow. |
-| **Must Have** | User (asset owner) | As a user, I want to submit an asset listing with details and images so that it can be reviewed before being offered at auction. |
-| **Must Have** | Admin | As an administrator, I want to approve or reject submitted listings so that only reviewed assets can be auctioned. |
-| **Must Have** | User (asset owner) | As an asset owner, I want to create a public or private auction for my approved listing and set its starting price, bid increment and schedule. |
-| **Must Have** | User | As a user, I want to join a private auction using an access code so that I can view and participate in an invited auction. |
-| **Must Have** | User | As a user, I want to complete the Bid Commitment step through the banking sandbox flow so that I can participate in an auction. |
-| **Must Have** | User | As a user, I want to bid on auctions created by other users and receive confirmation when my bid is accepted or rejected. |
-| **Must Have** | User | As a user, I want to see updated auction prices, bidding history and remaining time so that I can follow an active auction. |
-| **Must Have** | User | As a user, I want to see the final auction result so that I know whether my bid won or another bidder won. |
-| **Should Have** | User | As a user, I want to view my own listings, the auctions I created and the auctions I joined in one place so that I can follow my activity. |
-| **Should Have** | Admin | As an administrator, I want to view auction statuses so that I can monitor the auctions available on the platform. |
-| **Could Have** | User (asset owner) | As a user creating a listing, I want a suggested description based on the asset details I entered so that I can write a clear listing more easily. |
-
-Registration creates a standard User account. The same account can create listings and bid in other users' auctions. A user cannot bid on an auction they own. Admin accounts are used for listing review and platform administration.
+| **Must Have** | User (Seller / Bidder) | As a new user, I want to register with my name, email and password so that I can create listings and participate in auctions using one account. |
+| **Must Have** | User / Admin | As an account holder, I want to sign in and log out securely so that I can access my account and protect my session. |
+| **Must Have** | User (Seller / Bidder) | As a user, I want to browse public auctions by category so that I can find assets that interest me. |
+| **Must Have** | User (Seller / Bidder) | As a user, I want to open an auction and view its images, description, current price and schedule so that I can understand the asset before bidding. |
+| **Must Have** | User (Seller) | As a seller, I want to create a listing with a title, category, description and asset-specific details so that I can present my asset clearly. |
+| **Must Have** | User (Seller) | As a seller, I want to attach images to my listing so that other users can see the asset before participating. |
+| **Must Have** | User (Seller) | As a seller, I want to submit my listing for review and see its approval status so that I know when I can create an auction. |
+| **Must Have** | Admin | As an admin, I want to see submitted listings awaiting review so that I can examine them before they become available for auction. |
+| **Must Have** | Admin | As an admin, I want to approve a suitable listing or reject it with a reason so that the seller receives a clear review decision. |
+| **Must Have** | User (Seller) | As a seller, I want to create an auction from an approved listing so that I can offer my asset for bidding. |
+| **Must Have** | User (Seller) | As a seller, I want to set the starting price, minimum bid increment and auction dates so that the auction follows the conditions I choose. |
+| **Must Have** | User (Seller) | As a seller, I want to choose between a public and a private auction so that I can control how participants access my listing. |
+| **Must Have** | User (Seller) | As a seller, I want to copy the access code for my private auction so that I can share it with invited participants. |
+| **Must Have** | User (Bidder) | As a bidder, I want to enter a private auction access code so that I can view and join an auction I have been invited to. |
+| **Must Have** | User (Bidder) | As a bidder, I want to complete the Bid Commitment process using the Saudi Open Banking sandbox so that I can meet the participation requirement. |
+| **Must Have** | User (Bidder) | As a bidder, I want to know whether my commitment was completed successfully so that I can understand whether I am eligible to bid. |
+| **Must Have** | User (Bidder) | As a bidder, I want to see the current price and minimum next bid so that I can enter a valid amount. |
+| **Must Have** | User (Bidder) | As a bidder, I want to confirm my bid amount before submitting it so that I can avoid placing an incorrect bid. |
+| **Must Have** | User (Bidder) | As a bidder, I want to place a bid on another user's auction and receive an acceptance or rejection message so that I know the outcome of my action. |
+| **Must Have** | User (Bidder) | As a bidder, I want to see the latest accepted bids and remaining auction time so that I can follow the auction as it progresses. |
+| **Must Have** | User (Seller / Bidder) | As an auction participant, I want to see whether an auction is scheduled, active or closed so that I understand its current status. |
+| **Must Have** | User (Seller / Bidder) | As an auction participant, I want to see the final result when an auction closes so that I know whether a winning bid was recorded. |
+| **Should Have** | User (Seller) | As a seller, I want to see the listings and auctions I created in My Activity so that I can follow their review status and results. |
+| **Should Have** | User (Bidder) | As a bidder, I want to see auctions I have participated in under My Activity so that I can return to them easily. |
+| **Should Have** | User (Seller / Bidder) | As a user, I want clear messages when a form is incomplete, an access code is invalid or a bid is rejected so that I know what to correct. |
+| **Should Have** | Admin | As an admin, I want to view auction statuses and results so that I can monitor auction activity on the platform. |
+| **Could Have** | User (Seller) | As a seller, I want a suggested listing description based on the asset information I entered so that I can prepare a clear description more quickly. |
 
 ### 2.2 Account Types
 
 | Account | Description |
 |---|---|
-| **User** | A registered member who can create asset listings, publish auctions for approved assets, and bid in auctions owned by other members. Selling and bidding are activities within the same account. |
-| **Admin** | An authorized administrator who reviews submitted listings and manages administrative auction oversight. Admin accounts are not created through public registration. |
+| **User (Seller / Bidder)** | A registered member with one account for both activities. **Seller** describes a user when creating a listing or managing an auction they own. **Bidder** describes the same type of user when joining and bidding in another member's auction. A user may act as both seller and bidder without creating separate accounts. |
+| **Admin** | A platform administrator who reviews submitted listings, records approval or rejection decisions, and monitors auction activity. Admin accounts are not created through public registration. |
 
-Anyone can browse public auctions before signing in. Registration or login is required for protected actions. Browsing without an account is not a separate database role. The backend prevents users from bidding on auctions they own.
+Public auctions can be browsed without signing in. A user signs in to submit listings, create auctions, access private auctions or place bids. The backend prevents a user from bidding on an auction they own.
 
 ### 2.3 UI Mockups & Design Approach
 
