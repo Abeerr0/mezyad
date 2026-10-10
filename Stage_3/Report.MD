@@ -25,119 +25,54 @@ The project focuses on a complete and understandable auction workflow, from list
 
 ### 2.1 Prioritized User Stories (MoSCoW)
 
-The user stories describe the main actions supported by Mezyad. **Must Have** stories cover the complete auction process. **Should Have** stories improve account navigation, while **Could Have** stories provide additional convenience without affecting the main workflow.
+Mezyad provides a single standard account for both selling and bidding. A registered user can submit an asset, create an auction after approval, and participate in auctions created by other users. An administrator reviews submitted listings. The stories below describe the platform's main features, required behavior, and related interface screens.
 
-| ID | Feature | Priority | Role | User Story | Acceptance Criteria |
-|---|---|---|---|---|---|
-| US-01 | Register an account | Must Have | Visitor | As a visitor, I want to register as a bidder or seller so that I can use the platform. | A valid account is created with a unique email; the password is stored securely; admin cannot be selected at registration. |
-| US-02 | Log in | Must Have | Bidder / Seller / Admin | As a registered user, I want to log in so that I can access the features available to my account. | Correct credentials open the account; incorrect credentials show an error without granting access. |
-| US-03 | Submit a listing | Must Have | Seller | As a seller, I want to submit an asset with its details and images so that it can be reviewed before auctioning. | Required information is validated; the listing is saved as pending review and belongs to the seller. |
-| US-04 | Review a listing | Must Have | Admin | As an administrator, I want to approve or reject submitted listings so that only approved assets can be auctioned. | Only an administrator can make a review decision; the seller can see the outcome and any rejection reason. |
-| US-05 | Create an auction | Must Have | Seller | As a seller, I want to create a public or private auction for an approved asset so that I can choose how bidders participate. | Only the owner can auction an approved asset; price and dates are valid; a private auction has an access code. |
-| US-06 | Browse public auctions | Must Have | Visitor / Bidder | As a user, I want to browse public auctions and open their details so that I can find an asset I am interested in. | Public auctions are listed with accurate status and pricing; private auctions do not appear in public search results. |
-| US-07 | Join a private auction | Must Have | Bidder | As a bidder, I want to enter an invitation code so that I can access a private auction. | The server checks the code and the user's permission; an incorrect code does not reveal private details. |
-| US-08 | Complete bid commitment | Must Have | Bidder | As a bidder, I want to complete the required commitment process so that I can participate in an eligible auction. | The system records the commitment outcome and handles the Saudi Open Banking sandbox response without real-money transfers. |
-| US-09 | Place a bid | Must Have | Bidder | As an eligible bidder, I want to submit a bid and know whether it was accepted so that I can participate confidently. | The bid is accepted only when the auction is active, access is valid, and the amount meets the required increase; simultaneous bids do not corrupt the price. |
-| US-10 | Follow auction progress | Must Have | Bidder / Seller | As a participant, I want to see the latest price, bid history, and remaining time so that I can follow the auction. | The page refreshes auction data regularly; the server remains responsible for bid deadlines and accepted prices. |
-| US-11 | View auction results | Must Have | Bidder / Seller | As a participant, I want to see the final result when an auction ends so that I know whether it has a winner. | An ended auction no longer accepts bids and shows the correct winning bid or a no-bids result. |
-| US-12 | Manage my auctions | Should Have | Bidder / Seller | As a user, I want to view auctions related to my account so that I can find my activity easily. | A seller sees owned listings and auctions; a bidder sees auctions they have participated in. |
-| US-13 | Suggest a listing description | Could Have | Seller | As a seller, I want a suggested description based on the asset information I entered so that I can write my listing more easily. | The suggestion uses the existing fields, can be edited, and does not invent information about the asset. |
+| ID | Priority | Feature | Actor | User Story / Main Action | System Behavior and Acceptance Criteria | Expected Result | Screen |
+|---|---|---|---|---|---|---|---|
+| US-01 | Must Have | Register | User | Create an account with name, email and password. | Validate fields and unique email; hash password; assign USER automatically. | Account created; duplicate email rejected. | Register |
+| US-02 | Must Have | Login | User / Admin | Sign in with registered credentials and log out securely. | Verify password and session; use account role to authorize features. | Authenticated session or clear error. | Login |
+| US-03 | Must Have | Submit listing | User (owner) | Create an asset listing with category, description and images. | Save owner ID and PENDING_REVIEW; validate required information. | Listing appears in My Activity. | Create Listing |
+| US-04 | Must Have | Review listing | Admin | Approve or reject submitted asset listings. | Only ADMIN reviews; save decision and rejection reason. | Approved listings can be auctioned. | Admin Review |
+| US-05 | Must Have | Create auction | User (owner) | Create a public or private auction for an approved asset. | Validate ownership, approval, dates, prices and visibility; generate private access code. | Auction created with correct visibility. | Create Auction |
+| US-06 | Must Have | Browse auctions | Public / User | Find and view public auctions. | List public auctions with current price, status and item details; exclude private listings. | Public auction details are visible. | Home |
+| US-07 | Must Have | Private access | User | Enter the invitation code to join a private auction. | Validate code on server; grant access only to signed-in user. | Authorized user can view private auction. | Private Access |
+| US-08 | Must Have | Bid commitment | User | Complete the required banking-related commitment before bidding. | Process Saudi Open Banking sandbox interaction and store outcome; no real-money transfer. | Eligible commitment is recorded. | Commitment |
+| US-09 | Must Have | Place bid | User | Bid on another user's active auction. | Check not owner, auction time, access, commitment and minimum increment; save atomically. | Accepted bid changes price; invalid bid rejected. | Auction Details |
+| US-10 | Must Have | Track auction | Public / User | See auction price, bid history and remaining time. | Refresh authorized auction details every few seconds; use server state for bid validity. | Auction view shows latest accepted data. | Auction Details |
+| US-11 | Must Have | Auction result | User | See the final winning bid or no-bid outcome. | Close auction consistently and reject late bids. | Final result appears. | Auction Result |
+| US-12 | Should Have | My Activity | User | See listings and auctions I created alongside auctions I bid in. | Filter listings and bids by signed-in user; show both activities in one account. | User can manage selling and bidding together. | My Activity |
+| US-13 | Could Have | Description suggestion | User | Generate an editable listing description from entered asset details. | Use existing form values; no external AI service or invented claims. | Editable description appears in form. | Create Listing |
 
-#### User Roles and Permissions
+### 2.2 Account Types
 
-Mezyad has three registered roles: **Bidder**, **Seller**, and **Admin**. Visitors can browse public auctions without registering. The table below shows which actions are available to each role.
-
-| Action | Visitor | Bidder | Seller | Admin |
-|---|---|---|---|---|
-| Register or log in | Yes | Yes | Yes | Login only |
-| Browse public auctions | Yes | Yes | Yes | Yes |
-| Submit an asset listing | No | No | Yes | No |
-| Review submitted listings | No | No | No | Yes |
-| Create public/private auctions | No | No | Own approved assets | No |
-| Access private auctions | No | With valid code | Own auctions | For administration |
-| Complete bid commitment | No | Yes | No | No |
-| Submit a bid | No | Yes, if eligible | No | No |
-| View auction results | Public only | Authorized auctions | Own/public auctions | Yes |
-| View personal auction activity | No | Own participation | Own listings/auctions | Administrative view |
-| Suggest listing description | No | No | Yes | No |
-
-All protected actions are checked by the backend. A private auction's code is not a substitute for verifying the signed-in bidder's access.
-
-### 2.2 UI Mockups & Design Approach
-
-The interface uses **React** with an Arabic right-to-left layout. The visual direction combines a vintage-inspired style with readable typography, clear spacing, and straightforward navigation. Shared components are used for auction cards, forms, status labels, buttons, and feedback messages.
-
-The main user flows are described below. Each flow follows the actions shown in the interface and the response expected from the system.
-
-#### Flow A — Registration and Login
-
-| Step | User Action | System Response | Screen |
-|---|---|---|---|
-| 1 | Open registration and choose Bidder or Seller | Displays the appropriate form | Register |
-| 2 | Enter name, email and password | Checks required fields and email format | Register |
-| 3 | Submit the form | Creates the account or explains the error | Register |
-| 4 | Enter email and password | Verifies credentials and opens the account | Login |
-
-#### Flow B — Seller Listing and Admin Review
-
-| Step | User Action | System Response | Screen |
-|---|---|---|---|
-| 1 | Seller selects Create Listing | Opens the asset form | Create Listing |
-| 2 | Seller enters asset details and adds images | Checks required fields and displays the entered information | Create Listing |
-| 3 | Seller submits the listing | Saves it as Pending Review | Seller Dashboard |
-| 4 | Admin opens the review queue | Displays pending listings | Admin Review |
-| 5 | Admin approves or rejects the listing | Saves the decision and any rejection reason | Admin Review |
-| 6 | Seller checks the listing status | Shows Approved or Rejected with feedback | Seller Dashboard |
-
-#### Flow C — Create a Public or Private Auction
-
-| Step | User Action | System Response | Screen |
-|---|---|---|---|
-| 1 | Seller selects an approved asset | Opens auction settings | Create Auction |
-| 2 | Seller enters price, bid increment and schedule | Validates the auction settings | Create Auction |
-| 3 | Seller chooses Public or Private | Displays the selected visibility | Create Auction |
-| 4 | Seller confirms | Creates the auction | Auction Details |
-| 5 | If private, seller copies the access code | Shows the code to the owner with a copy action | Private Auction Details |
-
-#### Flow D — Join and Participate in a Private Auction
-
-| Step | User Action | System Response | Screen |
-|---|---|---|---|
-| 1 | Bidder opens a private auction invitation | Requests sign-in and access code as needed | Private Access |
-| 2 | Bidder enters the code | Checks the code and grants or rejects access | Private Access |
-| 3 | Bidder starts the commitment step | Processes the supported banking sandbox interaction and displays its result | Commitment |
-| 4 | Bidder opens auction details | Displays price, bid history and remaining time | Auction Details |
-| 5 | Bidder enters an amount and confirms | Validates and accepts or rejects the bid with a clear message | Bid Confirmation |
-
-#### Flow E — Auction Closure and Results
-
-| Step | User Action | System Response | Screen |
-|---|---|---|---|
-| 1 | User opens an auction near its end | Displays the latest server-backed information | Auction Details |
-| 2 | Auction end time passes | Server stops accepting new bids | Auction Details |
-| 3 | User views the result | Displays the winning bid or No Bids | Auction Result |
-| 4 | Bidder or seller opens My Auctions | Displays auctions associated with their account | My Auctions |
-
-#### Interface Feedback
-
-| Element | Behavior |
+| Account | Description |
 |---|---|
-| Loading state | Shows progress while a request is being processed |
-| Success/error messages | Explains the result of registration, listing review, access, and bidding |
-| Bid confirmation | Displays the amount before submitting a bid |
-| Auction status | Displays Scheduled, Active or Closed with a text label and color |
-| Empty state | Explains when no listings, auctions, or search results are available |
-| Copy private code | Copies the seller's private auction invitation code |
-| Creation steps | Shows progress through the existing auction form |
-| My Auctions | Lists a user's relevant auctions without a separate database table |
+| **User** | A registered member who can create asset listings, publish auctions for approved assets, and bid in auctions owned by other members. Selling and bidding are activities within the same account. |
+| **Admin** | An authorized administrator who reviews submitted listings and manages administrative auction oversight. Admin accounts are not created through public registration. |
 
-### 2.3 Listing Description Suggestion
+Anyone can browse public auctions before signing in. Registration or login is required for protected actions. Browsing without an account is not a separate database role. The backend prevents users from bidding on auctions they own.
 
-The listing form includes a small **Suggest Description** action. The seller first enters the asset category and relevant details. The interface combines these values into a short, editable description. The seller can change the text before submitting the listing.
+### 2.3 UI Mockups & Design Approach
 
-For example, vehicle information such as make, model, year, mileage, and condition can be arranged into a readable paragraph. The suggestion uses only the values provided by the seller. It does not estimate prices, verify asset condition, or call an external AI service.
+Mezyad uses React and an Arabic right-to-left interface with a vintage-inspired visual style, consistent typography, readable auction cards and clear navigation. The main screens are Home, Register/Login, Create Listing, Admin Review, Create Auction, Private Access, Commitment, Auction Details, Auction Result and My Activity.
 
-This feature is implemented within the listing form and does not require a separate backend component, API endpoint, or database table.
+**Account access:** A new member registers with a name, email and password. The system creates a standard USER account. The same login screen is used by users and administrators; the available functions depend on the authenticated role.
+
+**Listing and review:** A signed-in user submits asset details and images. The listing appears under My Activity as Pending Review. An administrator examines the listing and records approval or rejection. Approved listings become available for auction creation.
+
+**Auction creation:** The asset owner selects an approved listing, sets the starting price, minimum bid increment, start and end times, and chooses Public or Private. Public auctions appear in the general auction list. Private auctions use an invitation code that the owner can copy and share.
+
+**Private auction participation:** A signed-in user enters the access code. The backend verifies the code and records the access grant before showing protected auction details.
+
+**Commitment and bidding:** The user completes the required banking sandbox step, then enters a bid amount on an eligible auction owned by someone else. A confirmation dialog displays the amount. The backend validates the user, auction deadline, commitment, access and bid increment before accepting it.
+
+**Results and activity:** Auction pages show current price, bid history and remaining time. When an auction ends, the final result shows the winning bid or a no-bids outcome. My Activity combines My Listings, My Auctions and My Bids for the same account.
+
+**Interface feedback:** Loading indicators, validation messages, auction status labels, empty states and success/error notifications provide clear feedback throughout these screens.
+
+### 2.4 Listing Description Suggestion
+
+The Create Listing form includes a Suggest Description button. It combines information entered by the asset owner into a readable paragraph that can be edited before submission. For vehicles, the suggestion can use make, model, year, mileage and condition. The feature uses a simple React template and does not require a separate service or external AI model.
 
 ---
 
@@ -145,7 +80,7 @@ This feature is implemented within the listing form and does not require a separ
 
 ```mermaid
 flowchart TD
-  U[Visitor / Bidder / Seller / Admin] --> R[React UI]
+  U[Public / User / Admin] --> R[React UI]
   R -->|HTTPS REST requests / periodic GET| E[Node.js + Express]
   E -->|SQL queries and transactions| P[(PostgreSQL)]
   E -->|Approved sandbox request| B[Saudi Open Banking Sandbox]
@@ -157,7 +92,7 @@ flowchart TD
 
 **Updates:** React polls active auction details via GET every few seconds. Polling is not true push-based real-time. No Socket.io until a mentor requirement makes it necessary.
 
-**Image storage — pending implementation decision:** `item_images.image_url` stores references, not image bytes. Confirm a working upload/storage approach before describing upload as complete.
+Asset image references are stored in `item_images`. The listing form sends image files to the backend upload handler.
 
 ### 3.1 Development environment
 
@@ -180,7 +115,7 @@ Local development can use React dev server, Express server and PostgreSQL. Use e
 | BidCommitmentService | Record participation outcome | initiateCommitment, getCommitment |
 | BankIntegration | Isolated sandbox calls | startSandboxOperation, handleSandboxResponse |
 
-These are **logical responsibilities**, not a mandate to implement eight elaborate OOP classes. Simple Express routes plus small service functions are acceptable. No separate NotificationService, SmartAuctionAssistant, Redis coordinator, or WebSocket handler.
+These components organize the Express routes and service functions. The description suggestion is handled directly in the React listing form.
 
 ### 4.2 Simplified class/component diagram
 
@@ -225,17 +160,16 @@ classDiagram
   BidCommitmentService --> BankIntegration
 ```
 
-**Why keep BidService separate?** Bid acceptance has the highest concurrency risk and deserves a focused, testable transaction. The validator can be a plain helper module if a class feels excessive.
+BidService handles database transactions for bid acceptance, while BidValidator contains eligibility and amount checks.
 
 ---
 
 ## 5. Database Design (PostgreSQL Only)
 
-### 5.1 Proposed ER diagram
+### 5.1 Entity Relationship Diagram
 
 ```mermaid
 erDiagram
-  roles ||--o{ users : assigns
   users ||--o{ user_sessions : owns
   users ||--o{ items : sells
   categories ||--o{ items : classifies
@@ -256,8 +190,7 @@ erDiagram
 
 | Table | Essential fields | Purpose |
 |---|---|---|
-| `roles` | id, name UNIQUE | BIDDER, SELLER, ADMIN |
-| `users` | id, role_id, name, email UNIQUE, password_hash, created_at | Accounts |
+| `users` | id, role (USER or ADMIN), name, email UNIQUE, password_hash, created_at | Standard and administrator accounts |
 | `user_sessions` | id, user_id, token_hash, expires_at | Session tracking; may simplify if secure auth approach differs |
 | `categories` | id, name UNIQUE | Initial categories e.g. vehicles, real_estate |
 | `items` | id, seller_id, category_id, title, description, category_fields JSONB, status, review_reason, reviewed_by, reviewed_at | Listing and one current review decision |
@@ -268,7 +201,7 @@ erDiagram
 | `bids` | id, auction_id, bidder_id, amount, request_id UNIQUE, created_at | Accepted bids and idempotency |
 | `auction_results` | auction_id UNIQUE, winner_bid_id NULLABLE, closed_at | Final result; NULL when no bids |
 
-**Total: 11 tables.** A separate event log is not included unless official requirements demand audit history.
+**Total: 10 tables.** The schema stores account details, listings, auctions, access permissions, commitments, accepted bids and results.
 
 ### 5.3 Constraints and integrity
 
@@ -289,7 +222,7 @@ erDiagram
 
 **State model:** SCHEDULED / ACTIVE / CLOSED. Define ACTIVE based on server time and stored status consistently; closure can be finalized idempotently when the auction is accessed or by a simple scheduled job if the course requires proactive closure. A React timer must never determine the winner.
 
-**Simplifications:** Remove `auction_rules` (put minimum increment in auctions), `auction_extensions`, `assistant_interactions`, and Redis design. Remove `asset_verifications` only if the mentor does not require multiple verification histories; store current review fields on items. Remove `event_store` unless audit history is required.
+The auction's minimum increment is stored in `auctions`, and review information is stored with the asset listing. Bid history is maintained in the `bids` table.
 
 ---
 
@@ -303,10 +236,10 @@ sequenceDiagram
   participant UI as React
   participant API as Express
   participant DB as PostgreSQL
-  User->>UI: Register with role, email, password
+  User->>UI: Register with name, email, password
   UI->>API: POST /auth/register
   API->>API: Validate and hash password
-  API->>DB: Insert user (non-admin role)
+  API->>DB: Insert user with USER role
   DB-->>API: Saved or duplicate email
   API-->>UI: Success or validation error
   User->>UI: Log in
@@ -319,12 +252,12 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-  actor Seller
+  actor User as Asset Owner
   actor Admin
   participant UI as React
   participant API as Express
   participant DB as PostgreSQL
-  Seller->>UI: Submit listing
+  User->>UI: Submit listing
   UI->>API: POST /items
   API->>DB: Save PENDING_REVIEW listing
   API-->>UI: Listing submitted
@@ -332,7 +265,7 @@ sequenceDiagram
   UI->>API: POST /admin/items/:id/review
   API->>DB: Save APPROVED or REJECTED
   API-->>UI: Review recorded
-  Seller->>UI: Create auction for approved listing
+  User->>UI: Create auction for approved listing
   UI->>API: POST /auctions
   API->>DB: Check owner and approval; save auction
   API-->>UI: Auction created; private code if selected
@@ -342,40 +275,42 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-  actor Bidder
+  actor User as Bid Participant
   participant UI as React
   participant API as Express
   participant DB as PostgreSQL
   participant Bank as Open Banking Sandbox
   opt Private auction
-    Bidder->>UI: Enter access code
+    User->>UI: Enter access code
     UI->>API: POST /auctions/:id/access
     API->>DB: Validate code and record access
     API-->>UI: Access granted or denied
   end
-  Bidder->>UI: Start commitment
+  User->>UI: Start commitment
   UI->>API: POST /auctions/:id/commitment
-  API->>Bank: Supported sandbox operation (TBD)
-  Bank-->>API: Sandbox result (TBD)
+  API->>Bank: Banking sandbox request
+  Bank-->>API: Sandbox response
   API->>DB: Save commitment status
   API-->>UI: Show result
 ```
 
-**Dependency:** The banking exchange is intentionally abstract until the team verifies actual sandbox endpoints and required user consent. Do not claim proof-of-funds, account hold, transfer, or SMS verification without evidence.
+The banking interaction uses the sandbox service and stores the resulting commitment status without transferring real funds.
 
 ### Flow 4 — Place Bid (Atomic PostgreSQL Transaction)
 
 ```mermaid
 sequenceDiagram
-  actor Bidder
+  actor User as Bid Participant
   participant UI as React
   participant API as Express
   participant DB as PostgreSQL
-  Bidder->>UI: Confirm bid amount
+  User->>UI: Confirm bid amount
   UI->>API: POST /auctions/:id/bids
   API->>DB: BEGIN; SELECT auction FOR UPDATE
   DB-->>API: Locked auction state
-  API->>DB: Check role, access, commitment, server time and amount
+  API->>DB: Read access, owner, commitment and current bid
+  DB-->>API: Eligibility and auction data
+  API->>API: Validate not owner, access, commitment, time and amount
   alt Valid bid
     API->>DB: INSERT bid; UPDATE current_price; COMMIT
     API-->>UI: 201 Bid accepted
@@ -383,7 +318,7 @@ sequenceDiagram
     API->>DB: ROLLBACK
     API-->>UI: 4xx Rejected with reason
   end
-  UI-->>Bidder: Display success or error
+  UI-->>User: Display success or error
 ```
 
 ### Flow 5 — Auction Closure and Result
@@ -425,22 +360,22 @@ sequenceDiagram
 
 | Method | Path | Role | Key request | Success response | Key failures |
 |---|---|---|---|---|---|
-| POST | /auth/register | Visitor | name,email,password,role | 201 user summary | 400,409 |
-| POST | /auth/login | Visitor | email,password | 200 session/account | 401 |
+| POST | /auth/register | Public | name,email,password | 201 user summary | 400,409 |
+| POST | /auth/login | Public | email,password | 200 session/account | 401 |
 | POST | /auth/logout | Signed in | — | 200 signed out | 401 |
-| POST | /items | Seller | category,title,description,category_fields,images | 201 listing | 400,403 |
-| GET | /items | Seller/Admin | filter by own or pending | 200 list | 401,403 |
+| POST | /items | User | category,title,description,category_fields,images | 201 listing | 400,403 |
+| GET | /items | User/Admin | filter by own or pending | 200 list | 401,403 |
 | GET | /items/:id | Owner/Admin | item ID | 200 listing | 403,404 |
 | POST | /admin/items/:id/review | Admin | decision,reason? | 200 updated status | 403,409 |
-| POST | /auctions | Seller | itemId,visibility,prices,times | 201 auction; private code to owner | 400,403,409 |
+| POST | /auctions | User (owner) | itemId,visibility,prices,times | 201 auction; private code to owner | 400,403,409 |
 | GET | /auctions | Public | public filters/status | 200 public list | 400 |
 | GET | /auctions/:id | Authorized | auction ID | 200 details/result | 403/404 |
-| POST | /auctions/:id/access | Bidder | accessCode | 200 access granted | 403/404,429 |
-| POST | /auctions/:id/commitment | Bidder | provider-specific validated fields | 200/201 commitment status | 400,403,502 |
-| GET | /auctions/:id/commitment | Bidder | — | 200 own status | 403,404 |
-| POST | /auctions/:id/bids | Bidder | amount,requestId | 201 accepted bid | 400,403,409 |
+| POST | /auctions/:id/access | User | accessCode | 200 access granted | 403/404,429 |
+| POST | /auctions/:id/commitment | User | provider-specific validated fields | 200/201 commitment status | 400,403,502 |
+| GET | /auctions/:id/commitment | User | — | 200 own status | 403,404 |
+| POST | /auctions/:id/bids | User (not owner) | amount,requestId | 201 accepted bid | 400,403,409 |
 | GET | /auctions/:id/bids | Authorized | paging params | 200 accepted bid history | 403/404 |
-| GET | /me/auctions | Bidder/Seller | — | 200 own participation/owned auctions | 401 |
+| GET | /me/auctions | User | — | 200 own participation/owned auctions | 401 |
 
 The endpoints are grouped by user-facing functionality and share one Express backend. The Description Builder is client-side and needs **no endpoint**.
 
@@ -533,7 +468,7 @@ This four-week schedule organizes the implementation tasks while the team follow
 - One issue/task owner and one reviewer for each major feature.
 - `develop` branch only if the team genuinely needs it.
 
-### 8.3 Team ownership (adjust if members agree)
+### 8.3 Team Responsibilities
 
 | Area | Primary team members | Review/support |
 |---|---|---|
@@ -549,7 +484,9 @@ This four-week schedule organizes the implementation tasks while the team follow
 |---|---|---|---|---|
 | QA-01 | Auth | Duplicate email registration | 409, no duplicate user | Planned |
 | QA-02 | Auth | Wrong password | 401, no session | Planned |
-| QA-03 | Roles | Seller attempts admin review | 403 | Planned |
+| QA-03 | Roles | User attempts admin review | 403 | Planned |
+| QA-03A | Ownership | User bids on their own auction | Rejected | Planned |
+| QA-03B | Accounts | User creates an auction and bids on another user's auction | Both allowed | Planned |
 | QA-04 | Listing | Auction from unapproved item | Rejected | Planned |
 | QA-05 | Private access | Invalid code | Access denied | Planned |
 | QA-06 | Private access | Direct GET/bid without grant | No private data or bid | Planned |
@@ -564,7 +501,7 @@ This four-week schedule organizes the implementation tasks while the team follow
 | QA-15 | E2E | Public auction complete journey | Correct final outcome | Planned |
 | QA-16 | E2E | Private auction complete journey | Access and bidding rules respected | Planned |
 
-**No test is marked Passed before execution.** Prioritize QA-05 through QA-13 because authorization, money-related sandbox handling, and concurrency are the highest-risk parts.
+The test plan covers account permissions, private auction access, bid integrity and auction closure.
 
 ---
 
@@ -579,20 +516,3 @@ These are explicitly **not** MVP commitments:
 **Not future promises:** Escrow, real-money settlement, complex KYC, distributed infrastructure, predictive pricing, or a chatbot. They require separate requirements, security review, and resources.
 
 ---
-
-## 10. Project Scope Summary
-
-| Question | Current decision |
-|---|---|
-| Can each team member explain every technology? | React / Express / PostgreSQL; verify sandbox |
-| Is Redis necessary? | No |
-| Is Socket.io necessary now? | No, unless required |
-| Are private auctions core? | Yes |
-| Is banking integration real rather than mocked? | Real supported sandbox call required; details unverified |
-| Is the Description Builder AI? | No; template-based optional UX feature |
-| Are bids safe under concurrency? | Design uses a PostgreSQL row lock; must be implemented and tested |
-| Are images truly uploadable? | Pending image-storage decision |
-| Does documentation claim tests passed? | No |
-| Is the implementation fully complete? | Not claimed |
-
-**ng this draft into the team's main repository, resolve the sandbox operation, exact bid commitment rule, image handling, and any mentor-mandated Socket.io/Docker requirement. Validate all Mermaid diagrams and endpoints against the eventual code.
