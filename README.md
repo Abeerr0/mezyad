@@ -1,56 +1,42 @@
 # Mezyad | مِزياد
 
-**Mezyad** is a proposed multi-category digital auction platform for high-value and rare assets. This repository is the **team's design and technical documentation**; the architecture and flows below are planned requirements, not proof of a deployed MVP.
+**Mezyad** is a digital auction platform project for high-value and rare assets. This repository keeps each Holberton portfolio stage organized: **README = short stage guide; Report = complete answers to that stage's tasks.**
 
-## Project documentation
+## Portfolio stages
 
-| Stage | Document | Scope |
-|---|---|---|
-| 1 — Idea Development | [Stage 1 Report](Stage_1/Report.MD) | Problem, idea and feasibility |
-| 2 — Project Charter | [Stage 2 Report](Stage_2/Report.MD) | Objectives, stakeholders, scope, risks and milestones |
-| 3 — Technical Documentation | [Stage 3 Report](Stage_3/Report.MD) | Architecture, ERD, sequence diagrams, API contracts, SCM and QA |
+| Stage | Purpose | Formal answers | Status |
+|---|---|---|---|
+| **1 — Idea Development** | Team formation, research, evaluation and MVP idea | [Stage 1 Report](Stage_1/Report.MD) | Completed; **100/100** (team-reported) |
+| **2 — Project Charter** | SMART goals, stakeholders, scope, risks and milestones | [Stage 2 Report](Stage_2/Report.MD) | Revised to align with Stage 3 |
+| **3 — Technical Documentation** | Architecture, ERD, 5 sequences, APIs and QA | [Stage 3 Report](Stage_3/Report.MD) | Design documented |
+| **4 — MVP Development** | Sprint execution, code, tracking, QA and evidence | [Stage 4 Report](Stage_4/Report.MD) | Source started; full acceptance pending |
+| **5 — Project Closure** | Final demo, results and handoff | Not yet prepared | Future stage |
 
-## Approved MVP scope (Stage 3)
+### Navigate each stage
 
-- Register, log in and manage sessions; roles: **USER** and **ADMIN**.
-- One User account can list their own assets and bid on **other users'** auctions.
-- Category-specific listing details, images and administrator approval/rejection.
-- Public and code-protected private auctions; private access granted server-side.
-- Bid commitment step requiring **genuinely verified** Saudi Open Banking sandbox integration. Provider/operation/credentials are **not yet confirmed**.
-- Bid validation, PostgreSQL row locking, minimum increments, idempotent request IDs, bid history and auction closure with stable winner/no-winner result.
-- Basic React pages with periodic REST polling and a client-side description assistant.
+[Stage 1 Guide](Stage_1/README.MD) · [Stage 2 Guide](Stage_2/README.MD) · [Stage 3 Guide](Stage_3/README.MD) · [Stage 4 Guide](Stage_4/README.md)
 
-**Not part of the current MVP:** real payments, escrow, real KYC, handover management, blockchain, Redis, WebSockets and anti-sniping. Auction closure records the winner; it does **not** represent a completed real-world payment or delivery.
+## One consistent approved MVP
 
-## Architecture
+**Workflow:** Register/login → create category-specific asset listing with images → admin approve/reject → create public/private auction → verify private access (when required) → verified Saudi Open Banking sandbox commitment → submit server-validated bid → view history and updated price → close auction → persist winner/no-winner result.
 
-```mermaid
-flowchart LR
-  UI["React (RTL)"] -->|"REST + periodic polling"| API["Node.js / Express"]
-  API --> DB[("PostgreSQL: 10 tables")]
-  API -.->|"Authorized integration pending"| BANK["Saudi Open Banking Sandbox"]
-```
+**Stack:** React (frontend), Node.js/Express REST (backend), PostgreSQL (10 tables), periodic GET polling for auction updates. Same `USER` identity may sell and bid on other users' auctions; `ADMIN` moderates. Server-side database transactions and auction-row locking protect bid correctness.
 
-- PostgreSQL is authoritative for auction state and monetary amounts.
-- Bids and closure use `SELECT ... FOR UPDATE` inside database transactions.
-- Server time, not the React countdown, controls bidding deadlines.
-- Private access is enforced by the API; codes are hashed and attempts must be rate-limited.
+**Out of scope:** anti-sniping in the current MVP, Socket.io/WebSockets, Redis, real transfers, escrow, real KYC, handover, predictive pricing, blockchain and IoT. The description assistant is a simple client-side helper. The exact authorized Saudi Open Banking sandbox operation and access are **not yet verified**; fake approval is prohibited.
 
-## Auction categories
+**History versus final design:** Stage 1 is preserved unchanged because it documents the original brainstorm and was graded 100/100. Stage 2's revised charter records the later scope refinements. Stage 3 is the final technical baseline; Stage 4 documents implementation status without inventing tests or deployments.
 
-Camels; newly built unsold properties; high-end handbags and rare collectibles; distinctive vehicle registration plates; rare/limited/discontinued vehicle models.
+## Team responsibilities
 
-## Team
-
-| Member | Responsibility |
+| Member | Areas |
 |---|---|
 | Abeer Al-Saiari | Database with Tala; backend with Ghadi |
-| Tala Al-Hudaibi | Database with Abeer; QA and integration review with Aseel |
 | Ghadi Al-Zahrani | Backend with Abeer; frontend with Aseel |
-| Aseel Al-Zahrani | Frontend with Ghadi; QA and integration review with Tala |
+| Aseel Al-Zahrani | Frontend with Ghadi; QA/integration with Tala |
+| Tala Al-Hudaibi | Database with Abeer; QA/integration with Aseel |
 
-## Status and technical constraints
+## Timeline
 
-**Stage 3:** technical design documented; actual integration/test results are not claimed in this documentation repository. **Bank sandbox:** unverified external dependency. The implementation must follow the [Stage 3 technical baseline](Stage_3/Report.MD), not outdated transaction/hand-over descriptions.
+Stage 1: Week 1 · Stage 2: Weeks 2–3 · Stage 3: Weeks 4–5 · Stage 4: Weeks 6–10 · Stage 5: Weeks 11–12.
 
-No secrets, production URLs or successful sandbox calls are claimed here.
+[Source synchronization and technical decision notes](docs/SOURCE_SYNC_AND_STAGE3_REVIEW.md)
