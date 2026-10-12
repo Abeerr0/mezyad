@@ -1,5 +1,8 @@
 # Stage 4 — MVP Development
 
+**[Read the complete Stage 4 Report — Tasks 0–5](Report.MD)**
+
+
 **Baseline:** [Stage 3 technical report](../Stage_3/Report.MD) (read-only). This stage implements its approved design without editing it.
 
 | Task | Evidence | Current status |
