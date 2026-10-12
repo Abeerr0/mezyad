@@ -1,276 +1,377 @@
-# Mezyad — Stage 4: Sprint Execution, Monitoring, Reviews and Final QA
+# MEZYAD
+## STAGE 4 — MVP DEVELOPMENT & SPRINT EXECUTION
+**Holberton School | Portfolio Project | Engineering Delivery Report**
 
-**Project:** Mezyad — High-Value Asset Auction Platform  
-**Course:** Holberton Portfolio Project — Stage 4  
-**Team:** Abeer Al-Saiari, Ghadi Al-Zahrani, Aseel Al-Zahrani, Tala Al-Hudaibi  
-**Repository:** [Abeerr0/mezyad](https://github.com/Abeerr0/mezyad)  
-**Technical baseline:** [Stage 3 Report](../Stage_3/Report.MD) (protected, unchanged)  
-**Report prepared:** 12 October 2026  
-**Implementation status:** **In progress; not a completed or verified MVP.**
+| Project | Mezyad — Digital Auction Platform |
+|---|---|
+| Team | Abeer Al-Saiari · Ghadi Al-Zahrani · Aseel Al-Zahrani · Tala Al-Hudaibi |
+| Source of truth | [Stage 3 Technical Report](../Stage_3/Report.MD) |
+| Repository | [Mezyad on GitHub](https://github.com/Abeerr0/mezyad) |
+| Reporting snapshot | 12 October 2026 |
+| Stage | Implementation started — acceptance pending |
 
-> **Evidence integrity:** A plan is not a completed sprint. Code committed to GitHub is not proof that it has been executed successfully. Actual stand-ups, stakeholder feedback, tests, sandbox calls and deployment are reported only if independently evidenced. This report explicitly separates **planned**, **implemented in source**, **verified**, and **blocked**.
+> **Reading guide.** This is the main submission document, organized by **Tasks 0–5**. It answers what the team planned, what the repository currently contains, how the work is structured, what constitutes proof of completion, and what remains. **Committed code is not equivalent to tested functionality; templates are not real meeting minutes.** Where no verifiable evidence exists, the report identifies the gap rather than inventing it.
 
----
+### Executive summary
 
-## 0. Plan and Define Sprints
+Mezyad is an auction platform where one registered user can list an asset for sale and bid on other users' auctions. Administrators moderate submitted listings before auction creation. Auctions can be public or private; private participation requires a valid access grant. The bid flow requires commitment verification, minimum-price checks, transactional concurrency control, an immutable bid record, and consistent closure/winner determination. The project intentionally excludes real money movement.
 
-### 0.1 Objective and development approach
+The implementation repository now includes a PostgreSQL ten-table migration, Express routes, token-session authentication, a preliminary React interface, initial automated health-test source, and Stage 4 delivery artifacts. The current system is **not yet an accepted end-to-end MVP**: complete React journeys, secure image uploads, verified banking sandbox integration, live-database QA and sprint meeting evidence remain outstanding.
 
-The purpose of sprint planning is to transform the approved Stage 3 user stories into manageable, prioritized implementation tasks with clear ownership, dependencies, acceptance criteria and review checkpoints. We adopt **four one-week sprints**, corresponding to Stage 3 §8.1. Exact calendar start and end dates remain **to be confirmed by the team**; no fictional deadlines are presented.
-
-The development baseline is **React**, **Node.js/Express**, **PostgreSQL**, REST APIs with periodic **polling**, and PostgreSQL transactions for safe bidding. We do **not** substitute MySQL, Redis or Socket.io. The Stage 3 data model defines **ten tables**. Anti-sniping, real payments, escrow, KYC and handover are not in the currently approved Stage 3 MVP.
-
-### 0.2 MoSCoW prioritization
-
-| Priority | User-facing scope | Reason |
-|---|---|---|
-| **Must Have** | Register/login/logout; User/Admin authorization; listing submission and review; public/private auction creation and access; commitment validation; atomic bids; auction closure and winner; basic React screens; QA | Required for the minimum end-to-end auction journey |
-| **Must Have — external dependency** | Evidence of a genuine supported Saudi Open Banking sandbox operation | Required by the technical baseline; dependent on provider documentation and credentials |
-| **Should Have** | Improved loading/error/empty states, pagination, accessible UI, expanded automated tests | Improves reliability and usability without changing core business logic |
-| **Could Have** | Additional design polish and noncritical enhancements | Valuable only after core flow passes |
-| **Won't Have this stage** | Anti-sniping, WebSockets, Redis, real financial settlement, escrow, real KYC, blockchain and handover | Outside the current Stage 3 implementation baseline |
-
-### 0.3 Sprint schedule and acceptance checkpoints
-
-| Sprint | Duration | Planned work | Acceptance checkpoint | Owner(s) | Deadline |
-|---|---|---|---|---|---|
-| **Sprint 1 — Foundation** | Week 1 (7 days) | Repository setup, PostgreSQL schema and seed, Express/React scaffolding, registration/login, first listing workflow, bank sandbox access investigation | Sign in and save a listing in PostgreSQL; document verified sandbox access or blocker | Abeer + Tala DB; Abeer + Ghadi backend; Aseel + Ghadi UI | End of Week 1; calendar date TBD |
-| **Sprint 2 — Auctions** | Week 2 (7 days) | Admin approval/rejection, auction creation, public/private access, listing/auction screens | Seller submits listing → Admin approves → seller creates auction → eligible user accesses it | Abeer + Ghadi backend; Aseel + Ghadi UI; Tala QA | End of Week 2; calendar date TBD |
-| **Sprint 3 — Commitment & Bidding** | Week 3 (7 days) | Sandbox commitment if authorized, bid eligibility, atomic PostgreSQL bidding, history, closure, results | Valid and concurrent bid scenarios pass; late bids rejected; winner recorded consistently | Abeer + Ghadi backend; Abeer + Tala DB; Tala + Aseel QA | End of Week 3; calendar date TBD |
-| **Sprint 4 — Final Integration & QA** | Week 4 (7 days) | Full React–API–PostgreSQL integration, regression, negative/security tests, critical bug fixes, mentor demo rehearsal | Public and private auction journeys work without manual DB edits; evidence archived | Entire team; Tala + Aseel QA | End of Week 4; calendar date TBD |
-
-### 0.4 Task decomposition and dependencies
-
-| Backlog ID | Small task | Sprint | Priority | Responsible | Depends on | Acceptance |
-|---|---|---|---|---|---|---|
-| B01 | Schema, migrations, constraints and seed | 1 | Must | Abeer, Tala | PostgreSQL | Migration applies to clean DB |
-| B02 | Register/login/logout and role guard | 1 | Must | Abeer, Ghadi | B01 | Valid sessions; invalid credentials rejected |
-| B03 | Listing form, API, image validation | 1–2 | Must | Abeer, Ghadi, Aseel | B02 | Owner can submit valid listing and safe images |
-| B04 | Admin listing review | 2 | Must | Abeer, Ghadi | B03 | Only Admin can approve/reject |
-| B05 | Public/private auctions and access | 2 | Must | Abeer, Ghadi, Aseel | B04 | Private access requires code and grant |
-| B06 | Official sandbox verification | 1–3 | Must | Abeer, Ghadi | Provider credentials/docs | Reproducible provider test, or explicit blocker |
-| B07 | Commitment workflow | 3 | Must | Abeer, Ghadi | B05, B06 | No false commitment success |
-| B08 | Atomic bidding and idempotency | 3 | Must | Abeer, Tala | B05, B07 | Concurrent updates consistent |
-| B09 | Closure and auction result | 3 | Must | Abeer, Ghadi | B08 | Correct winner or no-winner result |
-| B10 | RTL React screens and polling | 1–4 | Must | Aseel, Ghadi | B02–B09 | All main screens usable |
-| B11 | Automated and manual E2E QA | 4 | Must | Tala, Aseel | B02–B10 | Tests executed and evidence recorded |
-| B12 | Sprint tracking and reviews | 1–4 | Must | All | Real meetings | Dated, attributable records |
-| B13 | Visual/accessibility polish | 4 | Should | Aseel, Ghadi | B10 | UX review evidence |
-
-The detailed, maintainable backlog is [Product_Backlog.md](Product_Backlog.md).
-
-### 0.5 Responsibilities and definition of done
-
-- **Abeer Al-Saiari:** database with Tala; backend with Ghadi; implementation coordination and technical review.
-- **Tala Al-Hudaibi:** database with Abeer; QA, integration review and test evidence with Aseel.
-- **Ghadi Al-Zahrani:** backend with Abeer; frontend with Aseel; UI implementation coordination.
-- **Aseel Al-Zahrani:** frontend with Ghadi; QA and integration review with Tala.
-
-A task is **Done** only when implementation is merged after review, acceptance criteria are demonstrated, relevant tests have actually passed, bugs are documented, and evidence is linked. A merged file without test evidence remains **implemented but unverified**.
+**Evidence index:** [Sprint plan](Sprint_Plan.md) · [Backlog](Product_Backlog.md) · [Progress](Progress_Tracker.md) · [Reviews](Sprint_Reviews.md) · [Retrospectives](Retrospectives.md) · [Testing](Testing_Report.md) · [Bugs](Bug_Tracker.md).
 
 ---
 
-## 1. Execute Development Tasks
+# TASK 0 — PLAN AND DEFINE SPRINTS
 
-### 1.1 Repository and version-control workflow
+## 0.1 Sprint strategy
 
-The repository contains the protected Stage 3 specification and a separate Stage 4 implementation. Work was initially committed to a feature branch and submitted through [Pull Request #1](https://github.com/Abeerr0/mezyad/pull/1), then merged into `main`. The merge is evidence of source-control activity **only**; it is not evidence of passing tests or formal peer review.
+The team follows **four one-week sprints** consistent with Stage 3 §8.1. Each sprint has a business outcome, acceptance scenario, owner, dependency and review gate. Calendar start/end dates require team confirmation; “Week 1” etc. describe relative sequencing, not invented past dates.
 
-Recommended ongoing workflow: issue/backlog item → named `feature/<task-id>-<description>` branch → small commits → PR → teammate review → tests → merge. Protect `Stage_3/Report.MD` from edits.
-
-### 1.2 Implemented source files (not yet verified by execution)
-
-| Component | Repository evidence | Source-level work present | Verification status |
-|---|---|---|---|
-| PostgreSQL schema | [001_schema.sql](../database/migrations/001_schema.sql) | Ten tables, foreign keys, constraints, indexes, bid request uniqueness and auction-result association | Migration not executed in a live DB here |
-| Category seed | [001_categories.sql](../database/seeds/001_categories.sql) | Initial listing categories | Not executed |
-| Express API | [app.js](../backend/src/app.js) | Auth, listing, admin review, auction, private access, commitment safety gate, bids, closure and activity routes | Not fully integration-tested |
-| Session auth | [auth.js](../backend/src/auth.js) | Bearer sessions and admin guard | Not independently tested |
-| React frontend | [main.jsx](../frontend/src/main.jsx) | Arabic RTL landing, public auction cards, polling, basic registration/login and detail view | Full UI flow incomplete |
-| Initial automated test | [health.test.js](../backend/tests/health.test.js) | Health endpoint test source | Execution result not recorded |
-| Repository setup | [README](../README.md), [.env.example](../.env.example) | Local setup guidance and safe environment template | Local reproduction not independently verified |
-
-**Current implementation gaps:** multipart image upload and validation are missing; the React app lacks complete seller/admin/private-auction/bidding journeys; sandbox integration is not connected; comprehensive unit/integration/E2E tests are absent. Some routes are scaffolded but cannot yet support a complete production-quality workflow.
-
-### 1.3 API scope and coding standards
-
-The approved Stage 3 API specifies **18 endpoints** across authentication, listings, admin review, auctions, commitment, bids and My Activity. The backend source contains corresponding route handlers plus helper routes such as `/health` and `/categories`. Route presence does **not** establish contract compliance.
-
-Coding conventions: use environment variables for secrets; parameterized PostgreSQL queries; hash passwords and session tokens; enforce role/ownership checks on the server; validate request inputs; return consistent `data` or `error.code/message` JSON; never accept a bid without a verified successful commitment; use `SELECT ... FOR UPDATE` for bid serialization.
-
-### 1.4 Banking integration dependency
-
-A genuine Saudi Open Banking sandbox provider, exact supported operation, authorized client credentials and consent flow are **not verified**. Accordingly the commitment creation endpoint deliberately returns a service-unavailable response rather than issuing fake `SUCCESS` records. This is a **blocking dependency** for an end-to-end real-sandbox bidding demonstration, not a completed integration. Mock tests, if later added, must be clearly labeled as mock-only.
-
----
-
-## 2. Monitor Progress and Adjust
-
-### 2.1 Daily stand-up protocol
-
-A short daily stand-up should answer: (1) what was completed since the last meeting, (2) what is planned next, and (3) what is blocked. The task owner updates the backlog status (`TODO`, `IN PROGRESS`, `BLOCKED`, `DONE`) and links relevant commits, PRs, bugs and test runs.
-
-**Actual meeting records:** No dated daily stand-up minutes have been supplied or verified. Therefore no meetings or individual contributions are claimed as already completed. Use the [Progress Tracker](Progress_Tracker.md) for actual entries.
-
-### 2.2 Tracking metrics
-
-| Metric | Formula | Current defensible result |
-|---|---|---|
-| Sprint velocity | Accepted backlog tasks completed in sprint | Not measured; no completed sprint record |
-| Completion percentage | Accepted tasks / planned tasks × 100 | Not measured; sprint task totals not finalized |
-| Open bug count | Verified discovered bugs minus verified fixed bugs | Not measured; QA execution pending |
-| Bug resolution rate | Verified fixed bugs / verified discovered bugs × 100 | Not measured; denominator unavailable |
-| Blocker count | Confirmed unresolved dependencies | At least one: real banking sandbox access/operation |
-
-A committed feature does not count toward velocity until its acceptance criteria and evidence are complete.
-
-### 2.3 Risk register and adjustment policy
-
-| Risk | Impact | Mitigation | Owner |
-|---|---|---|---|
-| Sandbox provider approval unavailable | Blocks genuine commitment and full bid journey | Investigate official documentation; request access; document actual blocker; no fake pass | Abeer, Ghadi |
-| Concurrent bids race | Incorrect price/winner | Transactional row locking and concurrency tests | Abeer, Tala |
-| Frontend/API contract mismatch | Broken demo | API contract checklist and integration tests | Aseel, Ghadi |
-| Image upload security | Unsafe or invalid listing files | File type/size validation and negative tests | Abeer, Ghadi |
-| Incomplete sprint evidence | Reduced Stage 4 assessment confidence | Dated stand-ups, demos, PR and test links | All |
-| Schedule slippage | Core journey unfinished | Prioritize Must Have tasks and record reassignments | All |
-
-If a blocker affects a sprint goal, record the decision, responsible person, changed scope and date in the tracker. Do not silently mark blocked items complete.
-
----
-
-## 3. Conduct Sprint Reviews and Retrospectives
-
-### 3.1 Sprint review format
-
-At the end of each sprint, demonstrate only accepted features against the checkpoint in §0.3. Record the date, attendees, commit/PR, demonstration scenario, actual result, stakeholder feedback, rejected items and carry-over tasks.
-
-| Sprint | Planned demonstration | Actual review evidence | Status |
-|---|---|---|---|
-| 1 | Auth + saved listing + sandbox access status | No verified review minutes or demo | Pending |
-| 2 | Seller → admin → public/private auction | No verified review minutes or demo | Pending |
-| 3 | Commitment → atomic bid → closure | No verified review minutes or demo | Pending |
-| 4 | Complete public/private E2E journey | No verified review minutes or demo | Pending |
-
-See [Sprint_Reviews.md](Sprint_Reviews.md).
-
-### 3.2 Retrospective format
-
-After each review, the team records **what went well**, **what did not go well**, and **what to change next sprint**. Every improvement action must have an owner and a follow-up checkpoint. No quotes or feedback are attributed to teammates without an actual meeting.
-
-| Sprint | What worked | Challenge | Action item | Status |
+| Sprint | Goal | Deliverable / demo scenario | Primary ownership | Gate |
 |---|---|---|---|---|
-| 1 | To be recorded | To be recorded | To be agreed | Pending |
-| 2 | To be recorded | To be recorded | To be agreed | Pending |
-| 3 | To be recorded | To be recorded | To be agreed | Pending |
-| 4 | To be recorded | To be recorded | To be agreed | Pending |
+| **S1: Foundation** | Make persistence and account identity possible | Apply PostgreSQL schema; register, log in and save a listing | Abeer + Tala (DB), Abeer + Ghadi (API), Aseel + Ghadi (UI) | Clean migration + tested authenticated request |
+| **S2: Marketplace** | Connect moderation to auction publication | Seller submits → admin reviews → approved listing becomes public/private auction | Abeer + Ghadi (API), Aseel + Ghadi (UI), Tala (QA) | Unauthorized admin access denied; private code enforced |
+| **S3: Bid integrity** | Ensure eligible bids are correct under concurrency | Verified commitment → bid → history → closure/result | Abeer + Ghadi (API), Abeer + Tala (DB), Tala + Aseel (QA) | Competing bids serialized, duplicate request rejected, correct winner |
+| **S4: Integration** | Prove complete, usable workflows | Public/private browser E2E, negative tests, bug fixes, demo | Entire team; Tala + Aseel QA lead | Reproducible test report, no critical defects |
 
-See [Retrospectives.md](Retrospectives.md).
+### Sprint dependency map
+
+```mermaid
+flowchart LR
+  A["S1: Schema + Auth"] --> B["S1: Listings"]
+  B --> C["S2: Admin Review"]
+  C --> D["S2: Public / Private Auctions"]
+  D --> E["S3: Commitment"]
+  F["External: Verified Banking Sandbox"] --> E
+  E --> G["S3: Atomic Bidding"]
+  G --> H["S3: Closure + Results"]
+  H --> I["S4: E2E / Regression / Demo"]
+  D --> I
+```
+
+## 0.2 MoSCoW prioritization
+
+| Priority | Requirements | Decision rationale |
+|---|---|---|
+| **Must** | Auth + User/Admin access, listings, approval, public/private auctions, code-gated private access, verified commitment, safe bidding, closure/results, React flows, PostgreSQL, tests | Core auction journey and Stage 3 contract |
+| **Must / externally blocked** | Real authorized Saudi Open Banking sandbox operation | Requires actual provider access and confirmed API; cannot be simulated as a successful integration |
+| **Should** | Clear UI states, input feedback, accessibility, pagination, automated regression depth | Reliability and demonstrability |
+| **Could** | Additional UX refinement | After Must features |
+| **Won't this stage** | Anti-sniping, Redis, WebSockets, escrow, real transfers, real KYC, blockchain, handover | Not part of the approved Stage 3 MVP |
+
+## 0.3 Backlog, assignment and acceptance
+
+The actionable [Product Backlog](Product_Backlog.md) maps tasks to sprint, owner, dependency, code location and acceptance evidence. For example:
+
+| Story | Definition of accepted behavior | Evidence required |
+|---|---|---|
+| **US-AUTH** | A user can register, authenticate, log out; unauthorized admin calls fail | 401/403/409 API tests and session checks |
+| **US-LIST** | User creates a listing; rejected listing can be edited and resubmitted; invalid images rejected | API, DB and upload negative tests |
+| **US-AUCT** | Only approved items can become auctions; private code gates visibility | Admin→seller→bidder integration test |
+| **US-COMMIT** | Commitment succeeds **only** after genuine authorized provider verification | Redacted official sandbox request/response and stored state |
+| **US-BID** | Minimum increments, ownership, duplicate requests, expiry and concurrency enforced | Parallel-request and DB transaction logs |
+| **US-RESULT** | Closure yields one stable result, including no-bid case | Repeat-close tests and DB assertions |
+
+**Definition of Ready:** acceptance criterion stated; dependencies identified; assigned owner; design/API contract understood.  
+**Definition of Done:** code merged, review evidence, actual successful test run, acceptance demonstration, no known critical defect, tracker updated. An unexecuted test is **not** “passed.”
 
 ---
 
-## 4. Final Integration and QA Testing
+# TASK 1 — EXECUTE DEVELOPMENT TASKS
 
-### 4.1 Test strategy
+## 1.1 Technical architecture
 
-1. **Static review:** verify endpoint names, data model, constraints, error shapes and React build configuration.
-2. **Database tests:** apply schema/seed to a clean PostgreSQL database, check foreign keys, uniqueness, types and transaction rollback.
-3. **API tests:** test authentication, authorization, listing review, private access, commitment failure handling and bid validation using a running server and test DB.
-4. **Concurrency tests:** submit competing bids with separate sessions and ensure consistent price and winner.
-5. **Browser E2E:** test registration, listing, admin review, auction discovery, private access, commitment, bidding, closing and My Activity using actual UI flows.
-6. **Security/negative tests:** invalid image, unauthorized review, owner bidding, expired session, late bid, duplicate request ID, private data disclosure and bank failure.
-7. **Regression:** rerun affected tests after fixes; attach logs/screenshots and exact commit SHA.
+```mermaid
+flowchart TD
+  U["Browser / React (RTL)"] -->|"HTTPS REST + polling"| API["Node.js / Express API"]
+  API --> AUTH["Authentication + Authorization"]
+  API --> LIST["Listings + Admin Moderation"]
+  API --> AUCT["Auctions + Private Access"]
+  API --> BID["Commitment + Bid Transactions"]
+  AUTH --> PG[("PostgreSQL")]
+  LIST --> PG
+  AUCT --> PG
+  BID --> PG
+  BID -.->|"Requires authorized access; not yet verified"| BANK["Saudi Open Banking Sandbox"]
+```
 
-### 4.2 Traceability to Stage 3
+**Stack contract:** React + Vite; Express REST; PostgreSQL; polling instead of real-time sockets. No Redis, MySQL or additional seller/bidder entity. `users` has `USER` and `ADMIN` roles; the same user can be a seller on one auction and a bidder on another.
 
-| Stage 3 QA cases | Area | Expected evidence | Actual execution |
+## 1.2 Database implementation
+
+[SQL migration](../database/migrations/001_schema.sql) defines the Stage 3 ten-table model:
+
+| Table | Purpose | Relationship / integrity focus |
+|---|---|---|
+| `users` | Identity, hashed credentials and role | Referenced by sessions, items, commitments and bids |
+| `user_sessions` | Hashed active session tokens and expiry | Belongs to user |
+| `categories` | Supported asset classifications | Referenced by items |
+| `items` | Seller-owned assets and moderation state | Seller and category FKs |
+| `item_images` | Listing image references | Belongs to item |
+| `auctions` | Time window, visibility, price, status | References approved item |
+| `private_auction_access` | Explicit private-access grants | Auction and user references |
+| `bid_commitments` | Eligibility/commitment records | Auction and bidder references |
+| `bids` | Accepted monetary offers | Auction, bidder and unique request identity |
+| `auction_results` | Finalized winner/no-winner outcome | Auction and winning-bid integrity |
+
+[Category seed](../database/seeds/001_categories.sql) is included. **Source review is not evidence that the migration has executed successfully**; clean-database verification is a required QA gate.
+
+## 1.3 API implementation and business rules
+
+The main [Express application](../backend/src/app.js) includes registration/login/logout, categories, listing creation/update, moderation, public/private auction routes, private access, bid commitment handling, bid history, bid submission, auction detail/closure and My Activity. [Auth middleware](../backend/src/auth.js) checks sessions and administrative access; [database adapter](../backend/src/db.js) uses PostgreSQL.
+
+### Auction state / ownership
+
+```mermaid
+stateDiagram-v2
+  [*] --> PENDING_REVIEW: Seller submits item
+  PENDING_REVIEW --> APPROVED: Admin approves
+  PENDING_REVIEW --> REJECTED: Admin rejects
+  REJECTED --> PENDING_REVIEW: Seller edits/resubmits
+  APPROVED --> AUCTION_CREATED: Seller creates auction
+  AUCTION_CREATED --> ACTIVE: Start time reached
+  ACTIVE --> CLOSED: End time reached
+  CLOSED --> [*]: Result finalized
+```
+
+The diagram is the **intended lifecycle**; precise persisted enum names and route transition behavior must be verified against SQL/API during integration testing.
+
+### Bid processing design
+
+```mermaid
+sequenceDiagram
+  actor B as Bidder
+  participant UI as React
+  participant API as Express
+  participant DB as PostgreSQL
+  B->>UI: Submit amount + requestId
+  UI->>API: POST /auctions/:id/bids
+  API->>DB: BEGIN; lock auction row FOR UPDATE
+  DB-->>API: Current price, time, status
+  Note over API,DB: Validate auth, ownership, private access,<br/>verified commitment, price and deadline
+  alt Invalid or duplicate
+    API->>DB: ROLLBACK / safe duplicate response
+    API-->>UI: Structured error
+  else Valid
+    API->>DB: INSERT accepted bid; update auction price
+    API->>DB: COMMIT
+    API-->>UI: Accepted bid / current state
+  end
+```
+
+**Why transactional locking?** Two simultaneous bidders must not both be accepted against the same stale current price. **Why requestId?** A retry must not create duplicate accepted bids. **Why server time?** A browser countdown cannot determine legal bid acceptance. These controls are present at source level but **concurrency and timing behavior have not yet been proven by live tests**.
+
+### Banking dependency and truthful failure behavior
+
+The Stage 3 commitment step requires a genuine Saudi Open Banking sandbox integration. Provider identity, credentials and exact supported API operation have not been established. The current commitment route fails closed (service unavailable) rather than manufacturing a successful bank confirmation. Consequently **the full bidding journey is blocked** until an authorized provider flow is integrated and tested. Do not interpret an HTTP mock as evidence of real banking integration.
+
+## 1.4 Frontend implementation
+
+[React source](../frontend/src/main.jsx) contains an Arabic right-to-left starter interface, public auction discovery, periodic polling, basic account forms and auction detail. [Styles](../frontend/src/style.css) establish the initial visual treatment. These are **initial screens**, not a complete frontend. Seller listing forms, admin review dashboard, private access UI, commitment flow, bid submission, My Activity and robust error/empty states require completion.
+
+### Intended frontend route map
+
+```mermaid
+flowchart TD
+  HOME["Explore Auctions"] --> DETAIL["Auction Detail"]
+  HOME --> AUTH["Register / Login"]
+  AUTH --> SELL["My Listings / New Listing"]
+  SELL --> REVIEW["Admin Review (ADMIN only)"]
+  REVIEW --> CREATE["Create Public / Private Auction"]
+  CREATE --> DETAIL
+  DETAIL --> ACCESS["Private Code (if needed)"]
+  ACCESS --> COMMIT["Commitment Verification"]
+  COMMIT --> BID["Bid + History"]
+  BID --> RESULT["Closed Result"]
+  AUTH --> ACT["My Activity"]
+```
+
+This diagram describes **remaining implementation scope**, not a claim that every page exists.
+
+## 1.5 Source control and traceability
+
+Initial implementation and documentation were introduced in [Pull Request #1](https://github.com/Abeerr0/mezyad/pull/1) and merged into `main`. Subsequent report corrections are committed directly to `main` for the user's urgent submission. This proves source history; it does **not** prove peer review or CI success. Future development should use task branches and reviewed PRs. The Stage 3 report remains unchanged.
+
+---
+
+# TASK 2 — MONITOR PROGRESS AND ADJUST
+
+## 2.1 Stand-up workflow
+
+Each daily stand-up records **date**, **attendees**, **yesterday's verified progress**, **today's plan**, **blockers**, **assigned action** and **linked issue/PR**. The team updates [Progress Tracker](Progress_Tracker.md) using a consistent state model: `TODO → IN PROGRESS → IN REVIEW → DONE`, or `BLOCKED` with reason. No retrospective daily meetings are invented.
+
+## 2.2 Metrics and reporting rules
+
+| Metric | Formula | How it guides decisions |
+|---|---|---|
+| Sprint completion | Accepted tasks ÷ planned tasks × 100 | Detect scope spillover |
+| Velocity | Accepted story points per sprint | Forecast next sprint capacity |
+| Burndown | Remaining planned points each day | Detect blocked or underestimated work |
+| Bug resolution rate | Verified fixed bugs ÷ verified reported bugs × 100 | Detect stabilization progress |
+| Escaped defects | Bugs found after prior acceptance | Improve QA coverage |
+| Blocker age | Days since blocker first recorded | Trigger escalation |
+
+**Actual metrics:** Sprint meetings, accepted task counts, story-point baselines and QA logs have not been verified. No fabricated percentages or burndown charts are shown. The real external blocker is provider access for the banking commitment operation.
+
+## 2.3 Decisions, escalation and corrective action
+
+| Risk | Trigger | Action | Owner |
 |---|---|---|---|
-| QA-01, QA-02 | Duplicate email, invalid password | HTTP 409 / 401 test logs | Not recorded |
-| QA-03, QA-03A, QA-03B | Admin permissions, owner restriction, dual user activity | API + integration tests | Not recorded |
-| QA-04–QA-07 | Approval, private access, commitment failure | API and sandbox negative tests | Not recorded |
-| QA-08–QA-11 | Bid minimum, duplicate request, concurrency, end time | Transactional integration tests | Not recorded |
-| QA-12–QA-13 | Closure without bids and repeat closure | DB and API tests | Not recorded |
-| QA-14–QA-16 | UI states and complete public/private flows | Browser E2E recordings | Not recorded |
-| QA-17–QA-23 | Resubmission, price boundaries, winner integrity, activity, image upload and lazy closure | Integration and negative tests | Not recorded |
+| Bank sandbox unavailable | Provider access/docs not confirmed by sprint checkpoint | Escalate to mentor/provider; document blocker; retain fail-closed behavior | Abeer + Ghadi |
+| Bid race condition | Parallel requests produce inconsistent price/winner | Stop release; reproduce with concurrent test; fix transaction | Abeer + Tala |
+| Incomplete React screens | Cannot demo a complete workflow | Prioritize Must screens before polish | Aseel + Ghadi |
+| Unsafe image input | Unsupported/oversized upload accepted | Reject input and add negative tests | Backend + QA |
+| Scope drift | Unapproved stack/feature introduced | Compare with Stage 3 and obtain team approval | Entire team |
 
-The IDs and expectations come from [Stage 3 §8.4](../Stage_3/Report.MD). **None of these tests are represented as passed without actual execution evidence.**
+**Evidence:** [Progress Tracker](Progress_Tracker.md) contains an explicit status snapshot and a reusable dated stand-up record.
 
-### 4.3 Reproduction commands
+---
 
-From the repository root, with PostgreSQL installed and configured:
+# TASK 3 — CONDUCT SPRINT REVIEWS AND RETROSPECTIVES
+
+## 3.1 Review structure
+
+A sprint review is a **demonstration against acceptance criteria**, not a statement that a sprint was successful. Each review must capture: meeting date, participants, sprint goal, exact commit, demonstrated scenario, expected versus actual outcome, mentor/stakeholder feedback, accepted/rejected stories, follow-up owner.
+
+| Sprint | Demonstration script | Acceptance decision |
+|---|---|---|
+| S1 | Register → login → submit listing → verify database row | Pending executed demo |
+| S2 | Admin approves → seller creates public/private auction → private code check | Pending executed demo |
+| S3 | Verify commitment → two competing bids → close → inspect result | Blocked by sandbox; remaining test evidence pending |
+| S4 | End-to-end browser journey including failure states and regression | Pending executed demo |
+
+[Review records and meeting template](Sprint_Reviews.md). No actual mentor comments or attendance are asserted without a source.
+
+## 3.2 Retrospective structure
+
+For each sprint, discuss **Start / Stop / Continue**, identify one or more specific improvements, and assign an owner and verification date. Examples of **proposed discussion topics**, not historical team quotes: keep database migrations small; stop merging without test evidence; continue explicit API error contracts; add concurrent-bid tests before the demo. Record actual outcomes in [Retrospectives](Retrospectives.md).
+
+---
+
+# TASK 4 — FINAL INTEGRATION AND QA TESTING
+
+## 4.1 Test pyramid
+
+| Level | Targets | Tool / evidence |
+|---|---|---|
+| Static and build | Node syntax, React bundle | `npm run check`, `npm run build`; logs |
+| Unit | Auth helpers, validators, state calculations | Node test runner; assertions |
+| API integration | HTTP status, permissions, DB writes | Test DB + HTTP client |
+| Database/concurrency | Transactions, uniqueness, rollback, winner | PostgreSQL concurrent clients |
+| Browser E2E | Public/private user journeys, loading/errors | Browser screenshots/video and reproducible steps |
+| Security/negative | Private leakage, upload type/size, replay, expired token | Negative tests and defect records |
+
+## 4.2 Stage 3 QA traceability matrix
+
+The exact QA identifiers are defined in [Stage 3 §8.4](../Stage_3/Report.MD).
+
+| Test ID | Scenario | Expected outcome | Evidence status |
+|---|---|---|---|
+| QA-01 | Duplicate registration email | 409; no duplicate account | Not executed |
+| QA-02 | Wrong password | 401; no session | Not executed |
+| QA-03 | Non-admin tries moderation | 403 | Not executed |
+| QA-03A | Seller bids on own auction | Rejected | Not executed |
+| QA-03B | User sells and bids elsewhere | Both roles permitted for same user | Not executed |
+| QA-04 | Auction from unapproved listing | Rejected | Not executed |
+| QA-05 | Invalid private code | Access denied | Not executed |
+| QA-06 | Direct private GET/bid without grant | No private data or bid | Not executed |
+| QA-07 | Sandbox error/timeout | Clear failure; no false approval | Not executed |
+| QA-08 | Below-minimum bid | Rejected; unchanged price | Not executed |
+| QA-09 | Same requestId twice | At most one accepted bid | Not executed |
+| QA-10 | Two simultaneous bids | Serializable, consistent outcome | Not executed |
+| QA-11 | Bid at/after endTime | Rejected by server | Not executed |
+| QA-12 | Close with no bids | Closed without winner | Not executed |
+| QA-13 | Repeat closure | One stable result | Not executed |
+| QA-14 | Empty/loading/error UI | Clear states | Not executed |
+| QA-15 | Public auction E2E | Correct final outcome | Not executed |
+| QA-16 | Private auction E2E | Correct access/bidding rules | Not executed |
+| QA-17 | Edit/re-submit rejected listing | Returns to pending review | Not executed |
+| QA-18 | First bid equals starting price | Accepted if eligible | Not executed |
+| QA-19 | Later bid below required increment | Rejected | Not executed |
+| QA-20 | Winner bid belongs to another auction | Cannot record as winner | Not executed |
+| QA-21 | Own listing + bids elsewhere in activity | Both appear | Not executed |
+| QA-22 | Unsafe image upload | Rejected safely | Not executed; feature missing |
+| QA-23 | Auction expires without page visit | Late bids rejected; next access finalizes | Not executed |
+
+**Critical QA interpretation:** “Not executed” does not mean “failed”; it means there is no credible execution evidence. A feature missing in code, such as image upload, is a known implementation gap rather than an invented observed runtime defect.
+
+## 4.3 Reproducible execution instructions
 
 ```bash
-# PostgreSQL setup
+# Prerequisites: Node.js, npm, PostgreSQL, correctly populated .env
 psql "$DATABASE_URL" -f database/migrations/001_schema.sql
 psql "$DATABASE_URL" -f database/seeds/001_categories.sql
 
-# Backend
 cd backend
 npm install
 npm run check
 npm test
 npm run dev
 
-# In a second terminal, from the repository root
+# In another terminal, from repo root:
 cd frontend
 npm install
 npm run build
 npm run dev
 ```
 
-These are **instructions for a future run**, not a claim that the commands have passed. See [Testing_Report.md](Testing_Report.md) for test evidence and [Bug_Tracker.md](Bug_Tracker.md) for verified issues.
+These commands are **not claimed as executed**. `npm install` is used because the repository has no committed lockfiles; do not present `npm ci` as reproducible until lockfiles exist. For complete testing, add isolated test data, reset scripts, deterministic clocks, concurrency cases, and test evidence.
 
-### 4.4 Final acceptance gate
+## 4.4 Bug triage and release gate
 
-The MVP is ready for final acceptance only after all Must Have features are demonstrated, the UI/API/DB work together, no critical bugs remain, real banking integration status is accurately disclosed, and test logs are attached. **This gate is not yet met.** No production environment has been deployed or verified.
+Classify defects as **Critical** (authorization, data corruption, false financial approval), **High** (core flow broken), **Medium** (recoverable functional/UX problem) or **Low** (cosmetic). Record reproducible steps, expected/actual behavior, environment, owner, fix commit and retest evidence in [Bug Tracker](Bug_Tracker.md).
+
+**Release gate:** no open Critical/High defects, Must stories accepted, successful migration and test logs, documented bank integration outcome, and successful public/private browser journeys. **Current gate: NOT MET.**
 
 ---
 
-## 5. Deliverables — Links and Evidence
+# TASK 5 — FINAL DELIVERABLES
 
-| Requested deliverable | Link | Status |
+| Required deliverable | Direct evidence | Honest status |
 |---|---|---|
-| **Sprint Planning** | [Sprint Plan](Sprint_Plan.md) · [Product Backlog](Product_Backlog.md) | Plan documented; calendar dates TBD |
-| **Sprint Reviews** | [Sprint Reviews](Sprint_Reviews.md) | Template; actual review records pending |
-| **Retrospectives** | [Retrospectives](Retrospectives.md) | Template; actual meeting records pending |
-| **Source Repository** | [Abeerr0/mezyad](https://github.com/Abeerr0/mezyad) | Available |
-| **Source Control Evidence** | [Merged Pull Request #1](https://github.com/Abeerr0/mezyad/pull/1) | Verified merge; not proof of peer review |
-| **Progress Tracking** | [Progress Tracker](Progress_Tracker.md) | Prepared; actual metrics pending |
-| **Bug Tracking** | [Bug Tracker](Bug_Tracker.md) | Prepared; verified bugs not yet cataloged |
-| **Testing Evidence and Results** | [Testing Report](Testing_Report.md) | Test plan present; execution evidence pending |
-| **Backend Source** | [Express backend](../backend/src/app.js) | Source committed; not fully verified |
-| **Frontend Source** | [React frontend](../frontend/src/main.jsx) | Initial UI committed; incomplete |
-| **Database Source** | [PostgreSQL migration](../database/migrations/001_schema.sql) | Source committed; migration execution pending |
-| **Production Environment** | No verified deployment URL | Not deployed |
-| **Score of the Task** | Evaluator-assigned score | Not yet available |
+| Sprint Planning | [Sprint Plan](Sprint_Plan.md), [Backlog](Product_Backlog.md), Task 0 above | Documented; calendar dates awaiting confirmation |
+| Sprint Reviews | [Sprint Reviews](Sprint_Reviews.md), Task 3 above | Procedure and scripts prepared; actual minutes pending |
+| Retrospectives | [Retrospectives](Retrospectives.md), Task 3 above | Procedure prepared; actual sessions pending |
+| Source repository | [GitHub main](https://github.com/Abeerr0/mezyad) | Available |
+| SCM / commits | [Merged PR #1](https://github.com/Abeerr0/mezyad/pull/1) | Source history available; peer review not established |
+| Progress / metrics | [Progress Tracker](Progress_Tracker.md) | Measurement framework prepared; actual daily metrics pending |
+| Bugs | [Bug Tracker](Bug_Tracker.md) | Known implementation gaps documented separately from tested defects |
+| QA results | [Testing Report](Testing_Report.md), Task 4 above | Test plan; full execution evidence pending |
+| Backend | [app.js](../backend/src/app.js) | Initial source committed |
+| Frontend | [main.jsx](../frontend/src/main.jsx) | Partial React source committed |
+| Database | [Schema](../database/migrations/001_schema.sql) | Migration source committed |
+| Production | Deployment URL | Not deployed / not verified |
+| Task score | Mentor/evaluator result | Not yet assigned |
 
-### 5.1 Current assessment readiness
+## Submission readiness: explicit next actions
 
-**Task 0:** substantial planning documentation exists, but real sprint calendar dates need agreement.  
-**Task 1:** initial code exists; the full MVP and bank integration remain incomplete.  
-**Task 2:** monitoring process exists; historical daily metrics and stand-ups are not evidenced.  
-**Task 3:** review/retrospective templates exist; actual sessions must be conducted.  
-**Task 4:** test plan exists; complete automated/manual execution evidence is missing.  
-**Task 5:** source and document links are provided; production and testing links are explicitly pending.
-
-### 5.2 Remaining actions before final submission
-
-1. Confirm sprint dates and complete backlog ownership/acceptance checkpoints.
-2. Finish image uploads, seller/admin/private auction and bidding React screens.
-3. Obtain and verify an official Saudi banking sandbox operation, or document the unresolved external blocker accurately.
-4. Run migrations and test suites in a real environment; record command outputs, commit SHA, dates and defects.
-5. Hold actual sprint reviews and retrospectives, record evidence and update velocity.
-6. Add verified deployment URL only if deployment actually succeeds.
+1. **Finish:** listing image validation, seller/admin/private/commitment/bid/activity UI.
+2. **Verify:** PostgreSQL migration, Express API and React build in a real environment.
+3. **Resolve external dependency:** official Saudi sandbox access and actual supported operation; do not fabricate success.
+4. **Test:** execute QA-01 through QA-23; attach command outputs, dates, screenshots and commit SHAs.
+5. **Document reality:** enter genuine stand-ups, sprint reviews, retrospectives and mentor feedback.
+6. **Release:** deploy only after acceptance gates pass; publish real URL only then.
 
 ---
 
-## Appendix — Technical consistency
+### Appendix A — File navigation
 
-- **Database:** PostgreSQL; ten tables; no MySQL.
-- **Backend:** Express REST; PostgreSQL transactional bid locking.
-- **Frontend:** React with Arabic RTL design and polling.
-- **User roles:** `USER` and `ADMIN`; one User can be seller and bidder in different auctions.
-- **No unapproved changes:** Stage 3 report remains unchanged; design discrepancies are tracked separately in [Stage 3 Review Notes](../docs/STAGE_3_REVIEW_NOTES.md).
-- **Financial safety:** No real payment, settlement or escrow is implemented or claimed.
+| Folder/file | Why it exists |
+|---|---|
+| `Stage_4/Report.MD` | Single authoritative task-by-task Stage 4 submission |
+| `Stage_4/Sprint_Plan.md` | Detailed sprint outcomes and dependencies |
+| `Stage_4/Product_Backlog.md` | Assignable work items and acceptance criteria |
+| `Stage_4/Progress_Tracker.md` | Stand-up records and measurable progress |
+| `Stage_4/Sprint_Reviews.md` | Demo scripts and actual review minutes |
+| `Stage_4/Retrospectives.md` | Continuous-improvement records |
+| `Stage_4/Testing_Report.md` | Executed QA evidence and environment |
+| `Stage_4/Bug_Tracker.md` | Defect triage and retest trail |
+| `backend/` | Express service and tests |
+| `frontend/` | React browser client |
+| `database/` | PostgreSQL migration and seed |
+| `docs/STAGE_3_REVIEW_NOTES.md` | Stage 3 design discrepancies without editing its source |
 
-**End of Stage 4 Report.**
+### Appendix B — Technical guardrails
+
+PostgreSQL, ten Stage 3 tables, REST polling, one user identity for both selling/bidding, `USER`/`ADMIN` roles, no real money, no fabricated bank success, no anti-sniping in current MVP. **Stage_3/Report.MD remains unchanged.**

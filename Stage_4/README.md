@@ -1,32 +1,25 @@
-# Stage 4 — MVP Development
+# Mezyad — Stage 4 MVP Development
 
-**[Read the complete Stage 4 Report — Tasks 0–5](Report.MD)**
+## Main submission
 
+### **[READ THE COMPLETE STAGE 4 REPORT — TASKS 0–5](Report.MD)**
 
-**Baseline:** [Stage 3 technical report](../Stage_3/Report.MD) (read-only). This stage implements its approved design without editing it.
+This is the primary deliverable, structured exactly by the Stage 4 tasks and supported by diagrams, tables, source links and an explicit implementation/evidence audit.
 
-| Task | Evidence | Current status |
+| Task | Answer | Supporting artifact |
 |---|---|---|
-| 0. Plan and define sprints | [Sprint plan](Sprint_Plan.md), [Backlog](Product_Backlog.md) | Documented; dates pending team confirmation |
-| 1. Execute development tasks | [Repository code](../backend/), [Frontend](../frontend/), [Schema](../database/migrations/001_schema.sql) | Partial implementation |
-| 2. Monitor progress | [Progress tracker](Progress_Tracker.md) | Template prepared; no stand-ups invented |
-| 3. Reviews and retrospectives | [Sprint reviews](Sprint_Reviews.md), [Retrospectives](Retrospectives.md) | Pending actual sprint meetings |
-| 4. Integration and QA | [Test results](Testing_Report.md), [Bug tracker](Bug_Tracker.md) | Not fully executed; environment-dependent |
-| 5. Deliverables | This index and linked evidence | Partial |
+| **0 — Plan and Define Sprints** | [Report Task 0](Report.MD#task-0--plan-and-define-sprints) | [Sprint Plan](Sprint_Plan.md) · [Backlog](Product_Backlog.md) |
+| **1 — Execute Development Tasks** | [Report Task 1](Report.MD#task-1--execute-development-tasks) | [Backend](../backend/src/app.js) · [Frontend](../frontend/src/main.jsx) · [PostgreSQL](../database/migrations/001_schema.sql) |
+| **2 — Monitor Progress and Adjust** | [Report Task 2](Report.MD#task-2--monitor-progress-and-adjust) | [Progress Tracker](Progress_Tracker.md) |
+| **3 — Sprint Reviews & Retrospectives** | [Report Task 3](Report.MD#task-3--conduct-sprint-reviews-and-retrospectives) | [Reviews](Sprint_Reviews.md) · [Retrospectives](Retrospectives.md) |
+| **4 — Final Integration & QA** | [Report Task 4](Report.MD#task-4--final-integration-and-qa-testing) | [Testing](Testing_Report.md) · [Bugs](Bug_Tracker.md) |
+| **5 — Final Deliverables** | [Report Task 5](Report.MD#task-5--final-deliverables) | [Source repository](https://github.com/Abeerr0/mezyad) |
 
-## Important boundaries
-- PostgreSQL, **not MySQL**.
-- React + Express + REST polling; no Socket.io or Redis.
-- Stage 3 schema contains ten tables; do not silently add Seller/Bidder tables.
-- Anti-sniping is a future enhancement in this Stage 3 revision.
-- Bank sandbox integration requires real provider access and verified operations; mocks are not proof of real integration.
-- No production deployment is claimed.
+### Project integrity
 
-## Source repository
-[Mezyad](https://github.com/Abeerr0/mezyad)
+- Stage 3 remains the protected specification and was not modified.
+- PostgreSQL, ten tables, React, Express, REST polling, User/Admin accounts.
+- Banking sandbox remains a real external blocker; no fake approval.
+- Code is **partial and not yet verified as a complete MVP**. Sprint minutes, QA pass results and deployment are not fabricated.
 
-## Production environment
-Not deployed. No URL to provide.
-
-## Assessment score
-Not assigned by the evaluator.
+[Stage 3 Technical Report](../Stage_3/Report.MD) · [Source-control PR](https://github.com/Abeerr0/mezyad/pull/1)
