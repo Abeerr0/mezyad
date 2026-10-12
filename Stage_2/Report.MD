@@ -356,38 +356,9 @@ Bank API access is treated as an early dependency even though the integration is
 
 This Project Charter is now complete. Together, Tasks 0 to 4 provide the project purpose and SMART objectives; the stakeholders and team responsibilities; the in-scope and out-of-scope boundaries; the risks with mitigation strategies; and the high-level timeline and milestones. The document is ready to be shared for review.
 
-**Document Status:** Stage 2 Project Charter — Revised to match approved Stage 3 scope; original milestones retained.
+**Document Status:** Stage 2 Project Charter — Final
 
 The charter creates a baseline for implementation. It fixes the objectives the team will be measured against, the stakeholders the system serves, the responsibilities each member holds, the scope the team will build, the risks the team will monitor, and the schedule the team will follow. It defines what will be built and why, while how it will be built is decided in Stage 3. Later stages work from this baseline rather than reopening these decisions.
 
 
 ---
-
-## Scope Alignment Addendum — Stage 2 to Stage 3
-
-Stage 2 defined the charter; Stage 3 refined the implementation. This explicit decision log resolves terminology inherited from the initial charter **without changing the historically graded Stage 1 report**.
-
-| Decision | Approved technical baseline | Status / rationale |
-|---|---|---|
-| Bidding updates | React + REST polling; no WebSockets | Polling is periodic, not push-based live delivery |
-| Auction deadline | Fixed end time, no anti-sniping in MVP | Server-time validation; extension deferred to future enhancements |
-| Bid integrity | PostgreSQL transactions, row locking, unique request IDs | No Redis or distributed locks |
-| Bank integration | Genuine authorized Saudi Open Banking sandbox operation | Provider, credentials and supported operation still unverified; no fabricated success |
-| Account types | One USER can sell and bid on others' auctions; ADMIN moderates | Bidder/seller are activities, not separate account roles |
-| AI helper | Simple client-side listing description assistant | No predictive valuation or chatbot |
-| Payments | No real transfers, settlement, escrow or handover | Student sandbox only |
-| Delivery | Stage 1 W1; Stage 2 W2–3; Stage 3 W4–5; Stage 4 W6–10; Stage 5 W11–12 | Original charter milestones retained |
-
-### Final approved MVP checklist
-
-1. Registration, login, sessions and USER/ADMIN authorization.
-2. Asset listing with category fields/images and administrator approval.
-3. Public/private auctions, secure private access and server-controlled timing.
-4. Bid commitment tied to a **verified** authorized sandbox response; until integration is available, participation fails closed.
-5. Transactional bid validation, price increments, request idempotency, history and periodic REST updates.
-6. Persisted closure with correct winner or no-winner result.
-7. Basic client-side listing description assistant and reproducible QA.
-
-**Out of scope:** anti-sniping, WebSockets, Redis, real banking transfers, escrow, real KYC, invoices, handover, blockchain, IoT, predictive AI and chatbots.
-
-This addendum clarifies requirements, **not** evidence that the MVP has been completed. The authoritative implementation contract is [Stage 3](../Stage_3/Report.MD).
