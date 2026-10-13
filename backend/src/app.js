@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import {randomBytes} from 'node:crypto';
 import {query,pool} from './db.js';
 import {auth,admin,hashToken,newToken} from './auth.js';
+import {validMoney,toCents} from './money.js';
 
 export const app=express();
 app.use(cors({origin:process.env.FRONTEND_ORIGIN||'http://localhost:5173'}));
@@ -97,7 +98,7 @@ app.post('/admin/items/:id/review',auth,admin,async(req,res,next)=>{
 });
 app.post('/auctions',auth,async(req,res,next)=>{
  try{const {itemId,visibility,startingPrice,minimumIncrement,startTime,endTime}=req.body||{};
- if(!validUuid(itemId)||!['PUBLIC','PRIVATE'].includes(visibility)||!numeric(startingPrice)||!numeric(minimumIncrement)||!startTime||!endTime||!Number.isFinite(Date.parse(startTime))||!Number.isFinite(Date.parse(endTime))||new Date(endTime)<=new Date(startTime))return err(res,400,'INVALID_INPUT','Invalid auction parameters');
+ if(!validUuid(itemId)||!['PUBLIC','PRIVATE'].includes(visibility)||!validMoney(startingPrice)||!validMoney(minimumIncrement)||!startTime||!endTime||!Number.isFinite(Date.parse(startTime))||!Number.isFinite(Date.parse(endTime))||new Date(endTime)<=new Date(startTime))return err(res,400,'INVALID_INPUT','Invalid auction parameters');
  const accessCode=visibility==='PRIVATE'?randomBytes(12).toString('hex'):null;
  const codeHash=accessCode?await bcrypt.hash(accessCode,12):null;
  const r=await query(`INSERT INTO auctions(item_id,visibility,access_code_hash,starting_price,current_price,minimum_increment,start_time,end_time)
@@ -141,7 +142,7 @@ app.get('/auctions/:id/commitment',auth,async(req,res,next)=>{
 });
 app.post('/auctions/:id/bids',auth,async(req,res,next)=>{
  const {amount,requestId}=req.body||{};
- if(!numeric(amount)||!validUuid(requestId)||!validUuid(req.params.id))return err(res,400,'INVALID_INPUT','Valid amount and UUID requestId required');
+ if(!validMoney(amount)||!validUuid(requestId)||!validUuid(req.params.id))return err(res,400,'INVALID_INPUT','Valid amount and UUID requestId required');
  const c=await pool.connect();
  try{
   await c.query('BEGIN');
@@ -161,8 +162,8 @@ app.post('/auctions/:id/bids',auth,async(req,res,next)=>{
   const now=clock.rows[0].current_time;
   if(now<new Date(a.start_time)||now>=new Date(a.end_time)||a.status==='CLOSED'){await c.query('ROLLBACK');return err(res,409,'AUCTION_NOT_ACTIVE','Auction not active')}
   const count=await c.query('SELECT 1 FROM bids WHERE auction_id=$1 LIMIT 1',[a.id]);
-  const minimumCents=count.rowCount?Math.round(Number(a.current_price)*100)+Math.round(Number(a.minimum_increment)*100):Math.round(Number(a.starting_price)*100);
-  if(Math.round(amount*100)<minimumCents){await c.query('ROLLBACK');return err(res,409,'BID_TOO_LOW','Bid below minimum')}
+  const minimumCents=count.rowCount?toCents(a.current_price)+toCents(a.minimum_increment):toCents(a.starting_price);
+  if(toCents(amount)<minimumCents){await c.query('ROLLBACK');return err(res,409,'BID_TOO_LOW','Bid below minimum')}
   const bid=await c.query('INSERT INTO bids(auction_id,bidder_id,amount,request_id) VALUES($1,$2,$3,$4) RETURNING id,amount',[a.id,req.user.id,amount,requestId]);
   await c.query("UPDATE auctions SET current_price=$1,status='ACTIVE' WHERE id=$2",[amount,a.id]);
   await c.query('COMMIT');
