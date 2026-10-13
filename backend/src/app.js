@@ -10,7 +10,7 @@ app.use(cors({origin:process.env.FRONTEND_ORIGIN||'http://localhost:5173'}));
 app.use(express.json({limit:'100kb'}));
 const err=(res,status,code,message)=>res.status(status).json({error:{code,message}});
 const validUuid=x=>typeof x==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x);
-const numeric=x=>typeof x==='number'&&Number.isFinite(x)&&x>0;
+const numeric=x=>typeof x==='number'&&Number.isFinite(x)&&x>0&&Number.isSafeInteger(Math.round(x*100))&&Math.abs(x*100-Math.round(x*100))<1e-7;
 const accessible=async(a,user)=>{
  if(a.visibility==='PUBLIC'||a.seller_id===user?.id)return true;
  if(!user)return false;
@@ -28,7 +28,8 @@ async function closeIfEnded(id){
   const r=await client.query('SELECT * FROM auctions WHERE id=$1 FOR UPDATE',[id]);
   if(!r.rowCount){await client.query('ROLLBACK');return}
   const a=r.rows[0];
-  if(a.status!=='CLOSED'&&new Date(a.end_time)<=new Date()){
+  const time=await client.query('SELECT clock_timestamp() AS current_time');
+  if(a.status!=='CLOSED'&&new Date(a.end_time)<=time.rows[0].current_time){
    const w=await client.query('SELECT id FROM bids WHERE auction_id=$1 ORDER BY amount DESC,created_at ASC LIMIT 1',[id]);
    await client.query("UPDATE auctions SET status='CLOSED' WHERE id=$1",[id]);
    await client.query('INSERT INTO auction_results(auction_id,winner_bid_id) VALUES($1,$2) ON CONFLICT(auction_id) DO NOTHING',[id,w.rows[0]?.id||null]);
@@ -42,7 +43,7 @@ app.post('/auth/register',async(req,res,next)=>{
   const {name,email,password}=req.body||{};
   if(typeof name!=='string'||!name.trim()||typeof email!=='string'||!/^\S+@\S+\.\S+$/.test(email)||typeof password!=='string'||password.length<8)return err(res,400,'INVALID_INPUT','Valid name, email and password (8+ chars) required');
   const hash=await bcrypt.hash(password,12);
-  const r=await query('INSERT INTO users(name,email,password_hash) VALUES($1,$2,$3) RETURNING id,name,email,role',[name.trim(),email.toLowerCase(),hash]);
+  const r=await query('INSERT INTO users(name,email,password_hash) VALUES($1,$2,$3) RETURNING id,name,email,role',[name.trim(),email.trim().toLowerCase(),hash]);
   res.status(201).json({data:r.rows[0]});
  }catch(e){if(e.code==='23505')return err(res,409,'DUPLICATE_EMAIL','Email already registered');next(e)}
 });
@@ -50,7 +51,7 @@ app.post('/auth/login',async(req,res,next)=>{
  try{
   const {email,password}=req.body||{};
   if(typeof email!=='string'||typeof password!=='string')return err(res,400,'INVALID_INPUT','Email and password required');
-  const r=await query('SELECT * FROM users WHERE email=$1',[email.toLowerCase()]);
+  const r=await query('SELECT * FROM users WHERE email=$1',[email.trim().toLowerCase()]);
   if(!r.rowCount||!await bcrypt.compare(password,r.rows[0].password_hash))return err(res,401,'INVALID_CREDENTIALS','Invalid credentials');
   const token=newToken(),u=r.rows[0];
   await query("INSERT INTO user_sessions(user_id,token_hash,expires_at) VALUES($1,$2,now()+interval '7 days')",[u.id,hashToken(token)]);
@@ -156,16 +157,17 @@ app.post('/auctions/:id/bids',auth,async(req,res,next)=>{
   if(prior.rowCount){await c.query('ROLLBACK');return err(res,409,'DUPLICATE_REQUEST','Bid request already processed')}
   const commitment=await c.query("SELECT 1 FROM bid_commitments WHERE auction_id=$1 AND user_id=$2 AND status='SUCCESS'",[a.id,req.user.id]);
   if(!commitment.rowCount){await c.query('ROLLBACK');return err(res,403,'COMMITMENT_REQUIRED','Verified commitment required')}
-  const now=Date.now();
-  if(now<Date.parse(a.start_time)||now>=Date.parse(a.end_time)||a.status==='CLOSED'){await c.query('ROLLBACK');return err(res,409,'AUCTION_NOT_ACTIVE','Auction not active')}
+  const clock=await c.query('SELECT clock_timestamp() AS current_time');
+  const now=clock.rows[0].current_time;
+  if(now<new Date(a.start_time)||now>=new Date(a.end_time)||a.status==='CLOSED'){await c.query('ROLLBACK');return err(res,409,'AUCTION_NOT_ACTIVE','Auction not active')}
   const count=await c.query('SELECT 1 FROM bids WHERE auction_id=$1 LIMIT 1',[a.id]);
-  const minimum=count.rowCount?Number(a.current_price)+Number(a.minimum_increment):Number(a.starting_price);
-  if(amount<minimum){await c.query('ROLLBACK');return err(res,409,'BID_TOO_LOW','Bid below minimum')}
+  const minimumCents=count.rowCount?Math.round(Number(a.current_price)*100)+Math.round(Number(a.minimum_increment)*100):Math.round(Number(a.starting_price)*100);
+  if(Math.round(amount*100)<minimumCents){await c.query('ROLLBACK');return err(res,409,'BID_TOO_LOW','Bid below minimum')}
   const bid=await c.query('INSERT INTO bids(auction_id,bidder_id,amount,request_id) VALUES($1,$2,$3,$4) RETURNING id,amount',[a.id,req.user.id,amount,requestId]);
   await c.query("UPDATE auctions SET current_price=$1,status='ACTIVE' WHERE id=$2",[amount,a.id]);
   await c.query('COMMIT');
   res.status(201).json({data:{bidId:bid.rows[0].id,amount,currentPrice:amount}});
- }catch(e){await c.query('ROLLBACK').catch(()=>{});next(e)}finally{c.release()}
+ }catch(e){await c.query('ROLLBACK').catch(()=>{});if(e.code==='23505')return err(res,409,'DUPLICATE_REQUEST','Bid request already processed');next(e)}finally{c.release()}
 });
 app.get('/auctions/:id/bids',auth,async(req,res,next)=>{
  try{const a=await auction(req.params.id);
