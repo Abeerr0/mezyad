@@ -137,12 +137,44 @@ app.post("/auth/register", async (req, res, next) => {
 });
 app.post("/auth/login", async (req, res, next) => {
   try {
-    const { email, password } = req.body || {};
-    if (typeof email !== "string" || typeof password !== "string")
-      return err(res, 400, "INVALID_INPUT", "Email and password required");
-    const r = await query("SELECT * FROM users WHERE email=$1", [
-      email.trim().toLowerCase(),
+    // ياخذ بيانات الطلب وإذا ما وصلت بيانات يستخدم كائن فارغ.
+const data = req.body || {};
+
+// ياخذ الإيميل الموجود في بيانات الطلب.
+const email = data.email;
+
+// ياخذ كلمة المرور الموجودة في بيانات الطلب.
+const password = data.password;
+    // نرفض الطلب إذا تحقق أي شرط من الشروط التالية.
+if (
+  // الإيميل لازم يكون نصًا.
+  typeof email !== "string" ||
+
+  // نرفض الإيميل الفارغ أو الذي يحتوي مسافات فقط.
+  !email.trim() ||
+
+  // طول الإيميل بعد تنظيفه لا يتجاوز حد قاعدة البيانات.
+  email.trim().toLowerCase().length > 254 ||
+
+  // كلمة المرور لازم تكون نصًا.
+  typeof password !== "string" ||
+
+  // نرفض كلمة المرور الفارغة.
+  password.length === 0 ||
+
+  // حجم كلمة المرور لا يتجاوز الحد الذي تستخدمه bcrypt.
+  Buffer.byteLength(password, "utf8") > 72
+) {
+  // نرسل خطأ 400 ونوقف معالجة طلب الدخول الحالي.
+  return err(res, 400, "INVALID_INPUT", "Valid email and password required");
+}
+//     rيبحث  في جدول المستخدمين عن االحساب باستخدام الايميمل ويحفظ نتيجه البحث في r
+const r = await query("SELECT * FROM users WHERE email=$1", [
+//نشيل المسافات من اطرف الايميمل ويحول حروفه الى سمول احرف صغيره يعني
+    email.trim().toLowerCase(),
+    //هذا اخر جزء من التعليمات اللي عطيناهاquery
     ]);
+    // التحقق من وجود سبب لرفض تسجيل الدخول
     if (
       !r.rowCount ||
       !(await bcrypt.compare(password, r.rows[0].password_hash))
@@ -163,6 +195,11 @@ app.post("/auth/login", async (req, res, next) => {
   } catch (e) {
     next(e);
   }
+});
+// نتحقق من الجلسة قبل إرجاع بيانات المستخدم.
+app.get("/auth/me", auth, (req, res) => {
+  // نرسل بيانات المستخدم التي جهزتها دالة auth.
+  res.json({ data: { user: req.user } });
 });
 app.post("/auth/logout", auth, async (req, res, next) => {
   try {
