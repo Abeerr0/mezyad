@@ -92,7 +92,7 @@ export function AuctionList({ category, home = false }) {
   </>;
 }
 
-export function AuctionDetails({ id, onRequireLogin }) {
+export function AuctionDetails({ id, onRequireLogin,onParticipate,receipt }) {
   const { request, status } = useAuth();
   const [auction, setAuction] = useState(null);
   const [failure, setFailure] = useState('');
@@ -120,6 +120,7 @@ export function AuctionDetails({ id, onRequireLogin }) {
   }, [id, request]);
   async function participation() {
     if (status !== 'authenticated') { onRequireLogin(); return; }
+    if(onParticipate){onParticipate();return;}
     setPending(true); setParticipationFailure('');
     try { await request('/api/v1/auctions/' + id + '/commitment', { method: 'POST' }); }
     catch (error) { setParticipationFailure(errorMessage(error)); }
@@ -157,6 +158,9 @@ export function AuctionDetails({ id, onRequireLogin }) {
         {imageIndex > 0 && <button className="text-action gallery-return" type="button" onClick={() => setImageIndex(0)}>الصورة الرئيسية</button>}
       </section>
     </div>
+    {receipt?.auctionId===id&&Number(auction.current_price)>receipt.amount&&<p className="feedback" role="status">تم تجاوز مزايدتك. راجع السعر الحالي قبل إضافة مزايدة جديدة.</p>}
+    {status==='authenticated'&&<BidHistory id={id}/>}
+    {auction.status==='CLOSED'&&<a className="button primary" href={'#result/'+id}>عرض نتيجة المزاد</a>}
     <section className="item-description"><h2>عن هذا المعروض</h2><p>{auction.description}</p></section>
     <section className="detail-insights" aria-label="متابعة المزاد">
       <div><h2>الوقت المتبقي</h2><Countdown endTime={auction.end_time}/><p>بحسب موعد نهاية المزاد.</p></div>
@@ -165,4 +169,10 @@ export function AuctionDetails({ id, onRequireLogin }) {
     </section>
     {auction.result && <p className="feedback" role="status">{auction.result.winner_bid_id ? 'انتهى المزاد وتم تحديد المزايدة الفائزة.' : 'انتهى المزاد دون مزايدات.'}</p>}
   </main>;
+}
+
+function BidHistory({id}){
+  const {request}=useAuth();const [data,setData]=useState(null),[failure,setFailure]=useState('');
+  useEffect(()=>{const c=new AbortController();let busy=false;async function load(){if(busy)return;busy=true;try{const value=await request('/api/v1/auctions/'+id+'/bids',{signal:c.signal});if(!Array.isArray(value)||value.some(b=>!b.id||!Number.isFinite(Number(b.amount))))throw new ApiError('INVALID_RESPONSE');if(!c.signal.aborted){setData(value);setFailure('');}}catch(error){if(!c.signal.aborted)setFailure(errorMessage(error));}finally{busy=false;}}load();const timer=setInterval(load,5000);return()=>{c.abort();clearInterval(timer);};},[id,request]);
+  return <section className="activity-section"><h2>سجل المزايدات</h2>{failure&&<p className="feedback error" role="alert">{failure}</p>}{!data&&!failure&&<p role="status">جارٍ تحميل السجل…</p>}{data?.length===0&&<p className="empty-state">لم تسجّل مزايدات في هذا المزاد بعد.</p>}{!!data?.length&&<ol className="bid-history">{data.map(b=><li key={b.id}><bdi dir="ltr">{amount(b.amount)}</bdi> ر.س <time dateTime={b.created_at}>{new Date(b.created_at).toLocaleString('ar-SA-u-nu-latn',{calendar:'gregory'})}</time></li>)}</ol>}</section>;
 }
