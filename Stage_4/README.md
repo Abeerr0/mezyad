@@ -21,6 +21,17 @@ endpoint before the account is shown. Passwords are never persisted. The stored
 user summary is for display; the backend remains responsible for authorization.
 Failed logout retains the session and offers a retry instead of claiming success.
 
+## Current Figma flow guide — 20 October 2026
+
+[Approved design](https://www.figma.com/design/mbc0Qc5e0hR8dIaqQjbMMN/Mezyad-1?node-id=0-1&t=duPXFdrLWmK9ZKc0-1) ·
+[Interactive prototype](https://www.figma.com/proto/mbc0Qc5e0hR8dIaqQjbMMN/Mezyad-1?node-id=0-1&t=duPXFdrLWmK9ZKc0-1) ·
+[Complete nine-flow walkthrough](../docs/figma-flows.md).
+
+This separate guide documents Figma Design, its current interactions and the
+uploaded development source. Figma Make documentation in the Stage 3 report is
+unchanged. Other stage reports retain their historical evidence; locally
+prepared, unpublished account-service changes are not part of this update.
+
 ## Approved interface
 
 The only application interface follows the approved [Figma Design](https://www.figma.com/design/mbc0Qc5e0hR8dIaqQjbMMN/Mezyad-1?node-id=2-2).
@@ -35,10 +46,12 @@ each card opens its own auction ID. A validated auction ID is retained in the
 login/registration URL, including across reloads. There are no customer-facing
 links to alternative prototypes or Figma pages.
 
-The phone field and password recovery action appear in Figma but have no
-approved Stage 3 storage/API contract. They remain visibly disabled pending owner
-review; registration sends only name, email and password. The footer's policy
-labels remain informational text until approved content is supplied.
+In the uploaded development snapshot reviewed on 20 October 2026, profile
+editing, password-recovery submission and notifications remain unavailable;
+the interface does not claim a save, sent email or an empty server inbox.
+Registration sends only name, email and password; phone storage is unsupported.
+Legal and contact pages explain that approved text or a contact service is not
+yet available. Unpublished local account services are excluded from this snapshot.
 
 Public auction and details data are polled every five seconds. A rejected or
 mismatched API response produces an error instead of another item's screen.
@@ -67,19 +80,22 @@ listing review. Approved owned listings can be used to create public or private
 auctions. Each route retains its listing or auction ID through confirmation,
 bidding and results; switching routes resets screen-local state.
 
-Listing details, category fields, local image previews and the Description
-Builder are implemented. Actual image submission and rejected-listing
-resubmission are **blocked** by the backend's missing multipart upload handler.
-The form sends the required multipart request and displays the real rejection;
-it does not fall back to a text-only submission or claim publication.
+Current uploaded behavior, reviewed on **20 October 2026**: listing details,
+category fields, image submission and rejected-owner resubmission use the real
+multipart Backend contract. Up to six JPG/PNG/WebP photos of 5 MiB each are
+accepted after server validation. Resubmission without new photos retains the
+saved set; new photos replace the set. Signed images are read from the Backend
+origin. The Description Builder uses the seller's own fields. Earlier blocked
+upload notes in dated stage reports remain historical evidence.
 
 Bid Commitment remains a **blocked external dependency**. The frontend only
 allows bidding after the API returns SUCCESS. The bid form preserves a request
 UUID across recoverable retries, asks for confirmation and waits for server
-acceptance. Results use the server's auction result. Personal win/loss text is
-available only when a matching accepted bid receipt is known in the current
-browser session; after a reload, the result stays generic because the current
-result endpoint does not identify the winning user.
+acceptance. Results use the server's auction result, `result.isWinner` and
+`participation.hasBid` when available, including after reload. Missing personal
+evidence stays generic; non-participants are not labelled as losing bidders.
+An uncertain bid response or DUPLICATE_REQUEST alone never proves acceptance of
+a particular bid. Banking remains deferred, without synthetic success in the app.
 
 ## Browser tests
 
