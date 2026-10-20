@@ -23,6 +23,8 @@ beforeEach(() => {
     if (url.endsWith('/auctions')) return response([villa, car]);
     if (url.endsWith('/auctions/' + car.id)) return response(car);
     if (url.endsWith('/auctions/' + villa.id)) return response(villa);
+    if (url.endsWith('/bids')) return response([]);
+    if (url.endsWith('/commitment') && options.method === 'GET') return response({ code: 'NOT_FOUND' }, 404);
     if (url.endsWith('/commitment') && options.method === 'POST') return response({ code: 'BANK_SANDBOX_UNAVAILABLE' }, 503);
     throw Error('Unexpected request in navigation test');
   }));
@@ -86,8 +88,9 @@ test('unavailable banking does not pretend that participation or a bid succeeded
   const actor = userEvent.setup(); mount();
   await screen.findByRole('link', { name: 'حسابي', exact: true });
   await actor.click(await screen.findByRole('button', { name: 'أضف مزايدتك', exact: true }));
+  await actor.click(await screen.findByRole('button', { name: 'ابدأ تأكيد المشاركة' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('لم يتم اعتماد المشاركة أو إرسال مزايدة.');
-  expect(fetch.mock.calls.some(([url]) => url.endsWith('/bids'))).toBe(false);
+  expect(fetch.mock.calls.some(([url, options]) => url.endsWith('/bids') && options.method === 'POST')).toBe(false);
 });
 
 test('a mismatched details response is rejected instead of showing another product', async () => {

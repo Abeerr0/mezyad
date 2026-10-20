@@ -63,3 +63,50 @@ Actual local execution results and remaining acceptance work are recorded in
 [Stage 4 Testing Report](../Stage_4/Testing_Report.md). The account workflow passed
 on GitHub for the published application revision; links and results are recorded
 in that report.
+
+
+## Stage 4 marketplace integration on abeer
+
+The existing Stage_4 screens are now active under src/marketplace. The original
+Stage reports remain unchanged. Account actions open listings, rejected-owner
+corrections, auction creation, private access and, for ADMIN, review/monitoring.
+
+Listing forms send real multipart FormData with canonical categoryFields. The
+browser adds the multipart boundary. Up to six JPG/PNG/WebP photos of 5 MiB each
+are allowed; the backend independently checks decoded content. New photos
+replace all current photos; resubmission without new photos retains them.
+Seller and admin pages render signed image paths against VITE_API_URL.
+
+Result screens read participation.hasBid and result.isWinner from the server,
+so personal outcomes survive reloads. A non-participant sees a generic result.
+No bank success is fabricated; Open Banking is deferred by request.
+
+### Browser QA against native PostgreSQL
+
+Install backend dependencies too. Use a dedicated database ending in _test:
+
+```sh
+npx playwright install --with-deps chromium
+TEST_DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/mezyad_browser_test npm run test:e2e
+```
+
+The harness runs Express and Vite on 44017/44018, isolates tables in a disposable
+schema and stores photos in a temporary directory. Synthetic SUCCESS fixtures
+exist only inside this test schema to exercise downstream bidding; they are
+not bank verification or a production fallback. No screenshots/video/traces
+are recorded. Test outputs default to /tmp/frontend-browser-results.
+
+### Optional browser smoke with PostgreSQL WASM
+
+If native PostgreSQL is unavailable, install tooling outside the project:
+
+```sh
+npm install --prefix /tmp/mezyad-sql-qa @electric-sql/pglite@0.5.10 @electric-sql/pglite-socket@0.2.13
+PGLITE_INSTALL_DIR=/tmp/mezyad-sql-qa npm run test:browser-smoke
+```
+
+Use BROWSER_EXECUTABLE_PATH only if Chromium is already installed elsewhere.
+This optional check executes actual React, Express, HTTP, image storage and SQL.
+The test harness restricts its application pool to one connection for this
+single-connection engine. It does not prove native row locking/concurrency.
+PGlite is never imported by the production app.

@@ -3,20 +3,43 @@ import { AccountPanel } from './auth/AccountPanel.jsx';
 import { useAuth } from './auth/AuthProvider.jsx';
 import { SiteHeader, SiteFooter } from './ui/SiteChrome.jsx';
 import { AuctionDetails, AuctionList, categories } from './ui/Auctions.jsx';
+import {Activity,ListingDetails} from './marketplace/Activity.jsx';
+import {ListingForm} from './marketplace/ListingForm.jsx';
+import {AdminDashboard} from './marketplace/AdminDashboard.jsx';
+import {AdminReview} from './marketplace/AdminReview.jsx';
+import {AuctionCreate} from './marketplace/AuctionCreate.jsx';
+import {PrivateAccess,Commitment,BidForm,BidReceipt,AuctionResult} from './marketplace/Participation.jsx';
+import {uuid,Page} from './marketplace/common.jsx';
+import './marketplace/workspace.css';
+
+const protectedViews=['monitoring','activity','listing','listing-edit','auction-new','admin','private','commitment','bid','bid-success'];
+function safeReturn(value){
+ if(['activity','listing/new','admin','private','monitoring'].includes(value))return value;
+ const [view,id]=String(value||'').split('/');
+ return protectedViews.includes(view)&&uuid(id)?view+'/'+id.toLowerCase():null;
+}
 
 function routeFromHash() {
   const [value, query = ''] = window.location.hash.slice(1).split('?');
+  const returnTo=safeReturn(new URLSearchParams(query).get('return'));
   const requestedAuction = new URLSearchParams(query).get('auction');
   const authAuction = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(requestedAuction || '') ? requestedAuction.toLowerCase() : undefined;
   if (/^auction\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value)) return { view: 'auction', id: value.slice(8).toLowerCase() };
   const [view, category] = value.split('/');
+  if (protectedViews.includes(view)||view==='result') {
+    if(view==='listing'&&category==='new')return {view:'listing-new'};
+    if(['activity','admin','private','monitoring'].includes(view)&&!category)return {view};
+    if(uuid(category))return {view,id:category.toLowerCase()};
+  }
   if (view === 'auctions') return { view, category: categories.some(c => c.key === category) ? category : undefined };
-  return { view: ['login', 'register', 'account'].includes(view) ? view : 'home', authAuction };
+  return { view: ['login', 'register', 'account'].includes(view) ? view : 'home', authAuction,returnTo };
 }
 const go = value => { window.location.hash = value; };
 
 export function App() {
-  const { status } = useAuth();
+  const { status,session } = useAuth();
+  const [receipt,setReceipt]=useState(null);
+  useEffect(()=>setReceipt(null),[session?.user.id]);
   const [route, setRoute] = useState(routeFromHash);
   useEffect(() => {
     const read = () => { setRoute(routeFromHash()); window.scrollTo(0, 0); };
@@ -25,16 +48,27 @@ export function App() {
   }, []);
   useEffect(() => {
     if (status === 'authenticated' && ['login', 'register'].includes(route.view)) {
-      go(route.authAuction ? 'auction/' + route.authAuction : 'account');
+      go(route.authAuction ? 'auction/' + route.authAuction : route.returnTo||'account');
     }
     if (status === 'guest' && route.view === 'account') go('login');
-  }, [status, route.view, route.authAuction]);
+    if(status==='guest'&&(protectedViews.includes(route.view)||route.view==='listing-new'))go('login?return='+encodeURIComponent(route.view==='listing-new'?'listing/new':route.view+(route.id?'/'+route.id:'')));
+  }, [status, route.view, route.authAuction,route.returnTo,route.id]);
+  const workspaceView=protectedViews.includes(route.view)||['listing-new','result'].includes(route.view);
+  let workspace;
+  if(workspaceView){
+    if(route.view!=='result'&&status!=='authenticated')workspace=<AccountPanel/>;
+    else if(['admin','monitoring'].includes(route.view)&&session.user.role!=='ADMIN')workspace=<Page title="لا تملك صلاحية الوصول"><p role="alert">هذه الصفحة مخصصة للمشرف.</p><a className="button secondary" href="#account">العودة إلى حسابي</a></Page>;
+    else workspace=({monitoring:<AdminDashboard/>,activity:<Activity/>,listing:<ListingDetails id={route.id}/>, 'listing-new':<ListingForm/>, 'listing-edit':<ListingForm id={route.id}/>, 'auction-new':<AuctionCreate id={route.id}/>,admin:<AdminReview id={route.id}/>,private:<PrivateAccess id={route.id}/>,commitment:<Commitment id={route.id}/>,bid:<BidForm id={route.id} onAccepted={setReceipt}/>, 'bid-success':<BidReceipt id={route.id} receipt={receipt}/>,result:<AuctionResult id={route.id} receipt={receipt}/>})[route.view];
+  }
+  if(workspaceView)workspace=<React.Fragment key={route.view+'/'+(route.id||'')}>{workspace}</React.Fragment>;
   const accountView = ['login', 'register', 'account'].includes(route.view);
   return <>
     <SiteHeader signedIn={status === 'authenticated'} accountView={accountView}/>
-    {accountView ? <AccountPanel initialMode={route.view === 'register' ? 'register' : 'login'}
-      onModeChange={mode => go((mode === 'register' ? 'register' : 'login') + (route.authAuction ? '?auction=' + route.authAuction : ''))}/>
-      : route.view === 'auction' ? <AuctionDetails id={route.id} onRequireLogin={() => go('login?auction=' + route.id)}/>
+    {workspaceView?workspace:accountView ? <AccountPanel initialMode={route.view === 'register' ? 'register' : 'login'}
+      onModeChange={mode => go((mode === 'register' ? 'register' : 'login') + (route.authAuction ? '?auction=' + route.authAuction : route.returnTo?'?return='+encodeURIComponent(route.returnTo):''))}>
+        <div className="workspace-actions"><a className="button primary" href="#activity">مزاداتي ونشاطي</a><a className="button secondary" href="#listing/new">إنشاء إعلان</a><a className="button secondary" href="#private">الدخول إلى مزاد خاص</a>{session?.user.role==='ADMIN'&&<a className="button secondary" href="#monitoring">لوحة المشرف</a>}</div>
+      </AccountPanel>
+      : route.view === 'auction' ? <AuctionDetails id={route.id} receipt={receipt} onParticipate={()=>go('commitment/'+route.id)} onRequireLogin={() => go('login?auction=' + route.id)}/>
         : route.view === 'auctions' ? <main className="content-shell browse-page">
           <p className="eyebrow">المزادات / {categories.find(c => c.key === route.category)?.label || 'جميع الأقسام'}</p>
           <h1>المزادات</h1><p className="section-description">تصفح المزادات</p>

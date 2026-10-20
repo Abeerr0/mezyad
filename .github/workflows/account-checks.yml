@@ -1,4 +1,4 @@
-name: Account integration checks
+name: Backend API and account checks
 
 on:
   pull_request:
@@ -12,6 +12,7 @@ on:
       - abeer
       - tala
       - 'feature/account-*'
+      - 'feature/abeer-backend-*'
   workflow_dispatch:
 
 permissions:
@@ -54,14 +55,20 @@ jobs:
       - name: Check backend syntax
         run: npm run check
         working-directory: backend
-      - name: Run HTTP and PostgreSQL account tests
-        run: npm test
+      - name: Run HTTP and PostgreSQL backend tests
+        run: npm run test:postgres
         working-directory: backend
       - name: Install frontend
         run: npm ci
         working-directory: frontend
       - name: Run account UI tests
         run: npm test
+        working-directory: frontend
+      - name: Install test browser
+        run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - name: Run public/private browser journeys against PostgreSQL
+        run: npm run test:e2e
         working-directory: frontend
       - name: Build frontend
         run: npm run build
