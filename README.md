@@ -15,6 +15,17 @@ Mezyad is a web-based auction platform for high-value and rare assets.
 
 Sellers submit asset listings for administrator review. Approved listings may be offered through public or private auctions. Eligible participants complete a bid commitment step before bidding. The server validates bid amounts, eligibility and deadlines, then records the winner or a no-winner outcome.
 
+## Figma Design and prototype flows
+
+[Approved design](https://www.figma.com/design/mbc0Qc5e0hR8dIaqQjbMMN/Mezyad-1?node-id=0-1&t=duPXFdrLWmK9ZKc0-1) ·
+[Interactive prototype](https://www.figma.com/proto/mbc0Qc5e0hR8dIaqQjbMMN/Mezyad-1?node-id=0-1&t=duPXFdrLWmK9ZKc0-1) ·
+[Nine-flow walkthrough in Arabic](docs/figma-flows.md).
+
+The walkthrough records the existing flow names, starting screens, actual
+transitions, role boundaries and differences from the uploaded application.
+Figma Make and the previous stage reports remain preserved separately; prototype
+bank-success states do not establish a working banking integration.
+
 ## Technology
 
 - React frontend
