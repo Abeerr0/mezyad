@@ -4,6 +4,7 @@ import { useAuth } from './auth/AuthProvider.jsx';
 import { SiteHeader, SiteFooter } from './ui/SiteChrome.jsx';
 import { AuctionDetails, AuctionList, categories } from './ui/Auctions.jsx';
 import { BrowsePage } from './ui/BrowsePage.jsx';
+import {AuctionAssistant} from './ui/AuctionAssistant.jsx';
 import { AccountActivity } from './ui/AccountActivity.jsx';
 import {ProfileSettings,NotificationsPage,RecoveryPage,RecoveryStatus} from './ui/AccountPages.jsx';
 import {SupportPage,MissingPage} from './ui/SupportPages.jsx';
@@ -22,9 +23,9 @@ import './marketplace/workspace.css';
 
 const serviceViews=['profile','notifications'];
 const supportViews=['about','faq','how-to-bid','terms','privacy','contact'];
-const protectedViews=['activity','listing','listing-edit','auction-new','admin','admin-dashboard','admin-auctions','private','commitment','bid','bid-success','outbid'];
+const protectedViews=['activity','listing','listing-edit','auction-new','admin','admin-dashboard','admin-auctions','private','commitment','bid','bid-success','outbid','assistant'];
 function safeReturn(value){
- if([...serviceViews,'activity','listing/new','admin','admin-dashboard','admin-auctions','private'].includes(value))return value;
+ if([...serviceViews,'activity','listing/new','admin','admin-dashboard','admin-auctions','private','assistant'].includes(value))return value;
  const [view,id]=String(value||'').split('/');
  return protectedViews.includes(view)&&uuid(id)?view+'/'+id.toLowerCase():null;
 }
@@ -38,7 +39,7 @@ function routeFromHash() {
   const [view, category] = value.split('/');
   if (protectedViews.includes(view)||view==='result') {
     if(view==='listing'&&category==='new')return {view:'listing-new'};
-    if(['activity','admin','admin-dashboard','admin-auctions','private'].includes(view)&&!category)return {view};
+    if(['activity','admin','admin-dashboard','admin-auctions','private','assistant'].includes(view)&&!category)return {view};
     if(uuid(category))return {view,id:category.toLowerCase()};
   }
   if (view === 'auctions') return { view, category: categories.some(c => c.key === category) ? category : undefined };
@@ -71,7 +72,7 @@ export function App() {
   if(workspaceView){
     if(route.view!=='result'&&status!=='authenticated')workspace=<AccountPanel/>;
     else if(['admin','admin-dashboard','admin-auctions'].includes(route.view)&&session.user.role!=='ADMIN')workspace=<Page title="لا تملك صلاحية الوصول"><p role="alert">هذه الصفحة مخصصة للمشرف.</p><a className="button secondary" href="#account">العودة إلى حسابي</a></Page>;
-    else workspace=({activity:<Activity/>,listing:<ListingDetails id={route.id}/>, 'listing-new':<ListingForm/>, 'listing-edit':<ListingForm id={route.id}/>, 'auction-new':<AuctionCreate id={route.id}/>,admin:<AdminReview id={route.id}/>, 'admin-dashboard':<AdminDashboard/>, 'admin-auctions':<AdminAuctions id={route.id}/>,private:<PrivateAccess id={route.id}/>,commitment:<Commitment id={route.id}/>,bid:<BidForm id={route.id} onAccepted={acceptBid}/>, 'bid-success':<BidReceipt id={route.id} receipt={receipt}/>,outbid:<Outbid id={route.id} receipt={receipt}/>,result:<AuctionResult id={route.id} receipt={receipt}/>})[route.view];
+    else workspace=({assistant:<AuctionAssistant id={route.id}/>,activity:<Activity/>,listing:<ListingDetails id={route.id}/>, 'listing-new':<ListingForm/>, 'listing-edit':<ListingForm id={route.id}/>, 'auction-new':<AuctionCreate id={route.id}/>,admin:<AdminReview id={route.id}/>, 'admin-dashboard':<AdminDashboard/>, 'admin-auctions':<AdminAuctions id={route.id}/>,private:<PrivateAccess id={route.id}/>,commitment:<Commitment id={route.id}/>,bid:<BidForm id={route.id} onAccepted={acceptBid}/>, 'bid-success':<BidReceipt id={route.id} receipt={receipt}/>,outbid:<Outbid id={route.id} receipt={receipt}/>,result:<AuctionResult id={route.id} receipt={receipt}/>})[route.view];
   }
   if(workspaceView)workspace=<React.Fragment key={route.view+'/'+(route.id||'')}>{workspace}</React.Fragment>;
   useLayoutEffect(()=>{

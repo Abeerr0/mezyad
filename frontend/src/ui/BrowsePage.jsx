@@ -50,6 +50,7 @@ export function BrowsePage({ category }) {
         </a>)}
       </nav>
       <AuctionList category={category}/>
+      <div className="workspace-actions"><a className="button secondary" href="#assistant">مساعد المزاد</a></div>
       <section className="browse-editorial">
         <p className="eyebrow">أقسام مِزياد</p>
         <h2>{category === 'camels' ? 'استكشف بقية المزادات' : 'اعثر على ما تبحث عنه'}</h2>

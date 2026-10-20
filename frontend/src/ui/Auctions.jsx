@@ -6,6 +6,7 @@ import {MediaGallery,ServerImage} from './MediaGallery.jsx';
 import {safeImage} from './media.js';
 export {safeImage} from './media.js';
 import './shared.css';
+import {ItemSpecifications} from './ItemSpecifications.jsx';
 import { errorMessage, ApiError } from '../api.js';
 
 export const categories = [
@@ -38,13 +39,13 @@ export function Countdown({ endTime, startTime, status }) {
   </p>;
 }
 
-export function AuctionCard({ auction, index = 0 }) {
+export function AuctionCard({ auction, index = 0,onRefresh }) {
   const image = safeImage(auction.image_url);
   const scheduled = auction.status === 'SCHEDULED';
   const hasStartingPrice = Number.isFinite(Number(auction.starting_price)) && Number(auction.starting_price) > 0;
   return <article className="auction-card">
     <a className="auction-image-link" href={'#auction/' + auction.id} aria-label={'عرض مزاد ' + auction.title}>
-      <ServerImage src={image} alt={auction.title}/>
+      <ServerImage src={image} alt={auction.title} onRefresh={onRefresh}/>
     </a>
     <div className="card-title"><h3>{auction.title}</h3><span dir="ltr">{String(index + 1).padStart(2, '0')}</span></div>
     <div className="price"><span>{scheduled ? 'حالة المزاد' : Number(auction.bid_count) > 0 ? 'أعلى مزايدة' : 'السعر الابتدائي'}</span>
@@ -91,7 +92,7 @@ export function AuctionList({ category, home = false }) {
     </form><p className="browse-summary" role="status">{auctions?<>عدد النتائج: <bdi>{visible.length}</bdi>. البحث والتصفية ضمن المزادات العامة المحمّلة.</>:'جارٍ تحميل قائمة المزادات العامة…'}</p></>}
     {failure&&<div className="feedback error catalog-failure" role="alert"><p>{failure}</p>{auctions&&<p>تعذر تحديث القائمة. الأسعار والحالات المعروضة قديمة؛ افتح المزاد للتحقق من آخر تحديث.</p>}<div className="workspace-actions"><button type="button" className="button secondary" disabled={loading} onClick={()=>setRevision(n=>n+1)}>إعادة المحاولة</button></div></div>}
     <div className="auction-grid" aria-busy={loading}>
-      {loading&&!auctions?<p className="empty-state" role="status">جارٍ تحميل المزادات…</p>:displayed.length?displayed.map((auction,index)=><AuctionCard key={auction.id} auction={auction} index={index+(home?0:(currentPage-1)*6)}/>):!failure&&<p className="empty-state">{query||state!=='ALL'?'لا توجد مزادات تطابق البحث والتصفية.':'لا توجد مزادات متاحة في هذا القسم حاليًا.'}</p>}
+      {loading&&!auctions?<p className="empty-state" role="status">جارٍ تحميل المزادات…</p>:displayed.length?displayed.map((auction,index)=><AuctionCard key={auction.id} auction={auction} index={index+(home?0:(currentPage-1)*6)} onRefresh={()=>setRevision(n=>n+1)}/>):!failure&&<p className="empty-state">{query||state!=='ALL'?'لا توجد مزادات تطابق البحث والتصفية.':'لا توجد مزادات متاحة في هذا القسم حاليًا.'}</p>}
     </div>
     {!home&&!loading&&pageCount>1&&<nav className="browse-pagination" aria-label="صفحات المزادات"><span>الصفحات</span>{Array.from({length:pageCount},(_,index)=><button key={index} type="button" aria-label={'الصفحة '+(index+1)} aria-current={currentPage===index+1?'page':undefined} onClick={()=>setPage(index+1)}>{index+1}</button>)}</nav>}
   </>;
@@ -132,17 +133,19 @@ export function AuctionDetails({ id, onRequireLogin,onParticipate,receipt }) {
         </button>
         <a className="button secondary" href={owner?'#activity':'#auctions'}>{owner?'العودة إلى مزاداتي':'العودة إلى المزادات'}</a>
       </section>
-      <MediaGallery images={images} title={auction.title}/>
+      <MediaGallery images={images} title={auction.title} onRefresh={data.reload}/>
     </div>
     {status==='authenticated'&&<BidHistory id={id} auction={auction} receipt={receipt} userId={session.user.id}/>}
     {auction.status==='CLOSED'&&<a className="button primary" href={'#result/'+id}>عرض نتيجة المزاد</a>}
     <div className="detail-bid-rules"><p>السعر الابتدائي: <bdi dir="ltr">{amount(auction.starting_price)}</bdi> ر.س</p><p>الحد الأدنى للزيادة: <bdi dir="ltr">{amount(auction.minimum_increment)}</bdi> ر.س</p><p>النوع: {auction.visibility==='PRIVATE'?'مزاد خاص':'مزاد عام'}</p></div>
     <section className="item-description"><h2>عن هذا المعروض</h2><p>{auction.description}</p></section>
+    <ItemSpecifications fields={auction.category_fields}/>
     <section className="detail-insights" aria-label="متابعة المزاد">
       <div><h2>{windowState==='scheduled'?'يبدأ المزاد خلال':'الوقت المتبقي'}</h2><Countdown endTime={auction.end_time} startTime={auction.start_time} status={auction.status}/><p>{windowState==='scheduled'?'بحسب موعد بداية المزاد.':'بحسب موعد نهاية المزاد.'}</p></div>
       <div><h2>السعر الحالي</h2><strong><bdi dir="ltr">{amount(auction.current_price)}</bdi> ر.س</strong><p>السعر المعروض من بيانات المزاد.</p></div>
       <div><h2>ملخص النشاط</h2><strong>{statusLabel(auction.status)}</strong><p>يمكنك متابعة السعر وحالة المزاد هنا.</p></div>
     </section>
+    {auction.visibility==='PUBLIC'&&<a className="button secondary" href={'#assistant/'+id}>مساعد المزاد</a>}
     {auction.status==='CLOSED' && <p className="feedback" role="status">{!validResult(auction.result)?'نتيجة الإغلاق غير متاحة بعد.':auction.result.winner_bid_id===null?'انتهى المزاد دون مزايدات.':'انتهى المزاد وتم تحديد المزايدة الفائزة.'}</p>}
   </main>;
 }

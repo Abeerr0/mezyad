@@ -31,13 +31,18 @@ const messages = {
   DUPLICATE_AUCTION: 'هذا الإعلان مرتبط بمزاد بالفعل.',
   PAYLOAD_TOO_LARGE: 'حجم البيانات أكبر من المسموح. قلّل حجم الملفات وحاول مجددًا.',
   INVALID_ID: 'الرابط أو معرّف الطلب غير صحيح.',
+  INVALID_IMAGE: 'اختر صورًا سليمة بصيغة JPG أو PNG أو WebP، حتى 6 صور و5 MiB للصورة.',
+  LIMIT_FILE_SIZE: 'حجم الصورة يتجاوز 5 MiB.',
+  LIMIT_FILE_COUNT: 'الحد الأقصى 6 صور.',
   INVALID_CATEGORY: 'اختر قسمًا متاحًا للمعروض.',
 };
 
 export const errorMessage = error => messages[error?.code]
   || (error?.status===429?'محاولات كثيرة. انتظر قليلًا قبل إعادة المحاولة.':'تعذر إتمام الطلب. حاول مجددًا.');
 
-export async function requestApi(path, { token, body, signal, method = 'GET', timeout = 10000 } = {}) {
+export const apiBase = () => (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '');
+
+export async function requestApi(path, { token, body, signal, method = 'GET', timeout = 10000, responseMeta = false } = {}) {
   const controller = new AbortController();
   let timedOut = false;
   const abort = () => controller.abort();
@@ -46,7 +51,7 @@ export async function requestApi(path, { token, body, signal, method = 'GET', ti
   const timer = setTimeout(() => { timedOut = true; controller.abort(); }, timeout);
   const multipart = typeof FormData !== 'undefined' && body instanceof FormData;
   try {
-    const base = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '');
+    const base = apiBase();
     const response = await fetch(base + path, {
       method,
       headers: {
@@ -64,7 +69,7 @@ export async function requestApi(path, { token, body, signal, method = 'GET', ti
     if (!payload || !Object.prototype.hasOwnProperty.call(payload, 'data')) {
       throw new ApiError('INVALID_RESPONSE', response.status);
     }
-    return payload.data;
+    return responseMeta ? {data:payload.data,meta:payload.meta} : payload.data;
   } catch (error) {
     if (error instanceof ApiError) throw error;
     if (timedOut) throw new ApiError('TIMEOUT');

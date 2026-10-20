@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ApiError, errorMessage } from "../api.js";
+import { createPortal } from "react-dom";
 import { useAuth } from "../auth/AuthProvider.jsx";
 
 export const uuid = (value) =>
@@ -31,13 +32,14 @@ export const navigate = (value) => {
   window.location.hash = value;
 };
 
-export function useData(path, validate, poll = 0) {
+export function useData(path, validate, poll = 0, options = {}) {
   const { request } = useAuth();
   const [data, setData] = useState(null),
     [failure, setFailure] = useState(""),
     [loading, setLoading] = useState(true),
     [revision, setRevision] = useState(0);
-  const validator = useRef(validate);
+  const validator = useRef(validate),requestOptions=useRef(options);
+  requestOptions.current=options;
   validator.current = validate;
   useEffect(() => {
     const controller = new AbortController();
@@ -49,7 +51,7 @@ export function useData(path, validate, poll = 0) {
       if (busy) return;
       busy = true;
       try {
-        const value = await request(path, { signal: controller.signal });
+        const value = await request(path, { ...requestOptions.current,signal: controller.signal });
         if (!validator.current(value)) throw new ApiError("INVALID_RESPONSE");
         if (!controller.signal.aborted) {
           setData(value);
@@ -110,16 +112,29 @@ export function Field({ label, id, error, children }) {
     </div>
   );
 }
-export function Confirm({ title, children, pending, onConfirm, onCancel, confirmLabel = "تأكيد" }) {
+export function Confirm({ title, children, pending, onConfirm, onCancel, confirmLabel = "تأكيد", variant }) {
   const ref = useRef(null),
     previous = useRef(null);
   useEffect(() => {
     previous.current = document.activeElement;
+    const root = document.getElementById("root");
+    const wasInert = root?.hasAttribute("inert");
+    const overflow = document.body.style.overflow;
+    root?.setAttribute("inert", "");
+    document.body.style.overflow = "hidden";
     ref.current?.focus();
-    return () => previous.current?.focus();
+    return () => {
+      if (!wasInert) root?.removeAttribute("inert");
+      document.body.style.overflow = overflow;
+      if (previous.current?.isConnected) previous.current.focus();
+    };
   }, []);
   const keys = (event) => {
-    if (event.key === "Escape" && !pending) onCancel();
+    event.stopPropagation();
+    if (event.key === "Escape") {
+      event.preventDefault();
+      if (!pending) onCancel();
+    }
     if (event.key === "Tab") {
       const elements = [
         ...ref.current.querySelectorAll(
@@ -145,8 +160,8 @@ export function Confirm({ title, children, pending, onConfirm, onCancel, confirm
       }
     }
   };
-  return (
-    <div className="dialog-shade">
+  return createPortal(
+    <div className={"dialog-shade" + (variant === "admin" ? " admin-workspace" : variant === "bidder" ? " bidder-workspace" : "")}>
       <section
         className="confirm-dialog"
         ref={ref}
@@ -175,6 +190,7 @@ export function Confirm({ title, children, pending, onConfirm, onCancel, confirm
           </button>
         </div>
       </section>
-    </div>
+    </div>,
+    document.body
   );
 }

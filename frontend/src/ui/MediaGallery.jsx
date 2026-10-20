@@ -1,12 +1,19 @@
-import React,{useEffect,useRef,useState} from 'react';
+import React,{createContext,useContext,useEffect,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
-import {safeImage} from './media.js';
+import {safeImage,isSignedImage,imageIdentity} from './media.js';
 import './shared.css';
 
-export function ServerImage({src,alt,className='',empty='لا تتوفر صورة'}) {
-  const source=safeImage(src),[failed,setFailed]=useState(null);
-  if(!source||failed===source)return <div className={className+' image-placeholder'} role="img" aria-label={empty}>{empty}</div>;
-  return <img className={className} src={source} alt={alt} onError={()=>setFailed(source)}/>;
+const RefreshImages=createContext(null);
+export function ServerImage({src,alt,className='',empty='لا تتوفر صورة',onRefresh}) {
+  const inherited=useContext(RefreshImages),refresh=onRefresh||inherited;
+  const source=safeImage(src),[failed,setFailed]=useState(null),attempt=useRef({source:null,at:0});
+  function renew(){
+    // One automatic re-read per failed URL, with a cooldown shared across URL changes.
+    if(!refresh||!isSignedImage(source)||attempt.current.source===source||Date.now()-attempt.current.at<30000)return;
+    attempt.current={source,at:Date.now()};refresh();
+  }
+  if(!source||failed===source)return <div className={className+' image-placeholder'}><span role="img" aria-label={empty}>{empty}</span>{source&&refresh&&isSignedImage(source)&&<button className="text-action" type="button" onClick={()=>{attempt.current={source,at:Date.now()};refresh();}}>تحديث روابط الصور</button>}</div>;
+  return <img className={className} src={source} alt={alt} onError={()=>{setFailed(source);renew();}}/>;
 }
 
 function GalleryDialog({images,index,setIndex,title,onClose,returnLabel}) {
@@ -35,20 +42,20 @@ function GalleryDialog({images,index,setIndex,title,onClose,returnLabel}) {
   </section></div>,document.body);
 }
 
-export function MediaGallery({images=[],title,variant='auction',returnLabel='العودة إلى تفاصيل المزاد'}) {
+export function MediaGallery({images=[],title,variant='auction',returnLabel='العودة إلى تفاصيل المزاد',onRefresh}) {
   const sources=[...new Set((Array.isArray(images)?images:[]).map(safeImage).filter(Boolean))];
   const [selected,setSelected]=useState(0),[open,setOpen]=useState(false),index=Math.min(selected,Math.max(0,sources.length-1));
-  const signature=sources.join('\n');
+  const signature=sources.map(imageIdentity).join('\n');
   useEffect(()=>{setSelected(0);setOpen(false);},[signature,title]);
   function choose(event){
     if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)||!sources.length)return;
     event.preventDefault();setSelected(event.key==='Home'?0:event.key==='End'?sources.length-1:(index+(event.key==='ArrowLeft'?1:-1)+sources.length)%sources.length);
   }
-  return <section className={'detail-gallery media-gallery media-gallery--'+variant} aria-label="صور المعروض" onKeyDown={choose}>
+  return <RefreshImages.Provider value={onRefresh}><section className={'detail-gallery media-gallery media-gallery--'+variant} aria-label="صور المعروض" onKeyDown={choose}>
     <ServerImage className="gallery-main" src={sources[index]} alt={title}/>
     {sources.length>0&&<button type="button" className="text-action gallery-open" onClick={()=>setOpen(true)}>فتح معرض الصور</button>}
-    {sources.length>1&&<><div className="gallery-thumbs">{sources.slice(1).map((source,i)=><button type="button" key={source} aria-label={'عرض الصورة '+(i+2)} aria-pressed={index===i+1} onClick={()=>setSelected(i+1)}><ServerImage src={source} alt={title+' — الصورة '+(i+2)}/></button>)}</div>
+    {sources.length>1&&<><div className="gallery-thumbs">{sources.map((source,i)=><button type="button" key={source} aria-label={'عرض الصورة '+(i+1)} aria-pressed={index===i} onClick={()=>setSelected(i)}><ServerImage src={source} alt={title+' — الصورة '+(i+1)}/></button>)}</div>
       <p className="field-hint" aria-live="polite">الصورة {index+1} من {sources.length}</p>{index>0&&<button className="text-action gallery-return" type="button" onClick={()=>setSelected(0)}>الصورة الرئيسية</button>}</>}
     {open&&sources.length>0&&<GalleryDialog images={sources} index={index} setIndex={setSelected} title={title} returnLabel={returnLabel} onClose={()=>setOpen(false)}/>}
-  </section>;
+  </section></RefreshImages.Provider>;
 }
