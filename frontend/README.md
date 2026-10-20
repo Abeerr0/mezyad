@@ -110,3 +110,7 @@ This optional check executes actual React, Express, HTTP, image storage and SQL.
 The test harness restricts its application pool to one connection for this
 single-connection engine. It does not prove native row locking/concurrency.
 PGlite is never imported by the production app.
+
+The latest full browser run passed **14/14** journeys against native PostgreSQL
+16.15 with the normal application pool. The earlier WASM smoke is supplemental.
+Native runtime and evidence: [validation record](../docs/native-postgresql-validation.md).

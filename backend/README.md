@@ -210,3 +210,9 @@ skipping every integration test. The normal `npm test` still permits unit-only
 work without a database. The CI uses PostgreSQL 16 and the required command,
 then runs the actual public/private browser journeys. CI has not run for these
 local commits while GitHub write access is blocked.
+
+Native execution on 20 October 2026 passed **110 tests, 0 failed, 0 skipped** on
+PostgreSQL 16.15. The first run exposed a pgcrypto creation race between test
+fixtures; their extension setup is now serialized while bid/closure tests remain
+concurrent. The 14 browser journeys also passed against the same native server.
+See [native validation](../docs/native-postgresql-validation.md) and its logs.

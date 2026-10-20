@@ -1,0 +1,30 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> mezyad-frontend@0.1.0 test:e2e
+> playwright test
+
+[WebServer] (node:468) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:480) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 14 tests using 1 worker
+
+(node:499) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 e2e/journeys.spec.js:11:1 › registration, login return and logout use the real API (2.1s)
+  ✓   2 e2e/journeys.spec.js:14:1 › public details preserve identity and bank unavailable does not submit a bid (1.5s)
+  ✓   3 e2e/journeys.spec.js:17:1 › private wrong code is denied; correct code opens the same private auction (2.8s)
+  ✓   4 e2e/journeys.spec.js:20:1 › ordinary USER cannot open admin review (1.2s)
+  ✓   5 e2e/journeys.spec.js:23:1 › administrator reviews and rejects the exact pending listing with confirmation (1.4s)
+  ✓   6 e2e/journeys.spec.js:26:1 › seller creates private auction from approved listing and receives code (2.3s)
+  ✓   7 e2e/journeys.spec.js:29:1 › real bid with synthetic eligibility uses confirmation, DB acceptance and history (1.7s)
+  ✓   8 e2e/journeys.spec.js:32:1 › ended no-bid auction shows no-winner result without settlement claims (224ms)
+  ✓   9 e2e/journeys.spec.js:35:1 › My Activity includes own listings and eligible auction participation (1.6s)
+  ✓  10 e2e/journeys.spec.js:38:1 › corrupt multipart image is denied without a false listing (1.7s)
+  ✓  11 e2e/journeys.spec.js:41:1 › responsive screens retain labels and stay inside 320/390/768/1440 px viewports (1.1s)
+  ✓  12 e2e/journeys.spec.js:45:1 › accepted bid closes with a matching winner in the same browser journey (1.7s)
+  ✓  13 e2e/journeys.spec.js:51:1 › uploaded listing is reviewed, corrected with its photos, approved and used in a public auction (7.7s)
+  ✓  14 e2e/journeys.spec.js:69:1 › private bidding closes with persisted winner and loser after reload using synthetic eligibility only (6.7s)
+
+  14 passed (36.6s)
