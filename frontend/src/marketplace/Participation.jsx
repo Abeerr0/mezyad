@@ -1,77 +1,173 @@
-import React,{useEffect,useState,useRef} from 'react';
+import React,{useEffect,useRef,useState} from 'react';
 import {useAuth} from '../auth/AuthProvider.jsx';
 import {ApiError,errorMessage} from '../api.js';
-import {amount, safeImage} from '../ui/Auctions.jsx';
-import {Page,Field,Feedback,Confirm,useData,validAuction,uuid,money,navigate} from './common.jsx';
+import {safeImage} from '../ui/Auctions.jsx';
+import {Page,Field,Feedback,Confirm,useData,uuid,navigate} from './common.jsx';
+import {BidderOutcome,BidPosition,ReceiptCopy} from './BidderPresentation.jsx';
+import {formatAmount as amount,cents,validBidderAuction,validHistory,validCommitment,validResult,validReceipt,minimumBid,auctionWindow,useNow,readIntent,saveIntent,clearIntent,higherAcceptedBid,useBidderAuction} from './bidderData.js';
+import './bidder.css';
 
-export function PrivateAccess({id}){
-  const {request}=useAuth();const [auctionId,setAuctionId]=useState(id||''),[code,setCode]=useState(''),[pending,setPending]=useState(false),[failure,setFailure]=useState('');
-  async function submit(e){e.preventDefault();setFailure('');let target=auctionId;try{if(!uuid(target)){const link=new URL(target,window.location.origin);target=link.hash.match(/^#(?:private|auction)\/([a-f0-9-]{36})$/i)?.[1]||target;}}catch{}if(!uuid(target)||!code.trim()){setFailure('أدخل رابط المزاد أو معرّفه الصحيح ورمز الوصول.');return;}setPending(true);
-    try{const result=await request('/api/v1/auctions/'+target+'/access',{method:'POST',body:{accessCode:code.trim()}});if(result?.accessGranted!==true)throw new ApiError('INVALID_RESPONSE');setCode('');navigate('auction/'+target.toLowerCase());}
-    catch(error){setFailure(errorMessage(error));}finally{setPending(false);}
+const Frame=({children})=><div className="bidder-workspace">{children}</div>;
+function SignedIn({children}){
+  const {status}=useAuth();
+  if(status!=='authenticated')return <Page title="سجّل الدخول للمتابعة"><p role="status">{status==='checking'?'جارٍ التحقق من الجلسة…':'تحتاج إلى حساب مسجّل لإتمام هذه الخطوة.'}</p><a className="button secondary" href="#login">تسجيل الدخول</a></Page>;
+  return children;
+}
+function AuctionFeedback({data,title}){return <Page title={title}><Feedback {...data}/><a className="button secondary" href="#auctions">العودة إلى المزادات</a></Page>;}
+function ProductImage({auction}){const image=safeImage(auction.images[0]);return image?<img className="bid-image" src={image} alt={auction.title}/>:<div className="bid-image image-placeholder">لا تتوفر صورة للمعروض</div>;}
+const bidPath=id=>'/api/v1/auctions/'+id;
+const useAuction=useBidderAuction;
+
+export function PrivateAccess({id}){return <Frame><SignedIn><AccessForm id={id}/></SignedIn></Frame>;}
+function AccessForm({id}){
+  const {request,session}=useAuth();
+  const [auctionId,setAuctionId]=useState(id||''),[code,setCode]=useState(''),[pending,setPending]=useState(false),[failure,setFailure]=useState(''),[granted,setGranted]=useState(null),[approvedTarget,setApprovedTarget]=useState(null);
+  const busy=useRef(false),alive=useRef(true);useEffect(()=>()=>{alive.current=false;},[]);
+  async function verifyDetails(target){
+    const value=await request(bidPath(target));
+    if(!validBidderAuction(value)||value.id!==target||value.visibility!=='PRIVATE'||value.seller_id===session.user.id)throw new ApiError('INVALID_RESPONSE');
+    if(alive.current){setGranted(value);setFailure('');}
   }
-  return <Page title="الدخول إلى المزاد الخاص" trail="مزاد خاص" node="422:176"><form className="workspace-panel narrow-panel" onSubmit={submit} noValidate><p className="section-description">أدخل رمز الوصول الذي شاركه معك البائع.</p>
-    {!id&&<Field label="رابط المزاد أو معرّفه" id="private-id"><input id="private-id" value={auctionId} onChange={e=>setAuctionId(e.target.value)} dir="ltr" disabled={pending}/></Field>}
-    <Field label="رمز الوصول" id="private-code"><input id="private-code" value={code} onChange={e=>setCode(e.target.value)} dir="ltr" autoComplete="off" disabled={pending} required/></Field>
-    {failure&&<p role="alert" className="feedback error">{failure}</p>}<div className="workspace-actions"><button className="button primary" disabled={pending}>{pending?'جارٍ التحقق…':'التحقق من الرمز'}</button><a className="button secondary" href="#auctions">العودة إلى المزادات</a></div>
-  </form></Page>;
+  async function submit(event){
+    event?.preventDefault();if(busy.current)return;
+    setFailure('');let target=auctionId.trim();
+    try{if(!uuid(target)){const link=new URL(target,window.location.origin);target=link.hash.match(/^#(?:private|auction)\/([a-f0-9-]{36})$/i)?.[1]||target;}}catch{/* The UUID validation below handles incomplete links. */}
+    if(!uuid(target)||(!approvedTarget&&!code.trim())){setFailure('أدخل رابط المزاد أو معرّفه الصحيح ورمز الوصول.');return;}
+    target=target.toLowerCase();busy.current=true;setPending(true);
+    try{
+      if(approvedTarget!==target){const value=await request(bidPath(target)+'/access',{method:'POST',body:{accessCode:code.trim()}});if(value?.accessGranted!==true)throw new ApiError('INVALID_RESPONSE');if(alive.current){setApprovedTarget(target);setCode('');}}
+      await verifyDetails(target);
+    }catch(error){if(alive.current)setFailure(errorMessage(error));}finally{busy.current=false;if(alive.current)setPending(false);}
+  }
+  if(granted)return <BidderOutcome node="425:171" title="تم قبول الرمز" itemTitle={'مزاد خاص / '+granted.title} actions={<><a className="button primary" href={'#commitment/'+granted.id}>تأكيد المشاركة</a><a className="button secondary" href={'#auction/'+granted.id}>عرض تفاصيل المزاد</a><a className="button secondary" href="#auctions">العودة إلى المزادات</a></>}><p>تم التحقق من صلاحية دخولك لهذا المزاد. تأكيد المشاركة مطلوب قبل المزايدة، ويظل قبولها مرتبطًا بمواعيد المزاد وقرار الخادم.</p></BidderOutcome>;
+  return <Page title="الدخول إلى المزاد الخاص" trail="مزاد خاص" node="422:176"><img className="private-access-photo" src="/images/private-access-interior.png" alt=""/><form className="workspace-panel narrow-panel" onSubmit={submit} noValidate><p className="section-description">أدخل رمز الوصول الذي شاركه معك البائع.</p>{!id&&<Field label="رابط المزاد أو معرّفه" id="private-id"><input id="private-id" value={auctionId} onChange={event=>{setAuctionId(event.target.value);setApprovedTarget(null);}} dir="ltr" disabled={pending}/></Field>}{!approvedTarget&&<Field label="رمز الوصول" id="private-code"><input id="private-code" value={code} onChange={event=>setCode(event.target.value)} dir="ltr" autoComplete="off" disabled={pending} required aria-invalid={!!failure}/></Field>}{failure&&<p role="alert" className="feedback error">{failure}</p>}{approvedTarget&&<p className="field-hint">قُبل الرمز، وتعذر التحقق من تفاصيل المزاد. ستعيد المحاولة قراءة صلاحية الدخول فقط.</p>}<div className="workspace-actions"><button className="button primary" disabled={pending}>{pending?'جارٍ التحقق…':approvedTarget?'التحقق من صلاحية الدخول':'التحقق من الرمز'}</button><a className="button secondary" href="#auctions">العودة إلى المزادات</a></div></form></Page>;
 }
 
-export function Commitment({id}){
-  const {request,session}=useAuth();const auction=useData('/api/v1/auctions/'+id,v=>validAuction(v)&&v.id===id);
-  const [status,setStatus]=useState(null),[failure,setFailure]=useState(''),[checking,setChecking]=useState(true),[pending,setPending]=useState(false),[retry,setRetry]=useState(0);
-  useEffect(()=>{const c=new AbortController();setChecking(true);setStatus(null);setFailure('');request('/api/v1/auctions/'+id+'/commitment',{signal:c.signal}).then(value=>{
-    if(!uuid(value?.id)||!['PENDING','SUCCESS','FAILED'].includes(value.status))throw new ApiError('INVALID_RESPONSE');if(!c.signal.aborted)setStatus(value.status);
-  }).catch(error=>{if(!c.signal.aborted&&error.status!==404)setFailure(errorMessage(error));}).finally(()=>{if(!c.signal.aborted)setChecking(false);});return()=>c.abort();},[id,request,retry]);
-  async function start(){if(pending)return;setPending(true);setFailure('');try{const value=await request('/api/v1/auctions/'+id+'/commitment',{method:'POST'});if(!uuid(value?.id)||!['PENDING','SUCCESS','FAILED'].includes(value.status))throw new ApiError('INVALID_RESPONSE');setStatus(value.status);}catch(error){setFailure(errorMessage(error));}finally{setPending(false);}}
-  const owner=auction.data?.seller_id===session.user.id;
-  return <Page title="تأكيد المشاركة" trail="المزادات / تأكيد المشاركة" node="422:289"><Feedback {...auction}/>{auction.data&&<section className="workspace-panel narrow-panel"><h2>{auction.data.title}</h2><p className="detail-price"><bdi dir="ltr">{amount(auction.data.current_price)}</bdi> ر.س</p>
-    {checking?<p role="status">جارٍ التحقق من حالة المشاركة…</p>:<><p className="status-pill">{({SUCCESS:'تأكيد المشاركة مكتمل',PENDING:'تأكيد المشاركة قيد المعالجة',FAILED:'لم يكتمل تأكيد المشاركة'})[status]||'لم يبدأ التأكيد بعد'}</p>{failure&&<p className="feedback error" role="alert">{failure}</p>}
-      {owner?<p role="alert">لا يمكنك المشاركة في مزاد تملكه.</p>:status==='SUCCESS'?<a className="button primary" href={'#bid/'+id}>متابعة إلى المزايدة</a>:<button className="button primary" disabled={pending} onClick={start}>{pending?'جارٍ تأكيد المشاركة…':'ابدأ تأكيد المشاركة'}</button>}
-      <button className="button secondary" disabled={pending} onClick={()=>setRetry(x=>x+1)}>تحديث حالة المشاركة</button>
-    </>}<div className="workspace-actions"><a className="button secondary" href={'#auction/'+id}>العودة إلى تفاصيل المزاد</a></div>
-  </section>}</Page>;
+export function Commitment({id}){return <Frame><SignedIn><CommitmentAuction id={id}/></SignedIn></Frame>;}
+function CommitmentAuction({id}){
+  const auction=useAuction(id),{session}=useAuth();
+  if(!auction.data||auction.failure)return <AuctionFeedback data={auction} title="تأكيد المشاركة"/>;
+  if(auction.data.seller_id===session.user.id)return <Page title="تأكيد المشاركة"><p role="alert">لا يمكنك المشاركة في مزاد تملكه.</p><a href={'#auction/'+id} className="button secondary">العودة إلى تفاصيل المزاد</a></Page>;
+  return <CommitmentStatus id={id} auction={auction.data}/>;
+}
+async function getCommitment(request,id,signal){
+  try{const value=await request(bidPath(id)+'/commitment',{signal});if(!validCommitment(value))throw new ApiError('INVALID_RESPONSE');return value;}
+  catch(error){if(error.status===404&&error.code==='NOT_FOUND')return null;throw error;}
+}
+function CommitmentStatus({id,auction}){
+  const {request}=useAuth(),now=useNow();
+  const [record,setRecord]=useState(null),[mode,setMode]=useState('loading'),[failure,setFailure]=useState('');
+  const busy=useRef(false),alive=useRef(true);useEffect(()=>()=>{alive.current=false;},[]);
+  const closed=auctionWindow(auction,now)==='closed';
+  function apply(value){setRecord(value);setMode(value?{SUCCESS:'success',PENDING:'pending',FAILED:'failed'}[value.status]:'ready');}
+  useEffect(()=>{const controller=new AbortController();getCommitment(request,id,controller.signal).then(value=>{if(!controller.signal.aborted)apply(value);}).catch(error=>{if(!controller.signal.aborted){setMode('uncertain');setFailure(errorMessage(error));}});return()=>controller.abort();},[id,request]);
+  useEffect(()=>{if(mode!=='pending'||closed)return;const controller=new AbortController();let reading=false;const timer=setInterval(async()=>{if(busy.current||reading)return;reading=true;try{const value=await getCommitment(request,id,controller.signal);if(!controller.signal.aborted){apply(value);setFailure('');}}catch(error){if(!controller.signal.aborted){setMode('uncertain');setFailure(errorMessage(error));}}finally{reading=false;}},5000);return()=>{controller.abort();clearInterval(timer);};},[id,request,mode,closed]);
+  async function refresh(){if(busy.current)return;busy.current=true;setMode('loading');setFailure('');try{const value=await getCommitment(request,id);if(alive.current)apply(value);}catch(error){if(alive.current){setMode('uncertain');setFailure(errorMessage(error));}}finally{busy.current=false;}}
+  async function start(){
+    if(busy.current||closed||['loading','pending','success','uncertain','submitting'].includes(mode))return;
+    busy.current=true;setMode('submitting');setFailure('');
+    try{const value=await request(bidPath(id)+'/commitment',{method:'POST'});if(!validCommitment(value))throw new ApiError('INVALID_RESPONSE');if(alive.current)apply(value);}
+    catch(error){if(alive.current){setRecord(null);setFailure(errorMessage(error));setMode(error.code==='BANK_SANDBOX_UNAVAILABLE'?'unavailable':['TIMEOUT','NETWORK_ERROR','INVALID_RESPONSE'].includes(error.code)||error.status>=500?'uncertain':'failed');}}
+    finally{busy.current=false;}
+  }
+  const back=<a className="button secondary" href={'#auction/'+id}>العودة إلى تفاصيل المزاد</a>;
+  if(['success','failed','unavailable','uncertain'].includes(mode)){
+    const heading={success:'اكتمل تأكيد المشاركة',failed:'لم يكتمل تأكيد المشاركة',unavailable:'التأكيد غير متاح حاليًا',uncertain:'تعذر التحقق من حالة المشاركة'}[mode];
+    const node={success:'422:343',failed:'422:389',unavailable:'422:435',uncertain:'422:389'}[mode];
+    return <BidderOutcome node={node} title={heading} itemTitle={auction.title} kind={mode} actions={<>{mode==='success'&&!closed?<a className="button primary" href={'#bid/'+id}>متابعة إلى المزايدة</a>:mode==='uncertain'?<button className="button primary" onClick={refresh}>تحديث حالة المشاركة</button>:!closed&&<button className="button primary" onClick={start}>إعادة المحاولة</button>}{back}</>}><p>{mode==='success'?'أعاد الخادم حالة مشاركة مكتملة لهذا المزاد. يتحقق الخادم مجددًا من الأهلية والسعر والوقت عند إرسال أي مزايدة.':mode==='uncertain'?'لم يصل تأكيد موثوق للنتيجة. حدّث الحالة قبل بدء محاولة جديدة؛ لن نرسل تأكيد المشاركة تلقائيًا.':'لم تُسجل أهلية جديدة من هذه المحاولة، ولم نرسل مزايدة.'}</p>{failure&&<p className="feedback error" role="alert">{failure}</p>}{closed&&<p className="field-hint">انتهى موعد المزاد؛ اكتمال المشاركة لا يسمح بمزايدة متأخرة.</p>}</BidderOutcome>;
+  }
+  return <Page title="تأكيد المشاركة" trail="المزادات / تأكيد المشاركة" node="422:289"><p className="section-description">أكمل هذه الخطوة قبل أن تتمكن من إضافة مزايدة.</p><div className="bid-layout commitment-layout"><section className="workspace-panel"><h2>{auction.title}</h2><div className="detail-price"><span>السعر الحالي</span><strong><bdi dir="ltr">{amount(auction.current_price)}</bdi> ر.س</strong></div><p>حالة تأكيد المشاركة</p><p className="bidder-status-box" role={['loading','submitting','pending'].includes(mode)?'status':undefined}>{mode==='loading'?'جارٍ التحقق من حالة المشاركة…':mode==='submitting'?'جارٍ إرسال طلب تأكيد المشاركة…':record?.status==='PENDING'?'تأكيد المشاركة قيد المعالجة':'لم يبدأ التأكيد بعد'}</p><p className="field-hint">تأكيد المشاركة مطلوب قبل المزايدة. لا يُطلب منك دفع مبلغ هنا.</p>{closed&&<p role="status">انتهى موعد المزاد؛ لا يمكن بدء مشاركة جديدة.</p>}<div className="workspace-actions"><button className="button primary" disabled={closed||['loading','pending','submitting'].includes(mode)} onClick={start}>{mode==='pending'?'بانتظار نتيجة المشاركة':'ابدأ تأكيد المشاركة'}</button><button className="button secondary" disabled={mode==='submitting'||mode==='loading'} onClick={refresh}>تحديث حالة المشاركة</button>{back}</div></section><ProductImage auction={auction}/></div></Page>;
 }
 
-export function BidForm({id,onAccepted}){
-  const {request,session}=useAuth();const auction=useData('/api/v1/auctions/'+id,v=>validAuction(v)&&v.id===id,5000);
-  const history=useData('/api/v1/auctions/'+id+'/bids',v=>Array.isArray(v)&&v.every(b=>uuid(b.id)&&Number(b.amount)>0),5000);
-  const commitment=useData('/api/v1/auctions/'+id+'/commitment',v=>uuid(v?.id)&&['SUCCESS','PENDING','FAILED'].includes(v.status));
-  const [value,setValue]=useState(''),[confirm,setConfirm]=useState(false),[pending,setPending]=useState(false),[failure,setFailure]=useState('');
-  const requestId=useRef(null),draft=useRef('');
-  const minimum=auction.data?(history.data?.length?Math.round(Number(auction.data.current_price)*100)+Math.round(Number(auction.data.minimum_increment)*100):Math.round(Number(auction.data.starting_price)*100))/100:0;
-  const ended=auction.data&&(auction.data.status==='CLOSED'||Date.parse(auction.data.end_time)<=Date.now()||Date.parse(auction.data.start_time)>Date.now());
-  const owner=auction.data?.seller_id===session.user.id;
-  function prepare(e){e.preventDefault();setFailure('');if(!money(value)||Number(value)<minimum){setFailure('أدخل مبلغًا لا يقل عن '+amount(minimum)+' ر.س');return;}
-    if(draft.current!==value||!requestId.current){requestId.current=crypto.randomUUID();draft.current=value;}setConfirm(true);
+export function BidForm({id,onAccepted}){return <Frame><SignedIn><BidAuction id={id} onAccepted={onAccepted}/></SignedIn></Frame>;}
+function BidAuction({id,onAccepted}){
+  const auction=useAuction(id);
+  if(!auction.data||auction.failure)return <AuctionFeedback data={auction} title="إضافة مزايدة"/>;
+  return <BidEntry id={id} auction={auction.data} refreshAuction={auction.reload} onAccepted={onAccepted}/>;
+}
+const definitiveRejections=new Set(['INVALID_INPUT','OWNER','NO_ACCESS','COMMITMENT_REQUIRED','BID_TOO_LOW','AUCTION_NOT_ACTIVE']);
+function BidEntry({id,auction,refreshAuction,onAccepted}){
+  const {session}=useAuth(),now=useNow();
+  const owner=auction.seller_id===session.user.id;
+  return owner?<Page title="إضافة مزايدة"><p role="alert">لا يمكنك المزايدة على مزاد تملكه.</p><a className="button secondary" href={'#auction/'+id}>العودة إلى تفاصيل المزاد</a></Page>:<EligibleBid key={id+session.user.id} id={id} auction={auction} now={now} refreshAuction={refreshAuction} onAccepted={onAccepted}/>;
+}
+function EligibleBid({id,auction,now,refreshAuction,onAccepted}){
+  const {request,session}=useAuth();
+  const history=useData(bidPath(id)+'/bids',validHistory,5000);
+  const eligibility=useData(bidPath(id)+'/commitment',validCommitment);
+  const [intent,setIntent]=useState(()=>readIntent(session.user.id,id)),[value,setValue]=useState(()=>String(readIntent(session.user.id,id)?.amount||''));
+  const [confirm,setConfirm]=useState(false),[pending,setPending]=useState(false),[failure,setFailure]=useState(''),[rejected,setRejected]=useState(false);
+  const prepared=useRef(null),busy=useRef(false),alive=useRef(true);useEffect(()=>()=>{alive.current=false;},[]);
+  const minimum=minimumBid(auction,history.data),windowState=auctionWindow(auction,now);
+  const usable=history.data&&minimum!==null&&eligibility.data?.status==='SUCCESS'&&windowState==='open'&&!history.failure&&!eligibility.failure;
+  function prepare(event){
+    event?.preventDefault();if(busy.current||!usable)return;
+    setFailure('');
+    if(intent?.state==='duplicate'||intent?.invalid)return;
+    if(intent){prepared.current=intent;setConfirm(true);return;}
+    const parsed=cents(value);
+    if(parsed===null||Number(value)<minimum){setFailure('أدخل مبلغًا لا يقل عن '+amount(minimum)+' ر.س');return;}
+    if(!prepared.current||cents(prepared.current.amount)!==parsed)prepared.current={auctionId:id,userId:session.user.id,requestId:crypto.randomUUID(),amount:parsed/100,state:'uncertain'};
+    setConfirm(true);
   }
-  async function send(){if(pending)return;setPending(true);setFailure('');try{
-    const accepted=await request('/api/v1/auctions/'+id+'/bids',{method:'POST',body:{amount:Number(value),requestId:requestId.current}});
-    if(!uuid(accepted?.bidId)||Number(accepted.amount)!==Number(value)||Number(accepted.currentPrice)!==Number(value))throw new ApiError('INVALID_RESPONSE');
-    onAccepted({auctionId:id,bidId:accepted.bidId,amount:Number(accepted.amount),userId:session.user.id});navigate('bid-success/'+id);
-  }catch(error){setFailure(errorMessage(error));if(!['TIMEOUT','NETWORK_ERROR','DUPLICATE_REQUEST'].includes(error.code)){requestId.current=null;auction.reload();history.reload();}}finally{setPending(false);setConfirm(false);}}
-  const usable=auction.data&&history.data&&commitment.data?.status==='SUCCESS'&&!ended&&!owner&&!auction.failure&&!history.failure;
-  const image=safeImage(auction.data?.images?.[0]);
-  return <Page title="إضافة مزايدة" trail="المزادات / إضافة مزايدة" node="7:105"><Feedback {...auction}/><Feedback {...history}/><Feedback {...commitment}/>{auction.data&&<div className="bid-layout"><section className="workspace-panel"><h2>{auction.data.title}</h2><p className="section-description">السعر الحالي: <bdi dir="ltr">{amount(auction.data.current_price)}</bdi> ر.س</p><p>الحد الأدنى للمزايدة: <bdi dir="ltr">{amount(minimum)}</bdi> ر.س</p>
-      {owner?<p role="alert">لا يمكنك المزايدة على مزاد تملكه.</p>:ended?<p role="status">المزاد غير متاح للمزايدة في الوقت الحالي.</p>:commitment.data&&commitment.data.status!=='SUCCESS'?<a className="button primary" href={'#commitment/'+id}>تأكيد المشاركة أولًا</a>:null}
-      {failure&&<p className="feedback error" role="alert">{failure}</p>}
-      <form onSubmit={prepare} noValidate><Field label="مبلغ مزايدتك (ر.س)" id="bid-amount"><input id="bid-amount" inputMode="decimal" dir="ltr" value={value} onChange={e=>setValue(e.target.value)} disabled={!usable||pending} required/></Field><button className="button primary" disabled={!usable||pending}>مراجعة المزايدة</button></form><a className="button secondary" href={'#auction/'+id}>العودة إلى تفاصيل المزاد</a>
-    </section>{image&&<img className="bid-image" src={image} alt={auction.data.title}/>}</div>}
-    {confirm&&<Confirm title="تأكيد المزايدة" pending={pending} onConfirm={send} onCancel={()=>setConfirm(false)}><p>{auction.data.title}</p><p><bdi dir="ltr">{amount(value)}</bdi> ر.س</p><p>يُتحقق من السعر وحالة المزاد عند إرسال المزايدة.</p></Confirm>}
+  function refresh(){refreshAuction();history.reload();eligibility.reload();}
+  async function send(){
+    if(busy.current||!prepared.current)return;
+    if(!usable){setConfirm(false);setFailure('تغيّرت الأهلية أو حالة المزاد. حدّث البيانات قبل تأكيد مزايدة جديدة.');refresh();return;}
+    const attempt=prepared.current;
+    if(auctionWindow(auction)!=='open'||(!intent&&attempt.amount<minimum)){setConfirm(false);setFailure('تغيّر السعر أو انتهى وقت المزاد. راجع البيانات الحالية قبل التأكيد.');refresh();return;}
+    if(!saveIntent(attempt)){setConfirm(false);setFailure('تعذر حفظ معرّف طلب المزايدة في هذه الجلسة. لم نرسل المزايدة؛ تحقق من إتاحة تخزين الجلسة قبل المحاولة.');return;}
+    busy.current=true;setPending(true);setIntent(attempt);setFailure('');
+    try{
+      const accepted=await request(bidPath(id)+'/bids',{method:'POST',body:{amount:attempt.amount,requestId:attempt.requestId}});
+      if(!uuid(accepted?.bidId)||cents(accepted.amount)!==cents(attempt.amount)||cents(accepted.currentPrice)!==cents(attempt.amount))throw new ApiError('INVALID_RESPONSE');
+      if(!alive.current)return;
+      clearIntent(session.user.id,id);setIntent(null);
+      onAccepted?.({auctionId:id,bidId:accepted.bidId,amount:attempt.amount,userId:session.user.id});navigate('bid-success/'+id);
+    }catch(error){
+      if(!alive.current)return;
+      setFailure(errorMessage(error));
+      if(definitiveRejections.has(error.code)&&[400,403,409].includes(error.status)){
+        clearIntent(session.user.id,id);setIntent(null);prepared.current=null;setRejected(true);refresh();
+      }else{
+        const saved={...attempt,state:error.code==='DUPLICATE_REQUEST'?'duplicate':'uncertain'};
+        saveIntent(saved);setIntent(saved);history.reload();refreshAuction();
+      }
+    }finally{busy.current=false;if(alive.current){setPending(false);setConfirm(false);}}
+  }
+  if(rejected)return <BidderOutcome node="424:181" title="لم تُقبل المزايدة" itemTitle={auction.title} actions={<><button className="button primary" onClick={()=>{setRejected(false);refresh();}}>مراجعة السعر وإعادة المحاولة</button><a className="button secondary" href={'#auction/'+id}>العودة إلى تفاصيل المزاد</a></>}><p>تحقق الخادم من الطلب ولم يقبله. راجع السبب والبيانات المحدثة قبل إرسال مبلغ جديد.</p><p className="feedback error" role="alert">{failure}</p></BidderOutcome>;
+  return <Page title="إضافة مزايدة" trail="المزادات / إضافة مزايدة" node="7:105"><p className="section-description">راجع قيمة العرض قبل تأكيده.</p><Feedback {...history}/><Feedback {...eligibility}/><div className="bid-layout"><section className="workspace-panel"><h2>{auction.title}</h2><div className="detail-price"><span>السعر الحالي</span><strong><bdi dir="ltr">{amount(auction.current_price)}</bdi> ر.س</strong></div><p>الحد الأدنى للمزايدة: <bdi dir="ltr">{minimum===null?'—':amount(minimum)}</bdi> ر.س</p><p className="bidder-deadline">الحد الأدنى للزيادة: <bdi dir="ltr">{amount(auction.minimum_increment)}</bdi> ر.س. يحدد الخادم السعر والوقت المقبولين عند الإرسال.</p>{windowState!=='open'?<p role="status">{windowState==='scheduled'?'لم يبدأ موعد المزاد بعد.':'المزاد غير متاح للمزايدة في الوقت الحالي.'}</p>:eligibility.data?.status!=='SUCCESS'&&!eligibility.loading?<a className="button secondary" href={'#commitment/'+id}>تأكيد المشاركة أولًا</a>:null}{failure&&<p className="feedback error" role="alert">{failure}</p>}
+    {intent&&<aside className="bidder-retry" aria-label="متابعة الطلب السابق"><p>{intent.invalid?'تعذر قراءة معرّف الطلب السابق. لا يمكن إرسال مزايدة جديدة بأمان من هذه الجلسة.':intent.state==='duplicate'?'سبق معالجة معرّف هذا الطلب. لا يتيح الرد الحالي ربطه بمزايدة شخصية مؤكدة؛ راجع السجل والنتيجة دون إرسال طلب جديد.':'لم يصل تأكيد موثوق للطلب السابق. المبلغ ومعرّف الطلب محفوظان؛ أي إعادة إرسال ستستخدم الطلب نفسه.'}</p>{!intent.invalid&&intent.state!=='duplicate'&&<button type="button" className="button primary" onClick={prepare} disabled={!usable||pending}>إعادة إرسال نفس المزايدة</button>}<button type="button" className="button secondary" onClick={refresh} disabled={pending}>تحديث السعر والسجل</button></aside>}
+    <form onSubmit={prepare} noValidate><Field label="مبلغ مزايدتك (ر.س)" id="bid-amount"><input id="bid-amount" inputMode="decimal" dir="ltr" value={value} onChange={event=>setValue(event.target.value)} disabled={!usable||pending||!!intent} required aria-invalid={!!failure}/></Field>{!intent&&<button className="button primary" disabled={!usable||pending}>مراجعة المزايدة</button>}</form><p className="field-hint">إرسال المزايدة لا يعني فوزك. لا توجد مدفوعات أو تسوية في هذه الخطوة.</p><a className="button secondary" href={'#auction/'+id}>العودة إلى تفاصيل المزاد</a></section><ProductImage auction={auction}/></div>
+    {confirm&&<Confirm title="تأكيد المزايدة" pending={pending} onConfirm={send} onCancel={()=>setConfirm(false)}><p>{auction.title}</p><p className="bid-confirm-amount"><bdi dir="ltr">{amount(prepared.current.amount)}</bdi> ر.س</p><p>يُتحقق من السعر والأهلية وموعد المزاد عند الإرسال.</p>{intent&&<p className="field-hint">ستُعاد نفس المزايدة بمعرّفها السابق؛ لن ننشئ طلبًا جديدًا.</p>}</Confirm>}
   </Page>;
 }
 
-export function BidReceipt({id,receipt}){
-  const auction=useData('/api/v1/auctions/'+id,v=>validAuction(v)&&v.id===id);
-  return <Page title={receipt?.auctionId===id?'تم تسجيل المزايدة':'متابعة المزايدة'} node="7:136"><Feedback {...auction}/>{auction.data&&<section className="outcome-panel"><h2>{auction.data.title}</h2>{receipt?.auctionId===id?<p role="status">تم قبول مزايدتك بقيمة <bdi dir="ltr">{amount(receipt.amount)}</bdi> ر.س. تابع المزاد لمعرفة النتيجة.</p>:<p>افتح تفاصيل المزاد لمراجعة سجل المزايدات.</p>}<div className="workspace-actions"><a className="button primary" href={'#auction/'+id}>متابعة المزاد</a><a className="button secondary" href={'#result/'+id}>عرض نتيجة المزاد</a></div></section>}</Page>;
+export function BidReceipt({id,receipt}){return <Frame><SignedIn><ReceiptState id={id} receipt={receipt}/></SignedIn></Frame>;}
+function ReceiptState({id,receipt}){
+  const {session}=useAuth(),auction=useAuction(id);
+  if(!auction.data||auction.failure)return <AuctionFeedback data={auction} title="متابعة المزايدة"/>;
+  return <BidderOutcome node="7:136" title={validReceipt(receipt,id,session.user.id)?'تم تسجيل المزايدة':'متابعة المزايدة'} itemTitle={auction.data.title} actions={<><a className="button primary" href={'#auction/'+id}>متابعة المزاد</a><a className="button secondary" href={'#result/'+id}>عرض نتيجة المزاد</a></>}><ReceiptCopy receipt={receipt} id={id} userId={session.user.id}/></BidderOutcome>;
+}
+export function Outbid({id,receipt}){return <Frame><SignedIn><OutbidState id={id} receipt={receipt}/></SignedIn></Frame>;}
+function OutbidState({id,receipt}){
+  const {session}=useAuth(),auction=useAuction(id);
+  if(!auction.data||auction.failure)return <AuctionFeedback data={auction} title="متابعة المزايدة"/>;
+  return <OutbidHistory id={id} receipt={receipt} auction={auction.data} userId={session.user.id}/>;
+}
+function OutbidHistory({id,receipt,auction,userId}){
+  const history=useData(bidPath(id)+'/bids',validHistory,5000);
+  if(!history.data||history.failure)return <Page title="متابعة المزايدة"><Feedback {...history}/></Page>;
+  if(higherAcceptedBid(receipt,auction,userId,history.data))return <BidPosition receipt={receipt} auction={auction} userId={userId} history={history.data} standalone/>;
+  return <BidderOutcome node="7:211" title="متابعة حالة المزايدة" itemTitle={auction.title} actions={<a className="button primary" href={'#auction/'+id}>العودة إلى المزاد</a>}><p>لا تتوفر بيانات موثوقة تثبت تجاوز مزايدتك في الجلسة الحالية. راجع السعر والسجل دون افتراض حالة شخصية.</p></BidderOutcome>;
 }
 export function AuctionResult({id,receipt}){
-  const {session}=useAuth();const auction=useData('/api/v1/auctions/'+id,v=>validAuction(v)&&v.id===id,5000);
-  const winner=auction.data?.result?.winner_bid_id;
-  const known=receipt?.auctionId===id&&receipt.userId===session?.user.id;
-  const heading=auction.data?.status!=='CLOSED'?'المزاد لم ينتهِ بعد':!winner?'انتهى المزاد دون مزايدات':known?(winner===receipt.bidId?'فزت بالمزاد':'لم تفز بالمزاد'):'تم تحديد المزايدة الفائزة';
-  return <Page title="نتيجة المزاد" trail="المزادات / النتيجة" node="424:89"><Feedback {...auction}/>{auction.data&&<section className="outcome-panel"><p className="eyebrow">{auction.data.title}</p><h2>{heading}</h2>
-    {auction.data.status==='CLOSED'&&winner&&<p>أعلى مزايدة مقبولة: <bdi dir="ltr">{amount(auction.data.current_price)}</bdi> ر.س</p>}
-    <div className="workspace-actions"><a className="button primary" href="#activity">الانتقال إلى نشاطي</a><a className="button secondary" href={'#auction/'+id}>عرض تفاصيل المزاد</a><a className="button secondary" href="#auctions">استكشاف المزادات</a></div>
-  </section>}</Page>;
+  const {session}=useAuth(),auction=useAuction(id);
+  if(!auction.data||auction.failure)return <Frame><AuctionFeedback data={auction} title="نتيجة المزاد"/></Frame>;
+  const a=auction.data,closed=a.status==='CLOSED',result=validResult(a.result),winner=result?a.result.winner_bid_id:undefined;
+  const known=validReceipt(receipt,id,session?.user.id),win=closed&&result&&winner&&known&&winner===receipt.bidId&&cents(a.current_price)===cents(receipt.amount);
+  const notWinningBid=closed&&result&&winner&&known&&winner!==receipt.bidId;
+  const heading=!closed?'المزاد لم ينتهِ بعد':!result?'نتيجة الإغلاق غير متاحة بعد':winner===null?'انتهى المزاد دون مزايدات':win?'فزت بالمزاد':notWinningBid?'هذه المزايدة لم تفز':'تم تحديد المزايدة الفائزة';
+  const node=winner===null&&closed&&result?'425:59':notWinningBid?'424:135':'424:89';
+  return <Frame><BidderOutcome node={node} title={heading} itemTitle={a.title} actions={<><a className="button primary" href="#activity">الانتقال إلى نشاطي</a><a className="button secondary" href={'#auction/'+id}>عرض تفاصيل المزاد</a><a className="button secondary" href="#auctions">استكشاف المزادات</a></>}>{closed&&result&&winner&&<p>أعلى مزايدة مقبولة: <bdi dir="ltr">{amount(a.current_price)}</bdi> ر.س</p>}{win&&<p>أُغلق المزاد وكانت مزايدتك المؤكدة في هذه الجلسة هي المزايدة الفائزة المسجلة في الخادم.</p>}{notWinningBid&&<p>المزايدة المحفوظة في هذه الجلسة ليست الفائزة. لا يحدد API المتاح صاحب المزايدة الفائزة؛ قد تكون لديك مزايدات أخرى من جلسة مختلفة.</p>}{closed&&result&&winner&&!win&&!notWinningBid&&<p className="field-hint">لا يمكن إثبات النتيجة الشخصية من البيانات المتاحة بعد إعادة التحميل. لا نستنتج هوية الفائز من السعر أو اسم السلعة.</p>}{closed&&!result&&<p>لم يعد الخادم بنتيجة إغلاق موثوقة. لا نستنتج من ذلك أن المزاد بلا مزايدات.</p>}{!closed&&<p>تظهر النتيجة النهائية بعد تأكيد الخادم إغلاق المزاد.</p>}</BidderOutcome></Frame>;
 }

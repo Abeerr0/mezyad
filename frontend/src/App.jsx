@@ -12,11 +12,12 @@ import {AdminHeader} from './marketplace/AdminShell.jsx';
 import './marketplace/admin.css';
 import {AdminReview} from './marketplace/AdminReview.jsx';
 import {AuctionCreate} from './marketplace/AuctionCreate.jsx';
-import {PrivateAccess,Commitment,BidForm,BidReceipt,AuctionResult} from './marketplace/Participation.jsx';
+import {PrivateAccess,Commitment,BidForm,BidReceipt,AuctionResult,Outbid} from './marketplace/Participation.jsx';
+import {validReceipt} from './marketplace/bidderData.js';
 import {uuid,Page} from './marketplace/common.jsx';
 import './marketplace/workspace.css';
 
-const protectedViews=['activity','listing','listing-edit','auction-new','admin','admin-dashboard','admin-auctions','private','commitment','bid','bid-success'];
+const protectedViews=['activity','listing','listing-edit','auction-new','admin','admin-dashboard','admin-auctions','private','commitment','bid','bid-success','outbid'];
 function safeReturn(value){
  if(['activity','listing/new','admin','admin-dashboard','admin-auctions','private'].includes(value))return value;
  const [view,id]=String(value||'').split('/');
@@ -42,9 +43,11 @@ const go = value => { window.location.hash = value; };
 
 export function App() {
   const { status,session } = useAuth();
-  const [receipt,setReceipt]=useState(null);
-  useEffect(()=>setReceipt(null),[session?.user.id]);
+  const [receipts,setReceipts]=useState({});
+  useEffect(()=>setReceipts({}),[session?.user.id]);
   const [route, setRoute] = useState(routeFromHash);
+  const receipt=receipts[route.id];
+  function acceptBid(value){if(validReceipt(value,value?.auctionId,session?.user.id))setReceipts(previous=>({...previous,[value.auctionId]:value}));}
   useEffect(() => {
     const read = () => { setRoute(routeFromHash()); window.scrollTo(0, 0); };
     window.addEventListener('hashchange', read);
@@ -62,7 +65,7 @@ export function App() {
   if(workspaceView){
     if(route.view!=='result'&&status!=='authenticated')workspace=<AccountPanel/>;
     else if(['admin','admin-dashboard','admin-auctions'].includes(route.view)&&session.user.role!=='ADMIN')workspace=<Page title="لا تملك صلاحية الوصول"><p role="alert">هذه الصفحة مخصصة للمشرف.</p><a className="button secondary" href="#account">العودة إلى حسابي</a></Page>;
-    else workspace=({activity:<Activity/>,listing:<ListingDetails id={route.id}/>, 'listing-new':<ListingForm/>, 'listing-edit':<ListingForm id={route.id}/>, 'auction-new':<AuctionCreate id={route.id}/>,admin:<AdminReview id={route.id}/>, 'admin-dashboard':<AdminDashboard/>, 'admin-auctions':<AdminAuctions id={route.id}/>,private:<PrivateAccess id={route.id}/>,commitment:<Commitment id={route.id}/>,bid:<BidForm id={route.id} onAccepted={setReceipt}/>, 'bid-success':<BidReceipt id={route.id} receipt={receipt}/>,result:<AuctionResult id={route.id} receipt={receipt}/>})[route.view];
+    else workspace=({activity:<Activity/>,listing:<ListingDetails id={route.id}/>, 'listing-new':<ListingForm/>, 'listing-edit':<ListingForm id={route.id}/>, 'auction-new':<AuctionCreate id={route.id}/>,admin:<AdminReview id={route.id}/>, 'admin-dashboard':<AdminDashboard/>, 'admin-auctions':<AdminAuctions id={route.id}/>,private:<PrivateAccess id={route.id}/>,commitment:<Commitment id={route.id}/>,bid:<BidForm id={route.id} onAccepted={acceptBid}/>, 'bid-success':<BidReceipt id={route.id} receipt={receipt}/>,outbid:<Outbid id={route.id} receipt={receipt}/>,result:<AuctionResult id={route.id} receipt={receipt}/>})[route.view];
   }
   if(workspaceView)workspace=<React.Fragment key={route.view+'/'+(route.id||'')}>{workspace}</React.Fragment>;
   const accountView = ['login', 'register', 'account'].includes(route.view);

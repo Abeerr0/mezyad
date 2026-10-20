@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthProvider.jsx';
+import {BidPosition} from '../marketplace/BidderPresentation.jsx';
+import {formatAmount,useBidderAuction,validHistory,validResult,useNow,auctionWindow} from '../marketplace/bidderData.js';
 import { errorMessage, ApiError } from '../api.js';
 
 export const categories = [
@@ -8,8 +10,7 @@ export const categories = [
   { key: 'cars', label: 'السيارات النادرة', name: 'Rare Vehicles' },
   { key: 'plates', label: 'اللوحات المميزة', name: 'Vehicle Plates' },
 ];
-export const amount = value => Number.isFinite(Number(value))
-  ? new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(Number(value)) : '—';
+export const amount = formatAmount;
 export const statusLabel = status => ({ ACTIVE: 'جارٍ', SCHEDULED: 'قريبًا', CLOSED: 'منتهي' }[status] || '—');
 const validAuction = value => value && typeof value.id === 'string'
   && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value.id)
@@ -108,60 +109,40 @@ export function AuctionList({ category, home = false }) {
 }
 
 export function AuctionDetails({ id, onRequireLogin,onParticipate,receipt }) {
-  const { request, status } = useAuth();
-  const [auction, setAuction] = useState(null);
-  const [failure, setFailure] = useState('');
-  const [imageIndex, setImageIndex] = useState(0);
-  const [pending, setPending] = useState(false);
-  const [participationFailure, setParticipationFailure] = useState('');
-  useEffect(() => {
-    const controller = new AbortController();
-    let busy = false;
-    setAuction(null); setFailure(''); setParticipationFailure(''); setImageIndex(0);
-    async function load() {
-      if (busy) return;
-      busy = true;
-      try {
-        const data = await request('/api/v1/auctions/' + id, { signal: controller.signal });
-        if (!validAuction(data) || data.id !== id || !Array.isArray(data.images)) throw new ApiError('INVALID_RESPONSE');
-        if (!controller.signal.aborted) { setAuction(data); setFailure(''); }
-      } catch (error) {
-        if (!controller.signal.aborted) setFailure(errorMessage(error));
-      } finally { busy = false; }
-    }
-    load();
-    const interval = setInterval(load, 5000);
-    return () => { controller.abort(); clearInterval(interval); };
-  }, [id, request]);
-  async function participation() {
-    if (status !== 'authenticated') { onRequireLogin(); return; }
-    if(onParticipate){onParticipate();return;}
-    setPending(true); setParticipationFailure('');
-    try { await request('/api/v1/auctions/' + id + '/commitment', { method: 'POST' }); }
-    catch (error) { setParticipationFailure(errorMessage(error)); }
-    finally { setPending(false); }
+  const {status,session}=useAuth(),data=useBidderAuction(id),now=useNow();
+  const auction=data.data,failure=data.failure;
+  const [imageIndex,setImageIndex]=useState(0);
+  useEffect(()=>setImageIndex(0),[id]);
+  const windowState=auctionWindow(auction,now),owner=auction?.seller_id===session?.user.id;
+  function participation(){
+    if(!auction||failure||owner||windowState!=='open')return;
+    if(status!=='authenticated'){onRequireLogin();return;}
+    if(onParticipate)onParticipate();else window.location.hash='commitment/'+id;
   }
   if (!auction) return <main className="content-shell detail-page">
-    {failure ? <p className="feedback error" role="alert">{failure}</p> : <p role="status">جارٍ تحميل تفاصيل المزاد…</p>}
+    {failure ? <div className="feedback error" role="alert"><p>{failure}</p><button className="button secondary" onClick={data.reload}>إعادة المحاولة</button><a className="button secondary" href={'#private/'+id}>لدي رمز وصول</a></div> : <p role="status">جارٍ تحميل تفاصيل المزاد…</p>}
     <a className="button secondary" href="#auctions">العودة إلى المزادات</a>
   </main>;
   const images = (auction.images || []).map(safeImage).filter(Boolean);
   const selectedImage = images[imageIndex] || safeImage(auction.image_url);
   const thumbnails = images.slice(1);
-  return <main className="content-shell detail-page">
+  return <main className="content-shell detail-page" data-design-node={auction.status==='SCHEDULED'?'432:66':'2:140'}>
     <p className="breadcrumb"><a href="#home">الرئيسية</a> / <a href="#auctions">المزادات</a> / {auction.title}</p>
     <div className="detail-grid">
       <section className="detail-summary">
         <p className="eyebrow">{categories.find(value => value.name === auction.category_name)?.label} / مزاد {statusLabel(auction.status)}</p>
         <h1>{auction.title}</h1>
-        <div className="detail-price"><p>السعر الحالي</p><strong><bdi dir="ltr">{amount(auction.current_price)}</bdi> ر.س</strong></div>
+        <div className="detail-price"><p>{auction.status==='SCHEDULED'?'السعر الابتدائي':'السعر الحالي'}</p><strong><bdi dir="ltr">{amount(auction.status==='SCHEDULED'?auction.starting_price:auction.current_price)}</bdi> ر.س</strong></div>
         <dl className="detail-status"><dt>حالة المزاد</dt><dd>{statusLabel(auction.status)}</dd><dt>نهاية المزاد</dt>
           <dd>{new Date(auction.end_time).toLocaleString('ar-SA-u-nu-latn', { calendar: 'gregory' })}</dd></dl>
         <p className="detail-description">راجع صور المعروض ووصفه قبل المشاركة في المزاد.</p>
         {failure && <p className="feedback error" role="alert">{failure}</p>}
-        {participationFailure && <p className="feedback error" role="alert">{participationFailure}</p>}
-        <button className="button primary" type="button" disabled={pending || auction.status === 'CLOSED' || Date.parse(auction.start_time) > Date.now()} onClick={participation}>
-          {pending ? 'جارٍ التحقق من المشاركة…' : auction.status === 'CLOSED' ? 'انتهى المزاد' : 'أضف مزايدتك'}
+        {windowState==='scheduled'&&<p className="scheduled-information">لم يبدأ موعد المزاد بعد. البداية: {new Date(auction.start_time).toLocaleString('ar-SA-u-nu-latn',{calendar:'gregory'})}.</p>}
+        {auction.status==='SCHEDULED'&&windowState==='open'&&<p className="scheduled-information">حلّ موعد البداية، وحالة الخادم ما زالت مجدولة. يتحقق الخادم من قبول أول مزايدة عند إرسالها.</p>}
+        {owner&&<p className="owner-information" role="status">هذا مزاد تملكه؛ لا يمكنك المشاركة فيه كمزايد.</p>}
+        {windowState==='closed'&&auction.status!=='CLOSED'&&<p className="scheduled-information">انتهى موعد المزاد. ننتظر تأكيد الإغلاق والنتيجة من الخادم.</p>}
+        <button className="button primary" type="button" disabled={owner||windowState!=='open'||!!failure} onClick={participation}>
+          {owner?'لا يمكنك المزايدة على مزادك':windowState==='closed'?'انتهى المزاد':windowState==='scheduled'?'لم يبدأ المزاد بعد':'أضف مزايدتك'}
         </button>
         <a className="button secondary" href="#auctions">العودة إلى المزادات</a>
       </section>
@@ -173,8 +154,7 @@ export function AuctionDetails({ id, onRequireLogin,onParticipate,receipt }) {
         {imageIndex > 0 && <button className="text-action gallery-return" type="button" onClick={() => setImageIndex(0)}>الصورة الرئيسية</button>}
       </section>
     </div>
-    {receipt?.auctionId===id&&Number(auction.current_price)>receipt.amount&&<p className="feedback" role="status">تم تجاوز مزايدتك. راجع السعر الحالي قبل إضافة مزايدة جديدة.</p>}
-    {status==='authenticated'&&<BidHistory id={id}/>}
+    {status==='authenticated'&&<BidHistory id={id} auction={auction} receipt={receipt} userId={session.user.id}/>}
     {auction.status==='CLOSED'&&<a className="button primary" href={'#result/'+id}>عرض نتيجة المزاد</a>}
     <section className="item-description"><h2>عن هذا المعروض</h2><p>{auction.description}</p></section>
     <section className="detail-insights" aria-label="متابعة المزاد">
@@ -182,12 +162,12 @@ export function AuctionDetails({ id, onRequireLogin,onParticipate,receipt }) {
       <div><h2>السعر الحالي</h2><strong><bdi dir="ltr">{amount(auction.current_price)}</bdi> ر.س</strong><p>السعر المعروض من بيانات المزاد.</p></div>
       <div><h2>ملخص النشاط</h2><strong>{statusLabel(auction.status)}</strong><p>يمكنك متابعة السعر وحالة المزاد هنا.</p></div>
     </section>
-    {auction.result && <p className="feedback" role="status">{auction.result.winner_bid_id ? 'انتهى المزاد وتم تحديد المزايدة الفائزة.' : 'انتهى المزاد دون مزايدات.'}</p>}
+    {auction.status==='CLOSED' && <p className="feedback" role="status">{!validResult(auction.result)?'نتيجة الإغلاق غير متاحة بعد.':auction.result.winner_bid_id===null?'انتهى المزاد دون مزايدات.':'انتهى المزاد وتم تحديد المزايدة الفائزة.'}</p>}
   </main>;
 }
 
-function BidHistory({id}){
+function BidHistory({id,auction,receipt,userId}){
   const {request}=useAuth();const [data,setData]=useState(null),[failure,setFailure]=useState('');
-  useEffect(()=>{const c=new AbortController();let busy=false;async function load(){if(busy)return;busy=true;try{const value=await request('/api/v1/auctions/'+id+'/bids',{signal:c.signal});if(!Array.isArray(value)||value.some(b=>!b.id||!Number.isFinite(Number(b.amount))))throw new ApiError('INVALID_RESPONSE');if(!c.signal.aborted){setData(value);setFailure('');}}catch(error){if(!c.signal.aborted)setFailure(errorMessage(error));}finally{busy=false;}}load();const timer=setInterval(load,5000);return()=>{c.abort();clearInterval(timer);};},[id,request]);
-  return <section className="activity-section"><h2>سجل المزايدات</h2>{failure&&<p className="feedback error" role="alert">{failure}</p>}{!data&&!failure&&<p role="status">جارٍ تحميل السجل…</p>}{data?.length===0&&<p className="empty-state">لم تسجّل مزايدات في هذا المزاد بعد.</p>}{!!data?.length&&<ol className="bid-history">{data.map(b=><li key={b.id}><bdi dir="ltr">{amount(b.amount)}</bdi> ر.س <time dateTime={b.created_at}>{new Date(b.created_at).toLocaleString('ar-SA-u-nu-latn',{calendar:'gregory'})}</time></li>)}</ol>}</section>;
+  useEffect(()=>{const c=new AbortController();let busy=false;async function load(){if(busy)return;busy=true;try{const value=await request('/api/v1/auctions/'+id+'/bids',{signal:c.signal});if(!validHistory(value))throw new ApiError('INVALID_RESPONSE');if(!c.signal.aborted){setData(value);setFailure('');}}catch(error){if(!c.signal.aborted){setData(null);setFailure(errorMessage(error));}}finally{busy=false;}}load();const timer=setInterval(load,5000);return()=>{c.abort();clearInterval(timer);};},[id,request]);
+  return <section className="activity-section">{!failure&&data&&<BidPosition receipt={receipt} auction={auction} userId={userId} history={data}/>}<h2>سجل المزايدات</h2>{failure&&<p className="feedback error" role="alert">{failure}</p>}{!data&&!failure&&<p role="status">جارٍ تحميل السجل…</p>}{data?.length===0&&<p className="empty-state">لم تسجّل مزايدات في هذا المزاد بعد.</p>}{!!data?.length&&<ol className="bid-history">{data.map(b=><li key={b.id}><bdi dir="ltr">{amount(b.amount)}</bdi> ر.س <time dateTime={b.created_at}>{new Date(b.created_at).toLocaleString('ar-SA-u-nu-latn',{calendar:'gregory'})}</time></li>)}</ol>}</section>;
 }

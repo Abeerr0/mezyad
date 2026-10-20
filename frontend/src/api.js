@@ -18,6 +18,8 @@ const messages = {
   NOT_FOUND: 'المحتوى المطلوب غير متاح.',
   BANK_SANDBOX_UNAVAILABLE: 'تأكيد المشاركة غير متاح حاليًا. لم يتم اعتماد المشاركة أو إرسال مزايدة.',
   OWNER: 'لا يمكنك المشاركة في مزاد تملكه.',
+  RATE_LIMITED: 'محاولات كثيرة. انتظر قليلًا قبل إعادة التحقق من رمز الوصول.',
+  TOO_MANY_REQUESTS: 'محاولات كثيرة. انتظر قليلًا قبل إعادة المحاولة.',
   INVALID_CODE: 'رمز الوصول غير صحيح. تحقق منه وحاول مجددًا.',
   NO_ACCESS: 'يلزم قبول رمز الوصول قبل المشاركة في هذا المزاد.',
   COMMITMENT_REQUIRED: 'أكمل تأكيد المشاركة قبل إضافة مزايدتك.',
@@ -33,7 +35,7 @@ const messages = {
 };
 
 export const errorMessage = error => messages[error?.code]
-  || 'تعذر إتمام الطلب. حاول مجددًا.';
+  || (error?.status===429?'محاولات كثيرة. انتظر قليلًا قبل إعادة المحاولة.':'تعذر إتمام الطلب. حاول مجددًا.');
 
 export async function requestApi(path, { token, body, signal, method = 'GET', timeout = 10000 } = {}) {
   const controller = new AbortController();
