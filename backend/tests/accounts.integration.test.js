@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { randomUUID, createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import bcrypt from 'bcryptjs';
+import { ensureTestExtension } from './helpers/test-extension.js';
 
 const testUrl = process.env.TEST_DATABASE_URL;
 const password = 'Account-test-2026';
@@ -19,6 +20,7 @@ before(async () => {
   if (!testUrl) return;
   ({ app } = await import('../src/app.js'));
   ({ pool } = await import('../src/db.js'));
+  await ensureTestExtension(pool);
   await pool.query(await readFile(new URL('../../database/migrations/001_schema.sql', import.meta.url), 'utf8'));
   server = app.listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));

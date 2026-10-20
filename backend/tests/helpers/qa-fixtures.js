@@ -5,6 +5,7 @@ import pg from 'pg';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import bcrypt from 'bcryptjs';
+import { ensureTestExtension } from './test-extension.js';
 
 export const databaseUrl = process.env.TEST_DATABASE_URL;
 export const databaseSkip = !databaseUrl && 'Requires a disposable TEST_DATABASE_URL ending in _test';
@@ -23,7 +24,7 @@ export async function setupQa(label) {
   const baseUrl = testDatabase(databaseUrl);
   const schema = 'qa_' + label + '_' + randomBytes(6).toString('hex');
   const control = new pg.Pool({ connectionString: baseUrl.toString() });
-  await control.query('CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public');
+  await ensureTestExtension(control);
   await control.query(`CREATE SCHEMA "${schema}"`);
   const url = new URL(baseUrl);
   url.searchParams.set('options', `-c search_path=${schema},public`);
