@@ -1,4 +1,4 @@
-# Backend account development
+# Mezyad backend
 
 Requires Node.js 20+ and PostgreSQL. From this directory:
 
@@ -65,3 +65,154 @@ existing records. It is not a production seeding command.
 Auction discovery/details now return their own category and image references
 from the existing tables. Private listings remain excluded from public discovery,
 and direct private detail access still requires authorization.
+
+## Marketplace backend — `feature/abeer-backend-api`
+
+From `backend/`, create the PostgreSQL database, set `DATABASE_URL` in `.env`,
+then run `npm run db:setup`. This applies the existing ten-table migration and
+five category seeds together in a transaction. Re-running is safe for the
+existing schema; it is not a schema upgrade tool. Setup creates no customers,
+bids or bank commitments.
+
+### Listings and photos
+
+`POST /api/v1/items` and `PATCH /api/v1/items/:id` accept multipart fields
+`categoryId`, `title`, `description`, `category_fields` (a JSON object string),
+and repeated `images` files, matching the Stage 4 listing form. Multipart
+creation requires at least one photo. JSON remains supported for older clients.
+Title: 1–240 characters; description: 1–20,000; category fields: an object.
+Only the owner can edit a rejected listing. Its category stays fixed. New photos
+replace old photos; omitting photos on edit preserves existing ones. Resubmission
+clears review metadata and returns to `PENDING_REVIEW`. Rejection reasons must
+contain nonblank text, up to 2,000 characters.
+
+Image limits: six JPG/PNG/WebP files, 5 MiB per file, 20 million input pixels.
+The server checks MIME, extension and decoded format, rejects corrupt/animated
+images, strips metadata and writes resized JPEGs with random names. Listing and
+image references are transactional. Failures remove new files; old files are
+removed after a successful replacement.
+
+`UPLOAD_DIR` defaults to `./uploads` relative to the backend working directory.
+Keep it on persistent storage when deploying and back it up with PostgreSQL.
+Uploads are excluded from Git and are not exposed by a static directory.
+Authorized listing/detail responses issue image links valid for ten minutes,
+usable in `<img>` without exposing the session token. Treat them as temporary
+access credentials. Restart invalidates old links; re-fetch details for new ones.
+This MVP uses one backend process: signing keys and attempt counters are local
+to that process.
+
+### Auctions and bidding
+
+Existing `/api/v1` and legacy routes remain supported. Invalid UUID paths return
+400 JSON. `GET /auctions` accepts `categoryId` and `status=SCHEDULED|ACTIVE|CLOSED`.
+Public discovery excludes private auctions. `GET /auctions?scope=all` requires
+ADMIN and supports monitoring all auctions; admins may view private details.
+Invitation attempts allow ten per minute per user/auction, then 429 with
+`Retry-After`. Login allows sixty attempts per fifteen minutes per IP.
+
+Read responses calculate status using database time. Opening details activates
+scheduled auctions when due or finalizes an ended auction exactly once.
+Late bids are rejected even before a page visit. Bidding and closure use the
+same auction row lock. Duplicate `requestId` returns 409. Money, ownership,
+access, commitment and deadline checks precede atomic bid/price persistence.
+`GET /auctions/:id/bids` accepts `limit` (1–100) and `offset` (0 or greater).
+`/me/items` includes image links; `/me/auctions` shows owned and bid-on auctions.
+
+### Open Banking: blocked on provider selection
+
+The team has not selected a sandbox provider. `src/bank.js` is the integration
+boundary, not a working adapter. Environment placeholders do not activate it.
+Commitment POST returns 503 `BANK_SANDBOX_UNAVAILABLE`; it creates no approval.
+Browser status/reference cannot approve a commitment. Private commitment GET
+also requires an access grant.
+
+Before implementing the adapter, supply the provider documentation, authorized
+sandbox account/scopes, supported operation, consent/callback flow, and exact
+rule mapping a trusted server response to SUCCESS. Keep secrets only in the
+backend environment. Genuine success, rejection and timeout evidence remains
+required by Stage 3. No funds-hold, proof-of-funds or transfer API was invented.
+
+### QA
+
+`npm test` now runs database, marketplace, upload, bidding and closure tests in
+addition to account tests. PostgreSQL suites require a disposable
+`TEST_DATABASE_URL` ending in `_test`; otherwise they explicitly skip.
+Fixtures use isolated schemas and temporary photo folders, removed on shutdown.
+Synthetic SUCCESS rows exist only in tests for downstream bidding, and do not
+prove bank integration. The GitHub workflow runs these tests against PostgreSQL 16 on this Feature
+branch and on pull requests targeting development.
+
+Marketplace UI files currently live under `Stage_4/`, outside
+`frontend/src/marketplace/`. Connecting those screens is separate frontend work;
+this branch does not claim a complete browser auction journey.
+
+
+## Review against all four reports
+
+`Stage_4/Report.MD` identifies `Stage_3/Report.MD` as the technical source of truth.
+The original four reports are unchanged. The current implementation keeps
+USER/ADMIN, ten PostgreSQL tables, REST polling and access-triggered closure.
+Anti-sniping and the broader assistant from older stages are not silently added.
+Stage 2 names SABB as the primary sandbox candidate and Al Rajhi as backup;
+neither has a verified operation/credentials contract in Stage 3.
+
+The listing parser accepts both `categoryId` (current UI) and `category` (Stage 3
+API table), and rejects conflicting values. Money conversion separates whole
+riyals and halalas before integer arithmetic to retain valid large prices.
+Unauthorised private bid requests use the same 404 response as nonexistent
+auctions. Incorrect invitation codes and nonexistent invitation targets share
+the same 403 INVALID_CODE response. Neither response discloses private details.
+
+`npm test` includes the seven previously packaged contract checks under
+`tests/acceptance/`. They are normal assertions, not expected failures.
+Their PostgreSQL results remain unverified until executed with TEST_DATABASE_URL.
+
+
+## Admin, results and categoryFields
+
+See [API.md](API.md) for the canonical categoryFields contract, legacy aliases,
+returned image paths, dashboard/monitoring routes and viewer-specific results.
+The active frontend now uses FormData, resolves signed images against the API
+origin, and displays seller/admin photos, dashboard counts and persisted results.
+The existing Stage 4 screens were brought into frontend/src/marketplace.
+
+## Optional local SQL smoke
+
+When native PostgreSQL is unavailable, a separate optional SQL check can run
+against PGlite. It executes the actual migration, seed and HTTP routes using the
+PostgreSQL WASM engine, with a test-only database adapter and synthetic users.
+It is NOT a native multi-client PostgreSQL or locking/concurrency result and
+never proves provider access. No PGlite dependency enters the production app.
+
+Install the optional tool in a separate directory, for example:
+
+```sh
+npm install --prefix /tmp/mezyad-sql-qa @electric-sql/pglite@0.5.10
+PGLITE_INSTALL_DIR=/tmp/mezyad-sql-qa npm run test:sql-smoke
+```
+
+The script creates a disposable in-memory database and temporary image directory,
+then removes both. Synthetic SUCCESS rows test only the code after commitment.
+For authoritative integration/concurrency tests, use TEST_DATABASE_URL with
+PostgreSQL 16 and `npm test`, or the prepared GitHub CI workflow.
+
+
+## Required native PostgreSQL validation
+
+Use a disposable database ending in `_test`, then run:
+
+```sh
+TEST_DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/mezyad_test npm run test:postgres
+```
+
+This command fails if the test database is missing; it cannot silently pass by
+skipping every integration test. The normal `npm test` still permits unit-only
+work without a database. The CI uses PostgreSQL 16 and the required command,
+then runs the actual public/private browser journeys. CI has not run for these
+local commits while GitHub write access is blocked.
+
+Native execution on 20 October 2026 passed **110 tests, 0 failed, 0 skipped** on
+PostgreSQL 16.15. The first run exposed a pgcrypto creation race between test
+fixtures; their extension setup is now serialized while bid/closure tests remain
+concurrent. The 14 browser journeys also passed against the same native server.
+See [native validation](../docs/native-postgresql-validation.md) and its logs.

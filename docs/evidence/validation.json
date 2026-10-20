@@ -1,0 +1,63 @@
+{
+  "date": "2026-10-20",
+  "branch": "abeer",
+  "tested_code_revision": "3f87ff3",
+  "base": "ecff1653c3917313d8eba3f5634bbf7cd3fe8cc5",
+  "backend_syntax": "pass",
+  "backend_default": {
+    "tests": 96,
+    "pass": 19,
+    "fail": 0,
+    "skipped": 77
+  },
+  "sql_smoke": {
+    "engine": "PGlite PostgreSQL WASM",
+    "passed": 27,
+    "native_concurrency_verified": false
+  },
+  "frontend": {
+    "passed": 55,
+    "build": "pass",
+    "source_changed": true
+  },
+  "browser": {
+    "passed": 14,
+    "failed": 0,
+    "engine": "Chromium 153 + React/Express + native PostgreSQL 16.15",
+    "native_postgresql_verified": true,
+    "synthetic_eligibility_fixtures_only": true
+  },
+  "native_postgresql_16": {
+    "status": "passed",
+    "version": "16.15",
+    "platform": "x86_64-alpine-linux-musl, 64-bit",
+    "runtime": "QEMU 8.2.2 TCG, Alpine 3.23, Linux 6.18.0-3-virt, 2 vCPUs",
+    "backend": {
+      "tests": 110,
+      "pass": 110,
+      "fail": 0,
+      "skipped": 0,
+      "cancelled": 0
+    },
+    "browser": {
+      "pass": 14,
+      "fail": 0,
+      "skipped": 0
+    },
+    "native_concurrency_verified": true,
+    "database_encoding": "UTF8",
+    "database_name": "mezyad_native_test",
+    "isolated_and_destroyed_after_run": true
+  },
+  "banking": "deferred by user; no fake success",
+  "github_upload": {
+    "attempted": true,
+    "status": 403,
+    "uploaded": false,
+    "remote_branch": "abeer"
+  },
+  "pull_request": "not created; not authorized by latest instruction",
+  "merge": "not performed; not authorized",
+  "ci": "not run remotely: GitHub write blocked; full native checks passed locally",
+  "fixed_failure": "Serialized pgcrypto extension setup before parallel test suites; application bidding remains concurrent"
+}

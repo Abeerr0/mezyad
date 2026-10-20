@@ -1,0 +1,16 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> mezyad-backend@0.1.0 test:postgres
+> node scripts/test-postgres.js
+
+file:///workspace/scratch/f1a24000e06b/Mezyad/backend/scripts/test-postgres.js:4
+if(!value)throw new Error('Set TEST_DATABASE_URL to a disposable PostgreSQL database ending in _test');
+                ^
+
+Error: Set TEST_DATABASE_URL to a disposable PostgreSQL database ending in _test
+    at file:///workspace/scratch/f1a24000e06b/Mezyad/backend/scripts/test-postgres.js:4:17
+    at ModuleJob.run (node:internal/modules/esm/module_job:439:25)
+    at async node:internal/modules/esm/loader:643:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.19.0

@@ -1,0 +1,36 @@
+{
+  "date": "2026-10-20",
+  "branch": "abeer",
+  "remote_base": "ecff1653c3917313d8eba3f5634bbf7cd3fe8cc5",
+  "node": "v24.19.0",
+  "platform": "Linux",
+  "source_reports": {
+    "Stage_1/Report.MD": "dc29c6351c45b07fa69e00b7d98e650781a74518",
+    "Stage_2/Report.MD": "ed30cca32cb59f7236022c4fe4b8c84dbceaae45",
+    "Stage_3/Report.MD": "08981b6a2ed5699ae81ad1074306a27183c3bd5a",
+    "Stage_4/Report.MD": "37759886bbfdfdd49dc02f8ea3dec6a48c142772"
+  },
+  "backend": {
+    "command": "npm test",
+    "counts": {
+      "tests": 87,
+      "pass": 16,
+      "fail": 0,
+      "skipped": 71,
+      "cancelled": 0
+    },
+    "postgresql_executed": false
+  },
+  "frontend": {
+    "tests_passed": 31,
+    "tests_failed": 0,
+    "build": "passed"
+  },
+  "not_verified": [
+    "PostgreSQL integration and row-lock concurrency",
+    "Genuine provider sandbox success, rejection and timeout",
+    "Complete public/private browser journeys"
+  ],
+  "remote_upload": "blocked: GitHub integration returned 403 Resource not accessible by integration",
+  "scope": "Source review plus local unit/HTTP/upload tests; not full MVP acceptance"
+}

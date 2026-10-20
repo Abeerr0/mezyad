@@ -15,9 +15,27 @@ const messages = {
   NETWORK_ERROR: 'تعذر الاتصال بالخادم. تحقق من الاتصال وحاول مجددًا.',
   TIMEOUT: 'استغرق الاتصال وقتًا أطول من المتوقع. حاول مجددًا.',
   INVALID_RESPONSE: 'تعذر قراءة استجابة الخادم. حاول مجددًا.',
-  NOT_FOUND: 'المزاد المطلوب غير متاح.',
+  NOT_FOUND: 'المحتوى المطلوب غير متاح.',
   BANK_SANDBOX_UNAVAILABLE: 'تأكيد المشاركة غير متاح حاليًا. لم يتم اعتماد المشاركة أو إرسال مزايدة.',
+  OWNER: 'لا يمكنك المشاركة في مزاد تملكه.',
+  INVALID_CODE: 'رمز الوصول غير صحيح. تحقق منه وحاول مجددًا.',
+  NO_ACCESS: 'يلزم قبول رمز الوصول قبل المشاركة في هذا المزاد.',
+  COMMITMENT_REQUIRED: 'أكمل تأكيد المشاركة قبل إضافة مزايدتك.',
+  BID_TOO_LOW: 'تغيّر السعر أو أن المبلغ أقل من الحد المطلوب. راجع السعر الحالي.',
+  AUCTION_NOT_ACTIVE: 'المزاد غير متاح للمزايدة في الوقت الحالي.',
+  DUPLICATE_REQUEST: 'سبق معالجة هذا الطلب. راجع سجل المزايدات قبل إرسال طلب جديد.',
+  INVALID_STATE: 'تغيّرت حالة الإعلان. حدّث الصفحة وتحقق منها.',
+  NOT_APPROVED: 'يمكن إنشاء المزاد لإعلان تملكه وتم اعتماده فقط.',
+  DUPLICATE_AUCTION: 'هذا الإعلان مرتبط بمزاد بالفعل.',
+  PAYLOAD_TOO_LARGE: 'حجم البيانات أكبر من المسموح. قلّل حجم الملفات وحاول مجددًا.',
+  INVALID_ID: 'الرابط أو معرّف الطلب غير صحيح.',
+  INVALID_CATEGORY: 'اختر قسمًا متاحًا للمعروض.',
+  INVALID_IMAGE: 'الصورة غير صالحة. اختر JPG أو PNG أو WebP بحجم حتى 5 ميجابايت.',
+  IMAGE_LIMIT: 'المسموح من صورة إلى 6 صور، وحجم كل صورة حتى 5 ميجابايت.',
+  TOO_MANY_REQUESTS: 'كثرت المحاولات. انتظر شوي وحاول مرة ثانية.',
 };
+
+export const apiOrigin = () => (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '');
 
 export const errorMessage = error => messages[error?.code]
   || 'تعذر إتمام الطلب. حاول مجددًا.';
@@ -29,15 +47,16 @@ export async function requestApi(path, { token, body, signal, method = 'GET', ti
   if (signal?.aborted) abort();
   signal?.addEventListener('abort', abort, { once: true });
   const timer = setTimeout(() => { timedOut = true; controller.abort(); }, timeout);
+  const multipart = typeof FormData !== 'undefined' && body instanceof FormData;
   try {
-    const base = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '');
+    const base = apiOrigin();
     const response = await fetch(base + path, {
       method,
       headers: {
-        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        ...(body !== undefined && !multipart ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { Authorization: 'Bearer ' + token } : {}),
       },
-      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      ...(body !== undefined ? { body: multipart ? body : JSON.stringify(body) } : {}),
       signal: controller.signal,
       cache: 'no-store',
     });
