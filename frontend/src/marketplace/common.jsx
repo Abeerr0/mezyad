@@ -1,0 +1,215 @@
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ApiError, errorMessage } from "../api.js";
+import { createPortal } from "react-dom";
+import { useAuth } from "../auth/AuthProvider.jsx";
+
+export const uuid = (value) =>
+  typeof value === "string" &&
+  /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value);
+export const listingStatus = (value) =>
+  ({
+    PENDING_REVIEW: "قيد المراجعة",
+    APPROVED: "معتمد",
+    REJECTED: "يحتاج إلى تعديل",
+  })[value] || "غير محدد";
+export const validListing = (value) =>
+  value &&
+  uuid(value.id) &&
+  typeof value.title === "string" &&
+  typeof value.description === "string" &&
+  ["PENDING_REVIEW", "APPROVED", "REJECTED"].includes(value.status);
+export const validAuction = (value) =>
+  value &&
+  uuid(value.id) &&
+  typeof value.title === "string" &&
+  Number(value.current_price) > 0 &&
+  ["ACTIVE", "SCHEDULED", "CLOSED"].includes(value.status);
+export const money = (value) =>
+  /^\d+(?:\.\d{1,2})?$/.test(String(value)) &&
+  Number(value) > 0 &&
+  Number(value) <= 999999999999.99;
+export const navigate = (value) => {
+  window.location.hash = value;
+};
+
+export function useData(path, validate, poll = 0, options = {}) {
+  const { request, session } = useAuth();
+  const sessionToken = session?.token ?? null;
+  const [data, setData] = useState(null),
+    [failure, setFailure] = useState(""),
+    [loading, setLoading] = useState(true),
+    [revision, setRevision] = useState(0);
+  const validator = useRef(validate),requestOptions=useRef(options);
+  requestOptions.current=options;
+  validator.current = validate;
+  const identity = useRef({path, sessionToken});
+  useEffect(() => {
+    const changedIdentity = identity.current.path !== path || identity.current.sessionToken !== sessionToken;
+    identity.current = {path, sessionToken};
+    const controller = new AbortController();
+    let busy = false;
+    if (changedIdentity) setData(null);
+    setFailure("");
+    setLoading(true);
+    async function load() {
+      if (busy) return;
+      busy = true;
+      try {
+        const value = await request(path, { ...requestOptions.current,signal: controller.signal });
+        if (!validator.current(value)) throw new ApiError("INVALID_RESPONSE");
+        if (!controller.signal.aborted) {
+          setData(value);
+          setFailure("");
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {if([401,403,404].includes(error.status))setData(null);setFailure(errorMessage(error));}
+      } finally {
+        busy = false;
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }
+    load();
+    const timer = poll ? setInterval(load, poll) : null;
+    return () => {
+      controller.abort();
+      if (timer) clearInterval(timer);
+    };
+  }, [path, request, poll, revision, sessionToken]);
+  return { data, failure, loading, reload: () => setRevision((x) => x + 1) };
+}
+export function Feedback({ failure, loading, reload }) {
+  return (
+    <>
+      {loading && <p role="status">جارٍ تحميل البيانات…</p>}
+      {failure && (
+        <div className="feedback error" role="alert">
+          <p>{failure}</p>
+          {reload && (
+            <button type="button" className="button secondary" onClick={reload}>
+              إعادة المحاولة
+            </button>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+export function Page({ title, trail, children, node, focusKey }) {
+  const main = useRef(null);
+  useLayoutEffect(() => {
+    if (!document.querySelector('[role="dialog"][aria-modal="true"]') && !main.current?.closest('[inert]')) {
+      main.current?.focus({ preventScroll: true });
+    }
+  }, [focusKey]);
+  return (
+    <main ref={main} id="main-content" tabIndex={-1} className="content-shell workspace-page" data-design-node={node}>
+      <p className="eyebrow">{trail}</p>
+      <h1>{title}</h1>
+      {children}
+    </main>
+  );
+}
+export function Field({ label, id, error, children }) {
+  return (
+    <div className="workspace-field">
+      <label htmlFor={id}>{label}</label>
+      {children}
+      {error && (
+        <p className="field-error" id={id + "-error"}>
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+export function Confirm({ title, children, pending, onConfirm, onCancel, confirmLabel = "تأكيد", variant }) {
+  const ref = useRef(null),
+    previous = useRef(null);
+  useEffect(() => {
+    previous.current = document.activeElement;
+    const dialog = ref.current;
+    const root = document.getElementById("root");
+    const wasInert = root?.hasAttribute("inert");
+    const overflow = document.body.style.overflow;
+    root?.setAttribute("inert", "");
+    document.body.style.overflow = "hidden";
+    ref.current?.focus();
+    return () => {
+      const anotherDialog = [...document.querySelectorAll('[role="dialog"][aria-modal="true"]')].some(element => element !== dialog);
+      if (!wasInert && !anotherDialog) root?.removeAttribute("inert");
+      document.body.style.overflow = anotherDialog ? "hidden" : overflow;
+      if (anotherDialog) return;
+      const target = previous.current;
+      if (target?.isConnected && !target.matches(':disabled,[aria-disabled="true"]') && !target.closest('[inert]')) {
+        target.focus();
+        if (document.activeElement === target) return;
+      }
+      const main = document.getElementById("main-content");
+      if (!main?.closest('[inert]')) main?.focus({ preventScroll: true });
+    };
+  }, []);
+  const keys = (event) => {
+    event.stopPropagation();
+    if (event.key === "Escape") {
+      event.preventDefault();
+      if (!pending) onCancel();
+    }
+    if (event.key === "Tab") {
+      const elements = [
+        ...ref.current.querySelectorAll(
+          "button:not(:disabled),a[href],input:not(:disabled),textarea:not(:disabled),select:not(:disabled)",
+        ),
+      ];
+      const first = elements[0],
+        last = elements.at(-1);
+      if (!elements.length) {
+        event.preventDefault();
+        return;
+      }
+      if (
+        event.shiftKey &&
+        (document.activeElement === first ||
+          document.activeElement === ref.current)
+      ) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+  };
+  return createPortal(
+    <div className={"dialog-shade" + (variant === "admin" ? " admin-workspace" : variant === "bidder" ? " bidder-workspace" : "")}>
+      <section
+        className="confirm-dialog"
+        ref={ref}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirmation-title"
+        onKeyDown={keys}
+      >
+        <h2 id="confirmation-title">{title}</h2>
+        {children}
+        <div className="workspace-actions">
+          <button
+            className="button primary"
+            disabled={pending}
+            onClick={onConfirm}
+          >
+            {pending ? "جارٍ الإرسال…" : confirmLabel}
+          </button>
+          <button
+            className="button secondary"
+            disabled={pending}
+            onClick={onCancel}
+          >
+            إلغاء
+          </button>
+        </div>
+      </section>
+    </div>,
+    document.body
+  );
+}

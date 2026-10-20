@@ -53,3 +53,18 @@ test('missing and malformed bearer tokens cannot reach protected handlers', asyn
     assert.equal((await response.json()).error.code, 'UNAUTHORIZED');
   }
 });
+
+
+test('malformed resource IDs fail at the HTTP boundary without accessing PostgreSQL',async()=>{
+  for(const path of ['/api/v1/items/not-a-uuid','/api/v1/auctions/not-a-uuid','/api/v1/auctions/not-a-uuid/bids']){
+    const response=await fetch(base+path);
+    assert.equal(response.status,400);
+    assert.equal((await response.json()).error.code,'INVALID_ID');
+  }
+});
+
+test('unknown API routes use the JSON error contract',async()=>{
+  const response=await fetch(base+'/api/v1/no-such-route');
+  assert.equal(response.status,404);
+  assert.equal((await response.json()).error.code,'NOT_FOUND');
+});

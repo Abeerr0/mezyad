@@ -1,0 +1,14 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> mezyad-frontend@0.1.0 test
+> vitest run
+
+
+ RUN  v4.1.11 /workspace/scratch/f1a24000e06b/Mezyad/frontend
+
+
+ Test Files  4 passed (4)
+      Tests  55 passed (55)
+   Start at  13:12:00
+   Duration  2.12s (transform 442ms, setup 327ms, import 610ms, tests 3.21s, environment 1.08s)
+

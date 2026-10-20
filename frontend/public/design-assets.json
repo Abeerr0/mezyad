@@ -6,7 +6,13 @@
     "signup": "7:32",
     "account": "7:67",
     "browse": "2:78",
-    "auction": "2:140"
+    "auction": "2:140",
+    "categoryCamels": "20:197",
+    "categoryProperty": "20:2",
+    "categoryCars": "20:67",
+    "categoryPlates": "20:132",
+    "privateAccess": "422:176",
+    "chooseAuctionType": "662:90"
   },
   "assets": [
     {
@@ -56,6 +62,41 @@
     {
       "path": "images/porsche-carrera-gt-4.jpg",
       "sha256": "2b26a86e6213d17e9cfca87a1cac5de86c407e682cd3ecf46288a1cda39e51ac"
+    },
+    {
+      "path": "images/category-camels-hero.png",
+      "sha256": "a8c0a42f80d9ce2012e6a9b3d65f53d2c0ffd9473f74818224ba615fcf66807d",
+      "figmaNode": "20:197"
+    },
+    {
+      "path": "images/category-property-hero.png",
+      "sha256": "8d14a6aca4bd54dd20496d62bbe512889e48c75d3ede9f62df0e0c83f65a2882",
+      "figmaNode": "20:2"
+    },
+    {
+      "path": "images/category-cars-hero.png",
+      "sha256": "3e758bd5887c0ab5af29621e86d1bb7a577f92cfd38d17ee4d03bf7eeee99307",
+      "figmaNode": "20:67"
+    },
+    {
+      "path": "images/category-plates-hero.png",
+      "sha256": "910385be4ad243eb27297cbd6b2f89ec48c28f3e84761e5427a459f31eb4a626",
+      "figmaNode": "20:132"
+    },
+    {
+      "path": "images/private-access-interior.png",
+      "sha256": "de3f190cfd10fa23b6075f6d322ea2a0ddac629b3091703a8b25c220c7609d94",
+      "figmaNode": "422:176"
+    },
+    {
+      "path": "images/auction-public-icon.svg",
+      "sha256": "67bc8b3f15710c32eb0e9fbe6948d13d765c4aa0c6a9f7e6fddeffc235adff97",
+      "figmaNode": "662:90"
+    },
+    {
+      "path": "images/auction-private-icon.svg",
+      "sha256": "8f56e13a0a336cd663bce54de3a12ee1608d1353b3128868802620f3249effd2",
+      "figmaNode": "662:90"
     }
   ]
 }

@@ -1,0 +1,64 @@
+import React,{createContext,useContext,useEffect,useRef,useState} from 'react';
+import {createPortal} from 'react-dom';
+import {safeImage,isSignedImage,imageIdentity} from './media.js';
+import './shared.css';
+
+const RefreshImages=createContext(null);
+export function ServerImage({src,alt,className='',empty='لا تتوفر صورة',onRefresh,onFailure,manualRetry=true}) {
+  const inherited=useContext(RefreshImages),refresh=onRefresh||inherited;
+  const source=safeImage(src),[failed,setFailed]=useState(null),attempt=useRef({source:null,at:0});
+  const Placeholder=manualRetry?'div':'span';
+  function renew(){
+    // One automatic re-read per failed URL, with a cooldown shared across URL changes.
+    if(!refresh||!isSignedImage(source)||attempt.current.source===source||Date.now()-attempt.current.at<30000)return;
+    attempt.current={source,at:Date.now()};refresh();
+  }
+  if(!source||failed===source)return <Placeholder className={className+' image-placeholder'}><span role="img" aria-label={empty}>{empty}</span>{manualRetry&&source&&refresh&&isSignedImage(source)&&<button className="text-action" type="button" onClick={()=>{attempt.current={source,at:Date.now()};refresh();}}>تحديث روابط الصور</button>}</Placeholder>;
+  return <img className={className} src={source} alt={alt} onError={()=>{setFailed(source);onFailure?.(source);renew();}}/>;
+}
+
+function GalleryDialog({images,index,setIndex,title,onClose,returnLabel}) {
+  const ref=useRef(null);
+  useEffect(()=>{
+    const previous=document.activeElement,root=document.getElementById('root'),inert=root?.hasAttribute('inert'),overflow=document.body.style.overflow;
+    root?.setAttribute('inert','');document.body.style.overflow='hidden';ref.current?.querySelector('button')?.focus();
+    return()=>{if(!inert)root?.removeAttribute('inert');document.body.style.overflow=overflow;if(previous?.isConnected)previous.focus();};
+  },[]);
+  function keys(event){
+    event.stopPropagation();
+    if(event.key==='Escape'){event.preventDefault();onClose();}
+    else if(images.length>1&&['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){
+      event.preventDefault();setIndex(event.key==='Home'?0:event.key==='End'?images.length-1:(index+(event.key==='ArrowLeft'?1:-1)+images.length)%images.length);
+    }else if(event.key==='Tab'){
+      const buttons=[...ref.current.querySelectorAll('button:not(:disabled),a[href]')],first=buttons[0],last=buttons.at(-1);
+      if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+      else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+    }
+  }
+  return createPortal(<div className="media-backdrop" onClick={event=>{if(event.target===event.currentTarget)onClose();}}><section className="media-dialog" ref={ref} role="dialog" aria-modal="true" aria-labelledby="gallery-heading" onKeyDown={keys} data-design-node="612:34">
+    <h2 id="gallery-heading">{title}</h2><button className="media-close text-action" type="button" onClick={onClose} aria-label="إغلاق معرض الصور">إغلاق</button>
+    <ServerImage className="media-full-image" src={images[index]} alt={title}/><p className="media-position" role="status">الصورة <bdi>{index+1}</bdi> من <bdi>{images.length}</bdi></p>
+    {images.length>1&&<div className="media-navigation"><button type="button" className="button secondary" disabled={index===0} onClick={()=>setIndex(i=>i-1)}>الصورة السابقة</button><button type="button" className="button secondary" disabled={index===images.length-1} onClick={()=>setIndex(i=>i+1)}>الصورة التالية</button></div>}
+    <button type="button" className="button secondary media-return" onClick={onClose}>{returnLabel}</button>
+  </section></div>,document.body);
+}
+
+export function MediaGallery({images=[],title,variant='auction',returnLabel='العودة إلى تفاصيل المزاد',onRefresh}) {
+  const sources=[...new Set((Array.isArray(images)?images:[]).map(safeImage).filter(Boolean))];
+  const [selected,setSelected]=useState(0),[open,setOpen]=useState(false),index=Math.min(selected,Math.max(0,sources.length-1));
+  const [failedThumbnails,setFailedThumbnails]=useState([]);
+  const signature=sources.map(imageIdentity).join('\n');
+  useEffect(()=>{setSelected(0);setOpen(false);setFailedThumbnails([]);},[signature,title]);
+  function choose(event){
+    if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)||!sources.length)return;
+    event.preventDefault();setSelected(event.key==='Home'?0:event.key==='End'?sources.length-1:(index+(event.key==='ArrowLeft'?1:-1)+sources.length)%sources.length);
+  }
+  return <RefreshImages.Provider value={onRefresh}><section className={'detail-gallery media-gallery media-gallery--'+variant} aria-label="صور المعروض" onKeyDown={choose}>
+    <ServerImage className="gallery-main" src={sources[index]} alt={title}/>
+    {sources.length>0&&<button type="button" className="text-action gallery-open" onClick={()=>setOpen(true)}>فتح معرض الصور</button>}
+    {sources.length>1&&<><div className="gallery-thumbs">{sources.map((source,i)=><button type="button" key={imageIdentity(source)} aria-label={'عرض الصورة '+(i+1)} aria-pressed={index===i} onClick={()=>setSelected(i)}><ServerImage src={source} alt={title+' — الصورة '+(i+1)} manualRetry={false} onFailure={failed=>setFailedThumbnails(previous=>previous.includes(failed)?previous:[...previous,failed])}/></button>)}</div>
+      {onRefresh&&failedThumbnails.some(source=>sources.includes(source)&&isSignedImage(source))&&<button className="text-action" type="button" onClick={onRefresh}>تحديث روابط الصور المصغرة</button>}
+      <p className="field-hint" aria-live="polite">الصورة {index+1} من {sources.length}</p>{index>0&&<button className="text-action gallery-return" type="button" onClick={()=>setSelected(0)}>الصورة الرئيسية</button>}</>}
+    {open&&sources.length>0&&<GalleryDialog images={sources} index={index} setIndex={setSelected} title={title} returnLabel={returnLabel} onClose={()=>setOpen(false)}/>}
+  </section></RefreshImages.Provider>;
+}

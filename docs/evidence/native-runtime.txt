@@ -1,0 +1,7 @@
+2026-10-20 11:27:54.353 UTC [2235] LOG:  starting PostgreSQL 16.15 on x86_64-alpine-linux-musl, compiled by cc (Alpine 15.2.0) 15.2.0, 64-bit
+2026-10-20 11:27:54.440 UTC [2235] LOG:  database system is ready to accept connections
+ PostgreSQL 16.15 on x86_64-alpine-linux-musl, compiled by cc (Alpine 15.2.0) 15.2.0, 64-bit
+NATIVE_POSTGRESQL_READY
+BACKEND_EXIT 1
+BACKEND_EXIT 0
+BROWSER_EXIT 0

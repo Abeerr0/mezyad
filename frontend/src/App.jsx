@@ -1,23 +1,59 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { AccountPanel } from './auth/AccountPanel.jsx';
 import { useAuth } from './auth/AuthProvider.jsx';
 import { SiteHeader, SiteFooter } from './ui/SiteChrome.jsx';
 import { AuctionDetails, AuctionList, categories } from './ui/Auctions.jsx';
+import { BrowsePage } from './ui/BrowsePage.jsx';
+import {AuctionAssistant} from './ui/AuctionAssistant.jsx';
+import { AccountActivity } from './ui/AccountActivity.jsx';
+import {ProfileSettings,NotificationsPage,RecoveryPage,RecoveryStatus} from './ui/AccountPages.jsx';
+import {SupportPage,MissingPage} from './ui/SupportPages.jsx';
+import './ui/shared.css';
+import {Activity,ListingDetails} from './marketplace/Activity.jsx';
+import {ListingForm} from './marketplace/ListingForm.jsx';
+import {AdminDashboard,AdminAuctions} from './marketplace/AdminWorkspace.jsx';
+import {AdminHeader} from './marketplace/AdminShell.jsx';
+import './marketplace/admin.css';
+import {AdminReview} from './marketplace/AdminReview.jsx';
+import {AuctionCreate} from './marketplace/AuctionCreate.jsx';
+import {PrivateAccess,Commitment,BidForm,BidReceipt,AuctionResult,Outbid} from './marketplace/Participation.jsx';
+import {validReceipt} from './marketplace/bidderData.js';
+import {uuid,Page} from './marketplace/common.jsx';
+import './marketplace/workspace.css';
+
+const serviceViews=['profile','notifications'];
+const supportViews=['about','faq','how-to-bid','terms','privacy','contact'];
+const protectedViews=['activity','listing','listing-edit','auction-new','admin','admin-dashboard','admin-auctions','private','commitment','bid','bid-success','outbid','assistant'];
+function safeReturn(value){
+ if([...serviceViews,'activity','listing/new','admin','admin-dashboard','admin-auctions','private','assistant'].includes(value))return value;
+ const [view,id]=String(value||'').split('/');
+ return protectedViews.includes(view)&&uuid(id)?view+'/'+id.toLowerCase():null;
+}
 
 function routeFromHash() {
   const [value, query = ''] = window.location.hash.slice(1).split('?');
+  const returnTo=safeReturn(new URLSearchParams(query).get('return'));
   const requestedAuction = new URLSearchParams(query).get('auction');
   const authAuction = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(requestedAuction || '') ? requestedAuction.toLowerCase() : undefined;
   if (/^auction\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value)) return { view: 'auction', id: value.slice(8).toLowerCase() };
   const [view, category] = value.split('/');
+  if (protectedViews.includes(view)||view==='result') {
+    if(view==='listing'&&category==='new')return {view:'listing-new'};
+    if(['activity','admin','admin-dashboard','admin-auctions','private','assistant'].includes(view)&&!category)return {view};
+    if(uuid(category))return {view,id:category.toLowerCase()};
+  }
   if (view === 'auctions') return { view, category: categories.some(c => c.key === category) ? category : undefined };
-  return { view: ['login', 'register', 'account'].includes(view) ? view : 'home', authAuction };
+  return { view: ['', 'home'].includes(value)?'home':[...serviceViews,...supportViews,'recovery','recovery-status','login','register','account'].includes(value)?value:'missing', authAuction,returnTo };
 }
 const go = value => { window.location.hash = value; };
 
 export function App() {
-  const { status } = useAuth();
+  const { status,session } = useAuth();
+  const [receipts,setReceipts]=useState({});
+  useEffect(()=>setReceipts({}),[session?.user.id]);
   const [route, setRoute] = useState(routeFromHash);
+  const receipt=receipts[route.id];
+  function acceptBid(value){if(validReceipt(value,value?.auctionId,session?.user.id))setReceipts(previous=>({...previous,[value.auctionId]:value}));}
   useEffect(() => {
     const read = () => { setRoute(routeFromHash()); window.scrollTo(0, 0); };
     window.addEventListener('hashchange', read);
@@ -25,30 +61,34 @@ export function App() {
   }, []);
   useEffect(() => {
     if (status === 'authenticated' && ['login', 'register'].includes(route.view)) {
-      go(route.authAuction ? 'auction/' + route.authAuction : 'account');
+      go(route.authAuction ? 'auction/' + route.authAuction : route.returnTo||(session?.user.role==='ADMIN'?'admin-dashboard':'account'));
     }
     if (status === 'guest' && route.view === 'account') go('login');
-  }, [status, route.view, route.authAuction]);
-  const accountView = ['login', 'register', 'account'].includes(route.view);
+    if(status==='guest'&&serviceViews.includes(route.view))go('login?return='+route.view);
+    if(status==='guest'&&(protectedViews.includes(route.view)||route.view==='listing-new'))go('login?return='+encodeURIComponent(route.view==='listing-new'?'listing/new':route.view+(route.id?'/'+route.id:'')));
+  }, [status, route.view, route.authAuction,route.returnTo,route.id,session?.user.role]);
+  const workspaceView=protectedViews.includes(route.view)||['listing-new','result'].includes(route.view);
+  let workspace;
+  if(workspaceView){
+    if(route.view!=='result'&&status!=='authenticated')workspace=<AccountPanel/>;
+    else if(['admin','admin-dashboard','admin-auctions'].includes(route.view)&&session.user.role!=='ADMIN')workspace=<Page title="لا تملك صلاحية الوصول"><p role="alert">هذه الصفحة مخصصة للمشرف.</p><a className="button secondary" href="#account">العودة إلى حسابي</a></Page>;
+    else workspace=({assistant:<AuctionAssistant id={route.id}/>,activity:<Activity/>,listing:<ListingDetails id={route.id}/>, 'listing-new':<ListingForm/>, 'listing-edit':<ListingForm id={route.id}/>, 'auction-new':<AuctionCreate id={route.id}/>,admin:<AdminReview id={route.id}/>, 'admin-dashboard':<AdminDashboard/>, 'admin-auctions':<AdminAuctions id={route.id}/>,private:<PrivateAccess id={route.id}/>,commitment:<Commitment id={route.id}/>,bid:<BidForm id={route.id} onAccepted={acceptBid}/>, 'bid-success':<BidReceipt id={route.id} receipt={receipt}/>,outbid:<Outbid id={route.id} receipt={receipt}/>,result:<AuctionResult id={route.id} receipt={receipt}/>})[route.view];
+  }
+  if(workspaceView)workspace=<React.Fragment key={route.view+'/'+(route.id||'')}>{workspace}</React.Fragment>;
+  useLayoutEffect(()=>{
+    const main=document.querySelector('main');if(main){main.id='main-content';main.tabIndex=-1;main.focus({preventScroll:true});}
+  },[route.view,route.id,route.category]);
+  const accountView = ['login', 'register', 'account',...serviceViews,'recovery','recovery-status'].includes(route.view);
   return <>
-    <SiteHeader signedIn={status === 'authenticated'} accountView={accountView}/>
-    {accountView ? <AccountPanel initialMode={route.view === 'register' ? 'register' : 'login'}
-      onModeChange={mode => go((mode === 'register' ? 'register' : 'login') + (route.authAuction ? '?auction=' + route.authAuction : ''))}/>
-      : route.view === 'auction' ? <AuctionDetails id={route.id} onRequireLogin={() => go('login?auction=' + route.id)}/>
-        : route.view === 'auctions' ? <main className="content-shell browse-page">
-          <p className="eyebrow">المزادات / {categories.find(c => c.key === route.category)?.label || 'جميع الأقسام'}</p>
-          <h1>المزادات</h1><p className="section-description">تصفح المزادات</p>
-          <nav className="category-filters" aria-label="تصفية المزادات">
-            <a className={'button ' + (!route.category ? 'primary' : 'secondary')} href="#auctions" aria-current={!route.category ? 'page' : undefined}>الكل</a>
-            {categories.map(category => <a key={category.key} href={'#auctions/' + category.key}
-              className={'button ' + (route.category === category.key ? 'primary' : 'secondary')}
-              aria-current={route.category === category.key ? 'page' : undefined}>{category.label}</a>)}
-          </nav>
-          <AuctionList category={route.category}/>
-          <section className="browse-editorial"><p className="eyebrow">أقسام مِزياد</p><h2>اعثر على ما تبحث عنه</h2>
-            <p>يمكنك الانتقال بين الأقسام ومتابعة المزادات بحسب اهتماماتك.</p>
-            <a className="button secondary" href="#home">العودة إلى الرئيسية</a></section>
-        </main> : <main>
+    <a className="skip-navigation" href="#main-content" onClick={event=>{event.preventDefault();document.querySelector('main')?.focus();}}>تجاوز إلى المحتوى</a>
+    {status==='authenticated'&&session.user.role==='ADMIN'&&['admin','admin-dashboard','admin-auctions'].includes(route.view)?<AdminHeader/>:<SiteHeader signedIn={status === 'authenticated'} accountView={accountView || workspaceView}/>}
+    {workspaceView?workspace:route.view==='profile'?<ProfileSettings/>:route.view==='notifications'?<NotificationsPage/>:route.view==='recovery'?<RecoveryPage/>:route.view==='recovery-status'?<RecoveryStatus/>:supportViews.includes(route.view)?<SupportPage view={route.view}/>:route.view==='missing'?<MissingPage/>:accountView ? <AccountPanel initialMode={route.view === 'register' ? 'register' : 'login'}
+      onModeChange={mode => go((mode === 'register' ? 'register' : 'login') + (route.authAuction ? '?auction=' + route.authAuction : route.returnTo?'?return='+encodeURIComponent(route.returnTo):''))}>
+        {route.view === 'account' && <AccountActivity/>}
+        <div className="workspace-actions account-shortcuts"><a className="button primary" href="#activity">مزاداتي ونشاطي</a><a className="button secondary" href="#listing/new">إنشاء إعلان</a><a className="button secondary" href="#private">الدخول إلى مزاد خاص</a>{session?.user.role==='ADMIN'&&<a className="button secondary" href="#admin-dashboard">لوحة تحكم المشرف</a>}</div>
+      </AccountPanel>
+      : route.view === 'auction' ? <AuctionDetails id={route.id} receipt={receipt} onParticipate={()=>go('commitment/'+route.id)} onRequireLogin={() => go('login?auction=' + route.id)}/>
+        : route.view === 'auctions' ? <BrowsePage category={route.category}/> : <main id="main-content" tabIndex={-1}>
           <section className="home-hero">
             <img className="hero-photo" src="/images/home-interior.jpg" alt="مساحة داخلية سعودية بتفاصيل معمارية هادئة"/>
             <div className="hero-panel"><h1>مزادات مختارة<br/>لمعروضات عالية القيمة</h1>
