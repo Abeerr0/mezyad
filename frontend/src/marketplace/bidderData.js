@@ -5,9 +5,11 @@ import {uuid,money,validAuction} from './common.jsx';
 
 export const formatAmount=value=>Number.isFinite(Number(value))?new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(Number(value)):'—';
 export function cents(value){
-  if(!money(value))return null;
-  const number=Number(value),rounded=Math.round(number*100);
-  return Number.isSafeInteger(rounded)&&Math.abs(number*100-rounded)<1e-7?rounded:null;
+  if(!['number','string'].includes(typeof value)||!money(value))return null;
+  // Parse the validated decimal text like the Backend, without floating-point rounding.
+  const [whole,fraction='']=String(value).split('.');
+  const total=Number(whole)*100+Number(fraction.padEnd(2,'0'));
+  return Number.isSafeInteger(total)?total:null;
 }
 export const validBidderAuction=value=>validAuction(value)&&uuid(value.seller_id)&&Array.isArray(value.images)
   &&['PUBLIC','PRIVATE'].includes(value.visibility)&&[value.starting_price,value.current_price,value.minimum_increment].every(v=>cents(v)!==null)
