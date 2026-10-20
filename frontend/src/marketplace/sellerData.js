@@ -36,7 +36,7 @@ export function useSellerAuctions(enabled=true,poll=false){
         }
         const needed=current.summaries.filter(a=>{
           const old=current.details.get(a.id);
-          return !old||(old.data.seller_id===userId&&old.data.status!=='CLOSED'&&Date.now()-old.at>=5000)
+          return !old||((old.data.seller_id===userId||old.data.visibility==='PRIVATE')&&(old.data.status!=='CLOSED'||old.data.visibility==='PRIVATE')&&Date.now()-old.at>=(old.data.status==='CLOSED'?30000:5000))
             ||(current.summaryAt>old.at&&(old.data.status!==a.status||old.data.title!==a.title||a.end_time&&a.end_time!==old.data.end_time));
         });
         for(let i=0;i<needed.length;i+=4){
@@ -49,7 +49,7 @@ export function useSellerAuctions(enabled=true,poll=false){
           for(const data of rows)current.details.set(data.id,{data,at:Date.now()});
         }
         if(!controller.signal.aborted)setState({userId,data:current.summaries.map(a=>current.details.get(a.id).data),loading:false,complete:true,failure:''});
-      }catch(error){if(!controller.signal.aborted)setState(previous=>({...previous,userId,loading:false,complete:false,failure:errorMessage(error)}));}
+      }catch(error){if(!controller.signal.aborted){const revoked=[401,403,404].includes(error.status);if(revoked){current.summaries=null;current.summaryAt=-Infinity;current.details.clear();}setState(previous=>({...previous,...(revoked?{data:[]}:{}),userId,loading:false,complete:false,failure:errorMessage(error)}));}}
       finally{busy=false;}
     }
     async function refresh(){await load();if(poll&&!controller.signal.aborted)timer=setTimeout(()=>{void refresh();},5000);}

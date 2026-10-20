@@ -3,6 +3,8 @@ import {useAuth} from '../auth/AuthProvider.jsx';
 import {Page,Feedback,useData,validListing,listingStatus} from './common.jsx';
 import {amount,statusLabel} from '../ui/Auctions.jsx';
 import {useSellerAuctions,linkedAuction,dateLabel} from './sellerData.js';
+import {MediaGallery} from '../ui/MediaGallery.jsx';
+import {listingImages} from '../ui/media.js';
 import {SellerMedia,ListingReason} from './SellerPresentation.jsx';
 
 export function Activity(){
@@ -43,13 +45,13 @@ export function Activity(){
 }
 export function ListingDetails({id,admin=false}){
   const {session}=useAuth(),userId=session.user.id;
-  const item=useData('/api/v1/items/'+id,v=>validListing(v)&&v.id===id);
+  const item=useData('/api/v1/items/'+id,v=>validListing(v)&&v.id===id,5000);
   const owned=item.data?.seller_id===userId,approved=owned&&item.data?.status==='APPROVED';
   const auctions=useSellerAuctions(approved),existing=linkedAuction(auctions.data,id,userId);
   if(item.data&&!owned&&!admin)return <Page title="الإعلان غير متاح"><p role="alert">لا تملك صلاحية عرض هذا الإعلان.</p></Page>;
   const rejected=item.data?.status==='REJECTED',pending=item.data?.status==='PENDING_REVIEW';
   const node=rejected?(item.data.category_fields?.letters?'430:103':'421:151'):pending?'9:159':'421:103';
-  return <Page title={rejected?'لم يُعتمد الإعلان':pending?'الإعلان قيد المراجعة':'إعلان معتمد'} trail="مزاداتي / حالة الإعلان" node={node}>
+  return <Page title={!item.data?'حالة الإعلان':rejected?'لم يُعتمد الإعلان':pending?'الإعلان قيد المراجعة':'إعلان معتمد'} trail="مزاداتي / حالة الإعلان" node={node}>
     <Feedback {...item}/>
     {item.data&&<><p className="section-description">{rejected?'راجع ملاحظة المراجعة وحدّث الإعلان قبل إرساله مجددًا.':pending?'تم إرسال الإعلان للمشرف. انتظر قرار المراجعة قبل إعداد المزاد.':'يمكنك إعداد المزاد بعد اعتماد الإعلان.'}</p>
       <section className="seller-outcome" aria-label="حالة الإعلان"><div className="seller-outcome-copy"><h2>{item.data.title}</h2><p className="status-pill">حالة الإعلان: {listingStatus(item.data.status)}</p>
@@ -57,7 +59,7 @@ export function ListingDetails({id,admin=false}){
         {rejected&&<><ListingReason reason={item.data.review_reason}/><p className="section-description">يمكنك مراجعة البيانات واختيار صور أوضح، ثم إرسال الإعلان للمراجعة مجددًا.</p></>}
         {approved&&<><Feedback {...auctions}/>{existing?<p className="seller-existing-notice" role="status">أُنشئ مزاد لهذا الإعلان بالفعل. حالته: {statusLabel(existing.status)}.</p>:auctions.failure&&<p className="field-hint">تعذر التحقق من وجود مزاد سابق. سيتحقق الخادم عند إرسال الإعدادات.</p>}</>}
         <div className="workspace-actions seller-outcome-actions">{approved&&(existing?<a className="button primary" href={'#auction/'+existing.id}>عرض المزاد</a>:!auctions.loading&&<a className="button primary" href={'#auction-new/'+id}>إعداد المزاد</a>)}{rejected&&owned&&<a className="button primary" href={'#listing-edit/'+id}>تعديل وإعادة إرسال</a>}<a className="button secondary" href="#activity">العودة إلى مزاداتي</a></div>
-      </div><SellerMedia images={existing?.images} title={item.data.title} large/>
+      </div>{listingImages(item.data)?.length?<MediaGallery images={listingImages(item.data)} title={item.data.title} variant="review" returnLabel="العودة إلى الإعلان"/>:<SellerMedia images={existing?.images} title={item.data.title} large/>}
       </section>
     </>}
   </Page>;
