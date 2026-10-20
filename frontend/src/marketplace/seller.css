@@ -56,3 +56,17 @@
  .seller-record,.seller-outcome { grid-template-columns:minmax(0,1fr); gap:24px; }.seller-record-copy { padding:0; }.seller-record-copy > .button { width:100%; }.seller-record .seller-media { order:-1; width:100%; height:270px; }
  .seller-outcome { margin-top:40px; }.seller-outcome-copy { padding:0; }.seller-outcome-copy h2 { font-size:28px; }.seller-media-large { order:-1; height:320px; width:100%; }.seller-outcome .seller-outcome-actions { gap:12px; margin-top:28px; }.seller-review-note { padding:18px; }.seller-access-code { padding:18px; }.seller-access-code input { font-size:18px!important; }.seller-existing-auction { padding:22px; }.seller-schedule { grid-template-columns:minmax(90px,1fr) minmax(0,2fr); gap:10px; }
 }
+
+/* Figma 9:65 / 430:151: the existing form and its draft assistant share one row. */
+.listing-edit-layout { display: grid; grid-template-columns: minmax(0,968fr) minmax(220px,260fr); gap: 36px; align-items: start; margin-top: 40px; }
+.listing-edit-layout > .form-panel { margin: 0; width: 100%; min-width: 0; }
+.listing-assistant { background: var(--ivory); border: 1px solid var(--line); padding: 28px 20px; min-width: 0; line-height: 2; overflow-wrap: anywhere; }
+.listing-assistant h2 { font-size: 24px; font-weight: 700; }
+.listing-assistant h3 { font: 400 15px/2 'Noto Sans Arabic',sans-serif; color: var(--gold); margin-top: 20px; }
+.listing-assistant p { font-size: 13px; margin-top: 16px; color: var(--muted); }
+.listing-assistant .listing-title-suggestion { color: var(--ink); }
+.listing-assistant .field-hint { font-size: 11px; }
+.upload-previews figure { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.upload-previews figure .text-action { margin: 12px 0 0; min-height: 44px; }
+@media(max-width:1000px) { .listing-edit-layout { grid-template-columns: minmax(0,1fr); gap: 24px; } }
+@media(max-width:700px) { .listing-edit-layout { margin-top: 28px; } .listing-assistant { padding: 24px 20px; } }

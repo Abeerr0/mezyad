@@ -28,7 +28,7 @@ export function Activity(){
               {item.status==='PENDING_REVIEW'&&<p>بانتظار قرار المشرف. لا يمكن إنشاء المزاد قبل الاعتماد.</p>}
               {item.status==='APPROVED'&&<p>{auction?'أُنشئ مزاد لهذا الإعلان. تابع حالته ضمن مزاداتي.':'تم اعتماد الإعلان. تحقق من حالته للمتابعة إلى إعداد المزاد.'}</p>}
               {item.status==='REJECTED'&&<ListingReason reason={item.review_reason}/>}
-              <a className="button secondary" href={'#listing/'+item.id}>عرض الإعلان</a></div><SellerMedia images={auction?.images} title={item.title}/></article>;
+              <a className="button secondary" href={'#listing/'+item.id}>عرض الإعلان</a></div><SellerMedia images={listingImages(item)||auction?.images} title={item.title} onRefresh={listings.reload}/></article>;
           })}</>}
       </section>
       <section className="seller-auctions" aria-labelledby="seller-auctions-title"><h2 id="seller-auctions-title">المزادات التي أنشأتها</h2><Feedback {...auctions}/>
@@ -37,7 +37,7 @@ export function Activity(){
         {owned.map(a=><article className="seller-record" key={a.id}><div className="seller-record-copy"><h3>{a.title}</h3><p className="status-pill">حالة المزاد: {statusLabel(a.status)}{a.visibility==='PRIVATE'?' • خاص':a.visibility==='PUBLIC'?' • عام':''}</p>
           <p>{a.status==='SCHEDULED'&&Number(a.starting_price)>0?'سعر البداية':'السعر الحالي'}: <bdi dir="ltr">{amount(a.status==='SCHEDULED'&&Number(a.starting_price)>0?a.starting_price:a.current_price)}</bdi> ر.س</p>
           <p className="field-hint">{a.status==='SCHEDULED'?'البداية: '+dateLabel(a.start_time):'النهاية: '+dateLabel(a.end_time)}</p>
-          <a className="button secondary" href={'#auction/'+a.id}>عرض المزاد</a></div><SellerMedia images={a.images} title={a.title}/></article>)}
+          <a className="button secondary" href={'#auction/'+a.id}>عرض المزاد</a></div><SellerMedia images={a.images} title={a.title} onRefresh={auctions.reload}/></article>)}
       </section>
       {participated.length>0&&<section className="seller-participations" aria-labelledby="seller-participations-title"><h2 id="seller-participations-title">مشاركاتي في مزادات الآخرين</h2><p className="section-description">هذه مشاركات بالمزايدة وليست مزادات تملكها.</p>{participated.map(a=><article className="activity-row" key={a.id}><div><h3>{a.title}</h3><p className="status-pill">{statusLabel(a.status)}</p></div><a className="button secondary" href={'#auction/'+a.id}>عرض المزاد</a></article>)}</section>}
     </div>
@@ -59,7 +59,7 @@ export function ListingDetails({id,admin=false}){
         {rejected&&<><ListingReason reason={item.data.review_reason}/><p className="section-description">يمكنك مراجعة البيانات واختيار صور أوضح، ثم إرسال الإعلان للمراجعة مجددًا.</p></>}
         {approved&&<><Feedback {...auctions}/>{existing?<p className="seller-existing-notice" role="status">أُنشئ مزاد لهذا الإعلان بالفعل. حالته: {statusLabel(existing.status)}.</p>:auctions.failure&&<p className="field-hint">تعذر التحقق من وجود مزاد سابق. سيتحقق الخادم عند إرسال الإعدادات.</p>}</>}
         <div className="workspace-actions seller-outcome-actions">{approved&&(existing?<a className="button primary" href={'#auction/'+existing.id}>عرض المزاد</a>:!auctions.loading&&<a className="button primary" href={'#auction-new/'+id}>إعداد المزاد</a>)}{rejected&&owned&&<a className="button primary" href={'#listing-edit/'+id}>تعديل وإعادة إرسال</a>}<a className="button secondary" href="#activity">العودة إلى مزاداتي</a></div>
-      </div>{listingImages(item.data)?.length?<MediaGallery images={listingImages(item.data)} title={item.data.title} variant="review" returnLabel="العودة إلى الإعلان"/>:<SellerMedia images={existing?.images} title={item.data.title} large/>}
+      </div>{listingImages(item.data)?.length?<MediaGallery images={listingImages(item.data)} title={item.data.title} variant="review" onRefresh={item.reload} returnLabel="العودة إلى الإعلان"/>:<SellerMedia images={existing?.images} title={item.data.title} large/>}
       </section>
     </>}
   </Page>;
