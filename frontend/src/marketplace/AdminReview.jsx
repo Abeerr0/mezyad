@@ -21,7 +21,11 @@ function ReviewItem({id}){
   const [current,setCurrent]=useState(null),[decision,setDecision]=useState(null),[reason,setReason]=useState(''),[validation,setValidation]=useState(''),[phase,setPhase]=useState('ready'),[notice,setNotice]=useState(''),[ownDecision,setOwnDecision]=useState(false),[denied,setDenied]=useState(false);
   const busy=useRef(false),alive=useRef(true);
   useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
-  const item=current||data.data;
+  const item=denied?null:current||data.data;
+  function hideUnavailable(error){
+    setCurrent(null);setOwnDecision(false);setDecision(null);setReason('');setValidation('');setDenied(error.status);setPhase('uncertain');
+    setNotice(error.status===404?'الإعلان غير متاح لهذه الجلسة. لم نعرض بياناته.':'لم يعد متاحًا اتخاذ قرار بهذه الجلسة. سجّل الدخول بحساب مشرف مخوّل.');
+  }
   async function readCurrent(){
     const value=await request('/api/v1/items/'+id);
     if(!validReviewRecord(value)||value.id!==id)throw new ApiError('INVALID_RESPONSE');
@@ -34,7 +38,7 @@ function ReviewItem({id}){
       const value=await readCurrent();if(!alive.current)return;
       setCurrent(value);setOwnDecision(false);setPhase('ready');
       setNotice(value.status==='PENDING_REVIEW'?'تحققنا من الخادم: الإعلان ما زال قيد المراجعة. راجع تفاصيله قبل تأكيد قرار جديد.':'تم التحقق من الحالة الحالية في الخادم. قد يكون القرار حُفظ سابقًا أو اتخذه مشرف آخر.');
-    }catch(error){if(alive.current){setPhase('uncertain');if(error.status===403)setDenied(true);setNotice('تعذر تأكيد حالة الإعلان. لن يُرسل قرار آخر قبل التحقق من حالته. '+errorMessage(error));}}
+    }catch(error){if(alive.current){if([403,404].includes(error.status))hideUnavailable(error);else{setPhase('uncertain');setNotice('تعذر تأكيد حالة الإعلان. لن يُرسل قرار آخر قبل التحقق من حالته. '+errorMessage(error));}}}
   }
   async function verify(){if(busy.current)return;busy.current=true;try{await reconcile();}finally{busy.current=false;}}
   async function review(){
@@ -54,16 +58,17 @@ function ReviewItem({id}){
       if(alive.current){setCurrent(value);setOwnDecision(true);setPhase('ready');}
     }catch(error){
       if(!alive.current)return;
-      if(error.status===403){setDenied(true);setNotice('لم يعد متاحًا اتخاذ قرار بهذه الجلسة. سجّل الدخول بحساب مشرف مخوّل.');setPhase('uncertain');}
+      if([403,404].includes(error.status))hideUnavailable(error);
       else if(submitted){setNotice('تعذر تأكيد حفظ القرار. نتحقق من حالة الإعلان قبل السماح بمحاولة جديدة.');await reconcile();}
       else{setPhase('uncertain');setNotice('تعذر التحقق من حالة الإعلان قبل الإرسال؛ لم نرسل قرارًا. '+errorMessage(error));}
     }finally{busy.current=false;if(alive.current)setDecision(null);}
   }
   const terminal=item&&item.status!=='PENDING_REVIEW';
   const locked=phase!=='ready'||denied;
-  return <AdminPage title={terminal?'نتيجة مراجعة الإعلان':'مراجعة الإعلان'} node={terminal?'612:31':'421:52'}><Feedback {...data}/><Feedback {...catalog}/>
+  return <AdminPage title={denied?(denied===404?'الإعلان غير متاح':'لا تملك صلاحية مراجعة الإعلان'):terminal?'نتيجة مراجعة الإعلان':'مراجعة الإعلان'} node={terminal?'612:31':'421:52'}>{!denied&&<Feedback {...data}/>}<Feedback {...catalog}/>
     {notice&&<div className="feedback admin-notice" role="alert"><p>{notice}</p>{phase==='uncertain'&&!denied&&<button className="button secondary" onClick={verify}>تحقق من حالة الإعلان</button>}</div>}
     {phase==='verifying'&&<p role="status">جارٍ التحقق من حالة الإعلان في الخادم…</p>}
+    {denied&&<section className="admin-decision"><p>أخفينا بيانات الإعلان وصوره لأن الوصول إليه لم يعد متاحًا.</p><div className="workspace-actions"><button className="button primary" disabled>الموافقة على الإعلان</button><button className="button secondary" disabled>رفض الإعلان</button><a className="button secondary" href="#admin">العودة إلى القائمة</a></div></section>}
     {item&&(terminal?<section className="admin-result-card"><ItemStatus value={item.status}/><h2>{item.title}</h2><p role="status">{ownDecision?(item.status==='APPROVED'?'تمت الموافقة على الإعلان بنجاح، ويمكن للبائع الآن إعداد المزاد.':'تم رفض الإعلان وإعادته إلى البائع للتعديل.'):'الحالة الحالية للإعلان: '+(item.status==='APPROVED'?'معتمد، ويمكن للبائع إعداد المزاد.':'مرفوض ويحتاج إلى تعديل.')}</p>{item.status==='REJECTED'&&<div className="admin-note"><h3>سبب الرفض</h3><p className="review-copy">{item.review_reason}</p></div>}<dl className="workspace-summary"><dt>معرّف المشرف</dt><dd><bdi className="admin-reference">{item.reviewed_by}</bdi></dd><dt>تاريخ المراجعة</dt><dd>{dateLabel(item.reviewed_at)}</dd></dl>{item.status==='APPROVED'&&<p className="field-hint">لم يُنشأ مزاد تلقائيًا. يحدد البائع نوع المزاد وإعداداته من حسابه.</p>}<a className="button primary" href="#admin">العودة إلى الإعلانات قيد المراجعة</a></section>:<>
       <p className="section-description">افحص معلومات السلعة ثم اتخذ قرارًا مستقلًا بشأن الإعلان.</p><div className="admin-review-grid"><section className="admin-item-copy"><p className="eyebrow">{labelFor(catalog.data?.find(c=>c.id===item.category_id)?.name)||'الفئة غير متاحة'}</p><h2>{item.title}</h2><ItemStatus value={item.status}/><p className="review-copy">{item.description}</p><dl className="workspace-summary">{Object.entries(item.category_fields).map(([key,value])=><React.Fragment key={key}><dt>{fieldLabels[key]||key}</dt><dd>{typeof value==='object'?JSON.stringify(value):String(value)}</dd></React.Fragment>)}<dt>معرّف البائع</dt><dd><bdi className="admin-reference">{item.seller_id}</bdi></dd><dt>تاريخ الإرسال</dt><dd>غير متاح</dd></dl></section><section className="admin-photo-panel">{listingImages(item)?.length?<MediaGallery images={listingImages(item)} title={item.title} variant="review" onRefresh={verify} returnLabel="العودة إلى المراجعة"/>:<><div className="admin-image-unavailable">صور الإعلان غير متاحة</div><p className="field-hint">لا تتوفر الصور في بيانات الإعلان الحالية. لا يمكن فحصها من هذه الصفحة.</p></>}</section></div>
       <section className="admin-decision"><h2>قرار المراجعة</h2><p>الموافقة تعتمد الإعلان فقط، ولا تنشئ المزاد أو تنشره تلقائيًا.</p><div className="workspace-actions"><button className="button primary" disabled={locked} onClick={()=>{setDecision('APPROVED');setValidation('');}}>الموافقة على الإعلان</button><button className="button secondary" disabled={locked} onClick={()=>{setDecision('REJECTED');setValidation('');}}>رفض الإعلان</button><a className="button secondary" href="#admin">العودة إلى القائمة</a></div></section>
