@@ -26,7 +26,7 @@ export const categoryDesigns = {
 
 export function BrowsePage({ category }) {
   const design = categoryDesigns[category];
-  return <main className={design ? 'category-page' : 'browse-page content-shell'}
+  return <main id="main-content" tabIndex={-1} className={design ? 'category-page' : 'browse-page content-shell'}
     data-design-node={design?.node || '2:78'}>
     {design ? <section className={'category-hero category-hero--' + category} aria-labelledby="browse-heading">
       <img className="category-hero-photo" src={design.image} alt="" width="1440" height="310"/>

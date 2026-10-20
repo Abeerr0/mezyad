@@ -2,6 +2,8 @@ import React,{useState} from 'react';
 import {useAuth} from '../auth/AuthProvider.jsx';
 import {errorMessage} from '../api.js';
 import {Page,listingStatus} from './common.jsx';
+import {ServerImage} from '../ui/MediaGallery.jsx';
+import {listingImages} from '../ui/media.js';
 import {labelFor} from './ListingForm.jsx';
 
 export function AdminAccess({children}){
@@ -20,5 +22,5 @@ export function AdminPage({title,active='review',node,children}){
 export function ItemStatus({value}){return <span className={'admin-status status-'+value}>{listingStatus(value)}</span>;}
 export function PendingCards({items,categories=[]}){
   if(!items.length)return <section className="admin-empty"><h2>لا توجد إعلانات بانتظار المراجعة.</h2><p>ستظهر الإعلانات الجديدة هنا عند إرسالها للمراجعة.</p></section>;
-  return <div className="admin-list">{items.map(item=><article className="admin-listing-row" key={item.id}><div className="admin-image-unavailable" aria-label="صورة الإعلان غير متاحة">لا تتوفر صورة للإعلان</div><div className="admin-row-copy"><div className="admin-title-line"><h3>{item.title}</h3><ItemStatus value={item.status}/></div><p>الفئة: {labelFor(categories.find(c=>c.id===item.category_id)?.name)||'غير متاحة'}</p><p className="field-hint">تاريخ الإرسال غير متاح</p></div><a className="button secondary" href={'#admin/'+item.id}>مراجعة الإعلان</a></article>)}</div>;
+  return <div className="admin-list">{items.map(item=><article className="admin-listing-row" key={item.id}><ServerImage className="admin-image-unavailable" src={listingImages(item)?.[0]} alt={item.title} empty="صورة الإعلان غير متاحة"/><div className="admin-row-copy"><div className="admin-title-line"><h3>{item.title}</h3><ItemStatus value={item.status}/></div><p>الفئة: {labelFor(categories.find(c=>c.id===item.category_id)?.name)||'غير متاحة'}</p><p className="field-hint">تاريخ الإرسال غير متاح</p></div><a className="button secondary" href={'#admin/'+item.id}>مراجعة الإعلان</a></article>)}</div>;
 }

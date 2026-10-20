@@ -1,10 +1,11 @@
 import React from 'react';
-import {safeImage} from '../ui/Auctions.jsx';
+import {safeImage} from '../ui/media.js';
+import {ServerImage} from '../ui/MediaGallery.jsx';
 import './seller.css';
 
 export function SellerMedia({images=[],title,large=false}){
   const src=images.map(safeImage).find(Boolean);
-  return src?<img className={'seller-media'+(large?' seller-media-large':'')} src={src} alt={title}/>
+  return src?<ServerImage className={'seller-media'+(large?' seller-media-large':'')} src={src} alt={title}/>
     :<div className={'seller-media seller-media-empty'+(large?' seller-media-large':'')}><span>لا تتوفر صورة للمعروض</span></div>;
 }
 export function ListingReason({reason}){
