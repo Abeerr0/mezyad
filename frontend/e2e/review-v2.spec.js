@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test';
-import {prepareListing} from './seller-support.js';
+import {prepareListing,session,base} from './seller-support.js';
 import {readFile} from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
@@ -13,7 +13,8 @@ test('seller account separates owned auctions from listing review records using 
  await page.getByRole('tab',{name:'إعلاناتي'}).click();await expect(panel.getByRole('heading',{name:'إعلاناتي وحالات المراجعة'})).toBeVisible();await expect(panel.getByRole('link',{name:'عرض الإعلان'}).first()).toBeVisible();expect(await panel.getByRole('link',{name:'عرض المزاد'}).count()).toBe(0);for(const link of await panel.getByRole('link',{name:'عرض الإعلان'}).all())expect(await link.getAttribute('href')).toMatch(/^#listing\//);
 });
 
-test('bidder account does not present participated auctions as owned auctions or listings',async({page})=>{
+test('bidder account does not present participated auctions as owned auctions or listings',async({page,request})=>{
+ const f=await fixture(),auth=await session(request,'bidder'),detail=(await (await request.get(base+'/auctions/'+f.auctions.eligible)).json()).data;const accepted=await request.post(base+'/auctions/'+f.auctions.eligible+'/bids',{headers:{Authorization:'Bearer '+auth.token},data:{amount:Number(detail.current_price)+50,requestId:crypto.randomUUID()}});expect(accepted.status()).toBe(201);
  await login(page,'bidder');const panel=page.getByRole('tabpanel');await expect(panel.getByRole('heading',{name:'QA eligible',exact:true})).toBeVisible();
  await page.getByRole('tab',{name:'مزاداتي',exact:true}).click();await expect(panel.getByText('لم تنشئ مزادًا بعد.')).toBeVisible();expect(await panel.getByRole('link',{name:'عرض المزاد'}).count()).toBe(0);
  await page.getByRole('tab',{name:'إعلاناتي'}).click();await expect(panel.getByText('لم تضف إعلانًا بعد.')).toBeVisible();

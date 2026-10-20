@@ -122,15 +122,15 @@ test('receipt from a different user cannot render bid success',async()=>{
  mount(<BidReceipt id={a.id} receipt={{...receipt,userId:uid(99)}}/>);expect(await screen.findByRole('heading',{name:a.title})).toBeVisible();expect(screen.queryByText(/تم قبول مزايدتك/)).toBeNull();
 });
 for(const [name,result,known,heading] of [
- ['verified winner',{winner_bid_id:bid.id,closed_at:'2026-10-20T10:00:00Z'},receipt,'فزت بالمزاد'],
- ['different winning bid',{winner_bid_id:uid(99),closed_at:'2026-10-20T10:00:00Z'},receipt,'هذه المزايدة لم تفز'],
+ ['verified winner',{winner_bid_id:bid.id,closed_at:'2026-10-20T10:00:00Z',isWinner:true,winning_amount:'1000'},null,'فزت بالمزاد'],
+ ['different winning bid',{winner_bid_id:uid(99),closed_at:'2026-10-20T10:00:00Z'},receipt,'تم تحديد المزايدة الفائزة'],
  ['reload without receipt',{winner_bid_id:bid.id,closed_at:'2026-10-20T10:00:00Z'},null,'تم تحديد المزايدة الفائزة'],
  ['no bids',{winner_bid_id:null,closed_at:'2026-10-20T10:00:00Z'},null,'انتهى المزاد دون مزايدات'],
  ['missing result',null,null,'نتيجة الإغلاق غير متاحة بعد'],
  ['malformed result',{},null,'نتيجة الإغلاق غير متاحة بعد'],
  ['foreign receipt',{winner_bid_id:bid.id,closed_at:'2026-10-20T10:00:00Z'},{...receipt,auctionId:uid(98)},'تم تحديد المزايدة الفائزة']
 ])test('result '+name+' uses explicit server evidence',async()=>{
- auction={...a,status:'CLOSED',result};mount(<AuctionResult id={a.id} receipt={known}/>);expect(await screen.findByRole('heading',{name:heading,exact:true})).toBeVisible();if(name==='different winning bid'){expect(screen.queryByRole('heading',{name:'لم تفز بالمزاد',exact:true})).toBeNull();expect(screen.getByText(/قد تكون لديك مزايدات أخرى/)).toBeVisible();}
+ auction={...a,status:'CLOSED',result,...(name==='verified winner'?{participation:{hasBid:true,bidCount:1,highestBid:'1000',latestBidId:bid.id}}:{})};mount(<AuctionResult id={a.id} receipt={known}/>);expect(await screen.findByRole('heading',{name:heading,exact:true})).toBeVisible();if(name==='different winning bid'){expect(screen.queryByRole('heading',{name:'لم تفز بالمزاد',exact:true})).toBeNull();expect(screen.getByText(/لا يمكن إثبات النتيجة الشخصية/)).toBeVisible();}
 });
 test('matching winner ID with inconsistent price does not prove a personal win',async()=>{
  auction={...a,status:'CLOSED',current_price:'1050',result:{winner_bid_id:bid.id,closed_at:'2026-10-20T10:00:00Z'}};mount(<AuctionResult id={a.id} receipt={receipt}/>);expect(await screen.findByRole('heading',{name:'تم تحديد المزايدة الفائزة'})).toBeVisible();expect(screen.queryByRole('heading',{name:'فزت بالمزاد',exact:true})).toBeNull();
