@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../auth/AuthProvider.jsx';
 import { ApiError, errorMessage } from '../api.js';
 import { amount, safeImage, statusLabel } from './Auctions.jsx';
+import {personalResult,higherAcceptedBid} from '../marketplace/bidderData.js';
 import {ProfileFields} from './AccountPages.jsx';
 import {ServerImage} from './MediaGallery.jsx';
 import { listingStatus, uuid, validListing } from '../marketplace/common.jsx';
@@ -173,12 +174,14 @@ export function AccountActivity() {
           <article className="activity-row" key={item.id}><div><h3>{item.title}</h3><p className="status-pill">{listingStatus(item.status)}</p>
             {item.review_reason && <p>سبب الرفض: {item.review_reason}</p>}</div><a className="button secondary" href={'#listing/' + item.id}>عرض الإعلان</a></article>)
           : <p className="empty-state">لم تضف إعلانًا بعد.</p>) : (current.rows.length ? current.rows.map(auction => {
-          const image = safeImage(auction.images[0]);
+          const image = safeImage(auction.images[0]),outcome=personalResult(auction,userId);
+          const position=tab==='bids'&&auction.status==='ACTIVE'&&higherAcceptedBid(null,auction,userId,[]);
           return <article className="account-auction-row" key={auction.id}>
             <div><h3>{auction.title}</h3><p className="eyebrow">مزاد {statusLabel(auction.status)}</p>
               <p>{auction.status==='SCHEDULED'&&Number(auction.starting_price)>0?'السعر الابتدائي':'السعر الحالي'}: <bdi dir="ltr">{amount(auction.status==='SCHEDULED'&&Number(auction.starting_price)>0?auction.starting_price:auction.current_price)}</bdi> ر.س</p>
-              <a className="button primary" href={'#auction/' + auction.id}>عرض المزاد</a></div>
-            <ServerImage src={image} alt={auction.title}/>
+              {position&&<p className="status-pill">تم تجاوز مزايدتك</p>}{auction.status==='CLOSED'&&outcome?.hasBid&&<p className="status-pill">{outcome.isWinner?'فزت بالمزاد':'لم تفز بالمزاد'}</p>}
+              <a className="button primary" href={'#auction/' + auction.id}>عرض المزاد</a>{auction.status==='CLOSED'&&<a className="button secondary" href={'#result/'+auction.id}>عرض نتيجة المزاد</a>}</div>
+            <ServerImage src={image} alt={auction.title} onRefresh={reload}/>
           </article>;
         }) : <p className="empty-state">{tab === 'bids' ? 'لا توجد مزايدات مرتبطة بحسابك حاليًا.' : 'لم تنشئ مزادًا بعد.'}</p>))}
         {pageCount > 1 && <nav className="account-pagination" aria-label="صفحات نشاط الحساب">

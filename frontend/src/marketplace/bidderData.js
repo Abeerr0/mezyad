@@ -15,6 +15,13 @@ export const validBidderAuction=value=>validAuction(value)&&uuid(value.seller_id
 export const validHistory=value=>Array.isArray(value)&&value.every(b=>uuid(b.id)&&cents(b.amount)!==null&&Number.isFinite(Date.parse(b.created_at)))&&new Set(value.map(b=>b.id)).size===value.length;
 export const validCommitment=value=>uuid(value?.id)&&['SUCCESS','PENDING','FAILED'].includes(value.status);
 export const validResult=value=>value&&typeof value==='object'&&(value.winner_bid_id===null||uuid(value.winner_bid_id))&&Number.isFinite(Date.parse(value.closed_at));
+export const validParticipation=p=>p&&typeof p.hasBid==='boolean'&&Number.isSafeInteger(p.bidCount)&&p.bidCount>=0
+  &&p.hasBid===(p.bidCount>0)&&(p.hasBid?uuid(p.latestBidId)&&cents(p.highestBid)!==null:p.latestBidId===null&&p.highestBid===null);
+export function personalResult(auction,userId){
+  if(!uuid(userId)||!validResult(auction?.result)||!validParticipation(auction.participation)||typeof auction.result.isWinner!=='boolean')return null;
+  if(auction.result.isWinner&&(!auction.participation.hasBid||!uuid(auction.result.winner_bid_id)||cents(auction.result.winning_amount)===null))return null;
+  return {isWinner:auction.result.isWinner,hasBid:auction.participation.hasBid};
+}
 export const validReceipt=(receipt,auctionId,userId)=>uuid(userId)&&receipt?.auctionId===auctionId&&receipt.userId===userId&&uuid(receipt.bidId)&&cents(receipt.amount)!==null;
 export function minimumBid(auction,history){
   if(!auction||!Array.isArray(history))return null;
@@ -31,6 +38,7 @@ export function auctionWindow(auction,now=Date.now()){
 }
 export function useNow(){const [now,setNow]=useState(Date.now);useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer);},[]);return now;}
 export function higherAcceptedBid(receipt,auction,userId,history){
+  if(uuid(userId)&&validParticipation(auction.participation))return auction.participation.hasBid&&cents(auction.current_price)>cents(auction.participation.highestBid);
   return validReceipt(receipt,auction.id,userId)&&Array.isArray(history)&&history.some(b=>b.id!==receipt.bidId&&cents(b.amount)>cents(receipt.amount));
 }
 // This is an unresolved client request, never a bank status or proof of bid ownership.
