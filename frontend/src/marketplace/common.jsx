@@ -33,7 +33,8 @@ export const navigate = (value) => {
 };
 
 export function useData(path, validate, poll = 0, options = {}) {
-  const { request } = useAuth();
+  const { request, session } = useAuth();
+  const sessionToken = session?.token ?? null;
   const [data, setData] = useState(null),
     [failure, setFailure] = useState(""),
     [loading, setLoading] = useState(true),
@@ -41,10 +42,13 @@ export function useData(path, validate, poll = 0, options = {}) {
   const validator = useRef(validate),requestOptions=useRef(options);
   requestOptions.current=options;
   validator.current = validate;
+  const identity = useRef({path, sessionToken});
   useEffect(() => {
+    const changedIdentity = identity.current.path !== path || identity.current.sessionToken !== sessionToken;
+    identity.current = {path, sessionToken};
     const controller = new AbortController();
     let busy = false;
-    setData(null);
+    if (changedIdentity) setData(null);
     setFailure("");
     setLoading(true);
     async function load() {
@@ -70,7 +74,7 @@ export function useData(path, validate, poll = 0, options = {}) {
       controller.abort();
       if (timer) clearInterval(timer);
     };
-  }, [path, request, poll, revision]);
+  }, [path, request, poll, revision, sessionToken]);
   return { data, failure, loading, reload: () => setRevision((x) => x + 1) };
 }
 export function Feedback({ failure, loading, reload }) {

@@ -1,0 +1,109 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> mezyad-backend@0.1.0 test
+> node --test tests/*.test.js tests/acceptance/*.test.js
+
+﹣ GAP-01: Stage 3 multipart listing accepts a valid PNG and persists its image reference (0.78906ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ GAP-02 / QA-17: resubmission saves corrected category fields, not only title/description (0.161401ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ GAP-03: invalid UUID on admin review is a client error, not an internal server failure (0.165257ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ GAP-04: overlong listing title is rejected with 400 before a PostgreSQL error (0.141682ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ GAP-05: whitespace-only rejection reason is rejected and listing remains pending (0.138296ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ GAP-06 / QA-06: private bid denial does not disclose whether the auction exists (0.119408ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ GAP-07: public auction status filter excludes auctions in other states (0.113399ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+✔ invalid registration is rejected at the HTTP boundary without requiring a database (108.326881ms)
+✔ incomplete login returns a clear 400 response (12.69867ms)
+✔ malformed JSON is rejected without echoing sensitive input (4.403175ms)
+✔ oversized account request is rejected before processing (3.894514ms)
+✔ missing and malformed bearer tokens cannot reach protected handlers (6.019837ms)
+✔ malformed resource IDs fail at the HTTP boundary without accessing PostgreSQL (6.027735ms)
+✔ unknown API routes use the JSON error contract (1.248848ms)
+﹣ account integration against PostgreSQL (0.567469ms) # Set TEST_DATABASE_URL to run real database tests
+✔ unconfigured bank never trusts browser SUCCESS or invents provider operations (1.092183ms)
+﹣ BID-01: authentication, UUID and money validation reject invalid requests (1.182598ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ QA-03A: owner cannot bid even with a synthetic SUCCESS commitment (0.201511ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ QA-03B: the same USER can own an auction and bid in another owner's auction (0.212688ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ BID-02: missing, PENDING and FAILED commitments cannot authorize bids (0.123004ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ QA-18: first bid at starting price is accepted and price/history update together (0.13378ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ QA-08: first bid below starting price is rejected without changing price (0.084716ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ QA-19: later bid enforces increment; exact increment is accepted (0.095243ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ BID-03: decimal increments retain exact cents without floating point drift (0.095413ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ QA-11: scheduled, expired and CLOSED auctions reject bids using server state/time (0.164336ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ QA-09: a retried request UUID accepts at most one bid (0.874257ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ QA-09 concurrent replay: two waiting requests with the same UUID produce one accepted bid (0.074561ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ QA-10: two simultaneous same-price bids serialize; loser sees the updated price (0.083395ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ BID-04: reused request UUID across auctions rolls back the losing auction price (0.175552ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ BID-05: database failure after bid insertion rolls back bid and price atomically (0.094922ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ BID-06 / QA-11: bid waiting on a row lock revalidates the deadline after the lock (0.13997ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ BID-07: private grant plus synthetic commitment permits a bid; history stays auction-specific (0.077006ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ QA-12: ended auction without bids closes with a null winner (0.108272ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ CLOSE-01: highest accepted bid determines winner and belongs to that auction (0.074021ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ QA-13: repeated and concurrent detail requests preserve one stable closure result (0.068773ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ QA-23: no page visit is needed to reject late bids; next detail access finalizes result (0.097455ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ CLOSE-02: active auction detail request does not close it prematurely (0.245898ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ CLOSE-03: failure while storing result rolls back CLOSED status; later access can retry (0.099819ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ CLOSE-04: queued bid and closure after deadline cannot create a late winner (0.072509ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ CLOSE-05: bid validated before deadline commits before waiting closure and becomes the winner (0.108532ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ DB-01: migration creates exactly the ten Stage 3 core tables, each with a primary key (0.925214ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ DB-02: account, category and session identifiers are unique; account roles are constrained (0.158938ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ DB-03: foreign keys reject orphan listings, images, sessions, bids and grants (0.109664ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ DB-04: all listing, auction, visibility and commitment status enums reject invalid values (1.073095ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ DB-05: prices/increments are positive and auction end must follow start (0.136073ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ DB-06: one auction per listing; private codes require hashes and public codes must be null (0.154661ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ DB-07: a user can have only one private grant and one commitment per auction (0.244015ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ DB-08 / QA-09: request UUID is globally unique and money uses numeric(14,2) (0.197355ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ DB-09 / QA-20: composite foreign key prevents a winner from another auction (0.218647ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ DB-10 / QA-12/13: nullable winner supports no bids; result is unique per auction (0.181822ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ DB-11: deleting an unauctioned item cascades its image references; deleting a free account cascades sessions (1.587314ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ DB-12: timestamps are timezone-aware and the four defined lookup indexes exist (0.095292ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+✔ GET /health returns status ok (33.034984ms)
+✔ attempt limit stops repeated requests, separates users and expires (1.051843ms)
+✔ categoryFields accepts the canonical JSON object and multipart JSON string (1.868244ms)
+✔ legacy category_fields remains compatible and conflicting aliases are rejected (0.415191ms)
+✔ invalid category fields cannot silently become an empty object (0.228091ms)
+﹣ UPLOAD: multipart listing saves decoded images and category fields; links require valid signatures (0.50825ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ QA-22: spoofed MIME, wrong extension, corrupt image, oversized file and too many images are rejected without leftovers (0.10061ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ UPLOAD rollback: a second corrupt image removes the first saved file and rolls back the listing (0.07361ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ QA-17 images: only rejected owner can replace photos and fields; old files removed after commit (0.067391ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ private listing image URL is absent from public discovery and unauthorized private details (0.103394ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ canonical categoryFields and images persist on create and resubmission; invalid aliases make no change (0.060841ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ invalid UUID paths return 400 JSON instead of database errors (0.524143ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ QA-05 rate limit: repeated guesses are blocked and grant remains absent (0.117115ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ private commitment GET requires grant even when a synthetic row already exists (0.1201ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ scheduled auctions become active without a bid; expired list status and final detail agree (0.076534ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ admin can monitor private auctions; anonymous and USER cannot request all scope (0.076835ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ review requires nonblank reason and rejects overlong text; history validates paging (0.068283ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ private invitation failures use the same response for missing and hidden auctions (0.099328ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ LIST-01: authenticated owner creates a JSON listing in PENDING_REVIEW with category fields (0.712906ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ LIST-02: missing auth and invalid listing fields do not create listings (0.125898ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ LIST-03: only owner or ADMIN can read an individual listing; lists are owner-scoped (0.078447ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ QA-03: USER cannot review; ADMIN approval records reviewer and review time (0.072368ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ QA-17: rejection includes reason; owner resubmission clears the prior review (0.077987ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ LIST-04: another user cannot resubmit a rejected listing; approved auction listing is locked (0.105728ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ QA-04: pending/rejected listings and another owner's approved listing cannot be auctioned (0.065008ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ AUCT-01: auction starts at starting price; invalid money/schedule and duplicate item are rejected (1.864168ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ PRIVATE-01: private creation returns code only to owner, stores a hash and stays out of discovery (0.161792ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ QA-05: wrong private invitation code creates no access grant (0.154601ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ PRIVATE-02: correct invitation grants access idempotently; owner cannot join as bidder (0.092939ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ QA-06: direct private details/history/bidding/commitment require an access grant (0.058418ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ COMMIT-01 / QA-07 partial: unavailable bank fails closed; browser SUCCESS and repeated requests do not approve (0.071497ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ COMMIT-02: commitment status is scoped to the caller and owner cannot initiate (0.077035ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ QA-21 API only: My Activity includes own listing/auction and bids in another auction (0.08039ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+✔ money validation (1.435097ms)
+✔ large auction amounts retain exact cents across the numeric(14,2) range (0.354069ms)
+﹣ dashboard and monitoring are ADMIN-only including private auctions (0.508841ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ dashboard counts match persisted listings and database-time auction states (0.164536ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ admin monitoring finalizes expired auctions and exposes stable winner/no-bids results (0.081822ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ winner survives page reload and participation remains scoped to the authenticated viewer (0.091527ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+﹣ monitoring validates filters/paging and admins can review all listing states (0.075393ms) # Requires a disposable TEST_DATABASE_URL ending in _test
+✔ actual decoded photo is resized to JPEG and can be removed (21.829506ms)
+✔ spoofed and corrupt images are rejected and partial files are cleaned up (4.792407ms)
+✔ image links are signed; unsigned, altered and expired requests are denied (35.937014ms)
+✔ multipart parser enforces file count, MIME, extension and 5 MiB limit before storage (54.320556ms)
+ℹ tests 96
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 77
+ℹ todo 0
+ℹ duration_ms 580.797848
