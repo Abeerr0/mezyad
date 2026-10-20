@@ -18,6 +18,8 @@ const messages = {
   NOT_FOUND: 'المحتوى المطلوب غير متاح.',
   BANK_SANDBOX_UNAVAILABLE: 'تأكيد المشاركة غير متاح حاليًا. لم يتم اعتماد المشاركة أو إرسال مزايدة.',
   OWNER: 'لا يمكنك المشاركة في مزاد تملكه.',
+  RATE_LIMITED: 'محاولات كثيرة. انتظر قليلًا قبل إعادة التحقق من رمز الوصول.',
+  TOO_MANY_REQUESTS: 'محاولات كثيرة. انتظر قليلًا قبل إعادة المحاولة.',
   INVALID_CODE: 'رمز الوصول غير صحيح. تحقق منه وحاول مجددًا.',
   NO_ACCESS: 'يلزم قبول رمز الوصول قبل المشاركة في هذا المزاد.',
   COMMITMENT_REQUIRED: 'أكمل تأكيد المشاركة قبل إضافة مزايدتك.',
@@ -29,18 +31,18 @@ const messages = {
   DUPLICATE_AUCTION: 'هذا الإعلان مرتبط بمزاد بالفعل.',
   PAYLOAD_TOO_LARGE: 'حجم البيانات أكبر من المسموح. قلّل حجم الملفات وحاول مجددًا.',
   INVALID_ID: 'الرابط أو معرّف الطلب غير صحيح.',
+  INVALID_IMAGE: 'اختر صورًا سليمة بصيغة JPG أو PNG أو WebP، حتى 6 صور و5 MiB للصورة.',
+  LIMIT_FILE_SIZE: 'حجم الصورة يتجاوز 5 MiB.',
+  LIMIT_FILE_COUNT: 'الحد الأقصى 6 صور.',
   INVALID_CATEGORY: 'اختر قسمًا متاحًا للمعروض.',
-  INVALID_IMAGE: 'الصورة غير صالحة. اختر JPG أو PNG أو WebP بحجم حتى 5 ميجابايت.',
-  IMAGE_LIMIT: 'المسموح من صورة إلى 6 صور، وحجم كل صورة حتى 5 ميجابايت.',
-  TOO_MANY_REQUESTS: 'كثرت المحاولات. انتظر شوي وحاول مرة ثانية.',
 };
 
-export const apiOrigin = () => (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '');
-
 export const errorMessage = error => messages[error?.code]
-  || 'تعذر إتمام الطلب. حاول مجددًا.';
+  || (error?.status===429?'محاولات كثيرة. انتظر قليلًا قبل إعادة المحاولة.':'تعذر إتمام الطلب. حاول مجددًا.');
 
-export async function requestApi(path, { token, body, signal, method = 'GET', timeout = 10000 } = {}) {
+export const apiBase = () => (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '');
+
+export async function requestApi(path, { token, body, signal, method = 'GET', timeout = 10000, responseMeta = false } = {}) {
   const controller = new AbortController();
   let timedOut = false;
   const abort = () => controller.abort();
@@ -49,7 +51,7 @@ export async function requestApi(path, { token, body, signal, method = 'GET', ti
   const timer = setTimeout(() => { timedOut = true; controller.abort(); }, timeout);
   const multipart = typeof FormData !== 'undefined' && body instanceof FormData;
   try {
-    const base = apiOrigin();
+    const base = apiBase();
     const response = await fetch(base + path, {
       method,
       headers: {
@@ -67,7 +69,7 @@ export async function requestApi(path, { token, body, signal, method = 'GET', ti
     if (!payload || !Object.prototype.hasOwnProperty.call(payload, 'data')) {
       throw new ApiError('INVALID_RESPONSE', response.status);
     }
-    return payload.data;
+    return responseMeta ? {data:payload.data,meta:payload.meta} : payload.data;
   } catch (error) {
     if (error instanceof ApiError) throw error;
     if (timedOut) throw new ApiError('TIMEOUT');

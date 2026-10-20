@@ -7,9 +7,9 @@ import { AuthProvider } from '../src/auth/AuthProvider.jsx';
 import { saveSession } from '../src/auth/session.js';
 import { Countdown, AuctionList } from '../src/ui/Auctions.jsx';
 
-const car = { id: '20000000-0000-4000-8000-000000000002', title: 'بورش كاريرا GT — 2005', category_name: 'Rare Vehicles', image_url: '/images/porsche-carrera-gt.jpg', images: ['/images/porsche-carrera-gt.jpg'], current_price: '4200000', status: 'ACTIVE', bid_count: 0, end_time: '2030-01-01T00:00:00Z', description: 'وصف السيارة' };
+const car = { seller_id:'10000000-0000-4000-8000-000000000001',visibility:'PUBLIC',starting_price:'4200000',minimum_increment:'10000',start_time:'2020-01-01T00:00:00Z',result:null,id: '20000000-0000-4000-8000-000000000002', title: 'بورش كاريرا GT — 2005', category_name: 'Rare Vehicles', image_url: '/images/porsche-carrera-gt.jpg', images: ['/images/porsche-carrera-gt.jpg'], current_price: '4200000', status: 'ACTIVE', bid_count: 0, end_time: '2030-01-01T00:00:00Z', description: 'وصف السيارة' };
 const villa = { ...car, id: '20000000-0000-4000-8000-000000000001', title: 'فيلا في حي حطين', category_name: 'Real Estate', image_url: '/images/hittin-villa.jpg', images: ['/images/hittin-villa.jpg'] };
-const session = { token: 'a'.repeat(64), user: { id: '10000000-0000-4000-8000-000000000009', name: 'غدي', email: 'ghadi@example.invalid', role: 'USER' } };
+const session = { token: 'a'.repeat(64), user: { id: '10000000-0000-4000-8000-000000000009', name: 'Test User', email: 'qa@example.invalid', role: 'USER' } };
 const response = (data, status = 200) => ({ ok: status < 400, status, json: async () => status < 400 ? { data } : { error: data } });
 const mount = () => render(<AuthProvider><App/></AuthProvider>);
 
@@ -23,7 +23,7 @@ beforeEach(() => {
     if (url.endsWith('/auctions')) return response([villa, car]);
     if (url.endsWith('/auctions/' + car.id)) return response(car);
     if (url.endsWith('/auctions/' + villa.id)) return response(villa);
-    if (url.endsWith('/bids')) return response([]);
+    if (url.endsWith('/bids') && options.method === 'GET') return response([]);
     if (url.endsWith('/commitment') && options.method === 'GET') return response({ code: 'NOT_FOUND' }, 404);
     if (url.endsWith('/commitment') && options.method === 'POST') return response({ code: 'BANK_SANDBOX_UNAVAILABLE' }, 503);
     throw Error('Unexpected request in navigation test');
@@ -88,9 +88,9 @@ test('unavailable banking does not pretend that participation or a bid succeeded
   const actor = userEvent.setup(); mount();
   await screen.findByRole('link', { name: 'حسابي', exact: true });
   await actor.click(await screen.findByRole('button', { name: 'أضف مزايدتك', exact: true }));
-  await actor.click(await screen.findByRole('button', { name: 'ابدأ تأكيد المشاركة' }));
+  await actor.click(await screen.findByRole('button', { name: 'ابدأ تأكيد المشاركة', exact: true }));
   expect(await screen.findByRole('alert')).toHaveTextContent('لم يتم اعتماد المشاركة أو إرسال مزايدة.');
-  expect(fetch.mock.calls.some(([url, options]) => url.endsWith('/bids') && options.method === 'POST')).toBe(false);
+  expect(fetch.mock.calls.some(([url,options]) => url.endsWith('/bids')&&options.method==='POST')).toBe(false);
 });
 
 test('a mismatched details response is rejected instead of showing another product', async () => {

@@ -9,8 +9,10 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
-    "test:browser-smoke": "node scripts/browser-wasm-smoke.js"
+    "test:e2e": "node scripts/run-browser-tests.mjs",
+    "test:react": "vitest run",
+    "test:runner": "node --test scripts/browser-runner.test.mjs",
+    "test:all": "npm run test && npm run test:runner && npm run test:e2e"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.4",
