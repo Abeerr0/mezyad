@@ -3,7 +3,7 @@ import { useAuth } from '../auth/AuthProvider.jsx';
 import {BidPosition} from '../marketplace/BidderPresentation.jsx';
 import {formatAmount,useBidderAuction,validHistory,validResult,useNow,auctionWindow} from '../marketplace/bidderData.js';
 import {MediaGallery,ServerImage} from './MediaGallery.jsx';
-import {safeImage} from './media.js';
+import {safeImage,isSignedImage} from './media.js';
 export {safeImage} from './media.js';
 import './shared.css';
 import {ItemSpecifications} from './ItemSpecifications.jsx';
@@ -41,12 +41,14 @@ export function Countdown({ endTime, startTime, status }) {
 
 export function AuctionCard({ auction, index = 0,onRefresh }) {
   const image = safeImage(auction.image_url);
+  const [failedImage,setFailedImage]=useState(null);
   const scheduled = auction.status === 'SCHEDULED';
   const hasStartingPrice = Number.isFinite(Number(auction.starting_price)) && Number(auction.starting_price) > 0;
   return <article className="auction-card">
     <a className="auction-image-link" href={'#auction/' + auction.id} aria-label={'عرض مزاد ' + auction.title}>
-      <ServerImage src={image} alt={auction.title} onRefresh={onRefresh}/>
+      <ServerImage src={image} alt={auction.title} onRefresh={onRefresh} manualRetry={false} onFailure={setFailedImage}/>
     </a>
+    {onRefresh&&failedImage===image&&isSignedImage(image)&&<button type="button" className="text-action" onClick={onRefresh}>تحديث صورة المزاد</button>}
     <div className="card-title"><h3>{auction.title}</h3><span dir="ltr">{String(index + 1).padStart(2, '0')}</span></div>
     <div className="price"><span>{scheduled ? 'حالة المزاد' : Number(auction.bid_count) > 0 ? 'أعلى مزايدة' : 'السعر الابتدائي'}</span>
       <strong>{scheduled ? 'قريبًا' : <><bdi dir="ltr">{amount(auction.current_price)}</bdi> ر.س</>}</strong></div>

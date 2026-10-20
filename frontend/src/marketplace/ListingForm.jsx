@@ -81,7 +81,7 @@ export function ListingForm({id}){
       navigate('listing/'+value.id);
     }catch(error){setFailure(errorMessage(error));if(error.code==='INVALID_STATE'&&error.status===409){setStateConflict(true);setLoaded(false);}}finally{setPending(false);}
   }
-  return <Page title={id?'تعديل الإعلان':step===-1?'اختر فئة السلعة':'إنشاء إعلان'} trail={step===-1?'حسابي / أنشئ مزادك':'مزاداتي / تفاصيل المعروض'} node={step===-1?'9:30':id?['430:151','430:219','430:270'][step]:['9:65','9:103','9:131'][step]}>
+  return <Page focusKey={step} title={id?'تعديل الإعلان':step===-1?'اختر فئة السلعة':'إنشاء إعلان'} trail={step===-1?'حسابي / أنشئ مزادك':'مزاداتي / تفاصيل المعروض'} node={step===-1?'9:30':id?['430:151','430:219','430:270'][step]:['9:65','9:103','9:131'][step]}>
     <p className="section-description">{step===-1?'ابدأ باختيار القسم المناسب قبل إضافة تفاصيل الإعلان.':id?'راجع ملاحظة المشرف وحدّث بيانات الإعلان وصوره قبل إرساله مجددًا.':'أضف وصفًا واضحًا ومعلومات يمكنك تأكيدها.'}</p>
     <Feedback loading={loading||catalog.loading} failure={catalog.failure} reload={catalog.reload}/>
     {missingCategory&&<div className="feedback error" role="alert"><p>قسم الإعلان غير متاح ضمن الأقسام الحالية. لا يمكن تعديل الإعلان قبل التحقق من قسمه.</p><a className="button secondary" href={'#listing/'+id}>العودة إلى الإعلان</a></div>}

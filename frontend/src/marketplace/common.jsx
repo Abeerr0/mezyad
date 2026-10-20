@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ApiError, errorMessage } from "../api.js";
 import { createPortal } from "react-dom";
 import { useAuth } from "../auth/AuthProvider.jsx";
@@ -94,9 +94,15 @@ export function Feedback({ failure, loading, reload }) {
     </>
   );
 }
-export function Page({ title, trail, children, node }) {
+export function Page({ title, trail, children, node, focusKey }) {
+  const main = useRef(null);
+  useLayoutEffect(() => {
+    if (!document.querySelector('[role="dialog"][aria-modal="true"]') && !main.current?.closest('[inert]')) {
+      main.current?.focus({ preventScroll: true });
+    }
+  }, [focusKey]);
   return (
-    <main id="main-content" tabIndex={-1} className="content-shell workspace-page" data-design-node={node}>
+    <main ref={main} id="main-content" tabIndex={-1} className="content-shell workspace-page" data-design-node={node}>
       <p className="eyebrow">{trail}</p>
       <h1>{title}</h1>
       {children}
@@ -121,6 +127,7 @@ export function Confirm({ title, children, pending, onConfirm, onCancel, confirm
     previous = useRef(null);
   useEffect(() => {
     previous.current = document.activeElement;
+    const dialog = ref.current;
     const root = document.getElementById("root");
     const wasInert = root?.hasAttribute("inert");
     const overflow = document.body.style.overflow;
@@ -128,9 +135,17 @@ export function Confirm({ title, children, pending, onConfirm, onCancel, confirm
     document.body.style.overflow = "hidden";
     ref.current?.focus();
     return () => {
-      if (!wasInert) root?.removeAttribute("inert");
-      document.body.style.overflow = overflow;
-      if (previous.current?.isConnected) previous.current.focus();
+      const anotherDialog = [...document.querySelectorAll('[role="dialog"][aria-modal="true"]')].some(element => element !== dialog);
+      if (!wasInert && !anotherDialog) root?.removeAttribute("inert");
+      document.body.style.overflow = anotherDialog ? "hidden" : overflow;
+      if (anotherDialog) return;
+      const target = previous.current;
+      if (target?.isConnected && !target.matches(':disabled,[aria-disabled="true"]') && !target.closest('[inert]')) {
+        target.focus();
+        if (document.activeElement === target) return;
+      }
+      const main = document.getElementById("main-content");
+      if (!main?.closest('[inert]')) main?.focus({ preventScroll: true });
     };
   }, []);
   const keys = (event) => {

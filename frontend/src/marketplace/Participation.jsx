@@ -14,7 +14,7 @@ function SignedIn({children}){
   if(status!=='authenticated')return <Page title="سجّل الدخول للمتابعة"><p role="status">{status==='checking'?'جارٍ التحقق من الجلسة…':'تحتاج إلى حساب مسجّل لإتمام هذه الخطوة.'}</p><a className="button secondary" href="#login">تسجيل الدخول</a></Page>;
   return children;
 }
-function AuctionFeedback({data,title}){return <Page title={title}><Feedback {...data}/><a className="button secondary" href="#auctions">العودة إلى المزادات</a></Page>;}
+function AuctionFeedback({data,title}){const {failure,loading,reload}=data;return <Page title={title}><Feedback failure={failure} loading={loading} reload={reload}/><a className="button secondary" href="#auctions">العودة إلى المزادات</a></Page>;}
 function ProductImage({auction,onRefresh}){return <ServerImage className="bid-image" src={auction.images[0]} alt={auction.title} onRefresh={onRefresh}/>;}
 const bidPath=id=>'/api/v1/auctions/'+id;
 const useAuction=useBidderAuction;
@@ -157,8 +157,10 @@ function OutbidState({id,receipt}){
   return <OutbidHistory id={id} receipt={receipt} auction={auction.data} userId={session.user.id}/>;
 }
 function OutbidHistory({id,receipt,auction,userId}){
-  const history=useData(bidPath(id)+'/bids',validHistory,5000);
-  if(!history.data||history.failure)return <Page title="متابعة المزايدة"><Feedback {...history}/></Page>;
+  const history=useData(bidPath(id)+'/bids',validHistory,5000),now=useNow();
+  if(history.failure)return <Page title="متابعة المزايدة"><Feedback {...history}/></Page>;
+  if(auctionWindow(auction,now)!=='open')return <BidPosition receipt={receipt} auction={auction} userId={userId} history={history.data} standalone/>;
+  if(!history.data)return <Page title="متابعة المزايدة"><Feedback {...history}/></Page>;
   if(higherAcceptedBid(receipt,auction,userId,history.data))return <BidPosition receipt={receipt} auction={auction} userId={userId} history={history.data} standalone/>;
   return <BidderOutcome node="7:211" title="متابعة حالة المزايدة" itemTitle={auction.title} actions={<a className="button primary" href={'#auction/'+id}>العودة إلى المزاد</a>}><p>لا تتوفر بيانات موثوقة تثبت تجاوز مزايدتك في الجلسة الحالية. راجع السعر والسجل دون افتراض حالة شخصية.</p></BidderOutcome>;
 }
