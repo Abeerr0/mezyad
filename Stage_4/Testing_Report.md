@@ -1,3 +1,59 @@
+# Stage 4 — نتائج الاختبارات وحدود الأدلة الحالية
+
+**تاريخ الفحص: 20 أكتوبر 2026 — Asia/Riyadh (UTC+3).** المرجع المنشور المفحوص هو [`development` عند `e6c69bf`](https://github.com/ghadi0alzhrani0/Mezyad/commit/e6c69bfbee7405b85bdaea94c89c27181455ccfa)، بعد دمج PR #11. هذا تحديث توثيق فقط؛ لا يشمل خدمات الحساب المحفوظة محليًا وغير المرفوعة، ولا نتائج اختباراتها. نجاح CI دليل تنفيذ اختبارات المصدر المحدد، وليس قبولًا نهائيًا لكل متطلبات Stage 4.
+
+<a id="current-results"></a>
+## 1. CI الحالي على المصدر المنشور
+
+[تشغيل development رقم 39488077335](https://github.com/ghadi0alzhrani0/Mezyad/actions/runs/39488077335) يختبر كومت دمج PR #11، `e6c69bfbee7405b85bdaea94c89c27181455ccfa`. بدأ 20 أكتوبر 2026 الساعة 22:59 وانتهى 23:03 تقريبًا بتوقيت الرياض. قُرئت سجلات الوظائف نفسها، لا أرقام التقارير الأقدم فقط. PR #11 غيّر توثيقًا فقط فوق `baab54b`؛ هذه الأعداد تخص التطبيق المنشور ولا تتضمن خدمات الحساب الجديدة المحلية.
+
+| الفحص والأمر | النتيجة الفعلية | البيئة والدليل المباشر |
+| --- | --- | --- |
+| Backend — `npm test` مع `TEST_DATABASE_URL` | **110 ناجحة؛ 0 فشل؛ 0 skipped** | [وظيفة PostgreSQL](https://github.com/ghadi0alzhrani0/Mezyad/actions/runs/39488077335/job/118853746101)؛ Ubuntu 24.04، Node 24.21.0، PostgreSQL 16.15 مؤقتة؛ العد يتضمن حالات Node المتداخلة |
+| React — `npm test` داخل frontend | **367 ناجحة في 18 ملفًا؛ 0 فشل/معلّق** | [وظيفة React](https://github.com/ghadi0alzhrani0/Mezyad/actions/runs/39488077335/job/118853746163)؛ Ubuntu 24.04، Node 24.21.0، Vitest وبيانات شبكة مضبوطة؛ ليست بدلًا من تكامل Backend |
+| مشغّل المتصفح — `npm run test:runner` | **6 ناجحة؛ 0 فشل؛ 0 skipped** | [وظيفة المشغّل](https://github.com/ghadi0alzhrani0/Mezyad/actions/runs/39488077335/job/118853746146)؛ Node 24.21.0؛ تشمل رفض الفشل والتجاوز والتقرير الناقص |
+| Playwright — `npm run test:e2e` | **87 ناجحة؛ 0 unexpected؛ 0 skipped؛ 0 flaky** | [وظيفة E2E](https://github.com/ghadi0alzhrani0/Mezyad/actions/runs/39488077335/job/118853746132)؛ Ubuntu 24.04، Node 24.22.0، Chromium/Chrome for Testing 156.0.8078.4، PostgreSQL 16.15؛ خادم ومخطط جديدان لكل ملف |
+| Production Build — `npm run build` | **PASS** | [وظيفة Build](https://github.com/ghadi0alzhrani0/Mezyad/actions/runs/39488077335/job/118853746235)؛ بناء Vite، وليس نشر إنتاج |
+| Syntax / YAML وactionlint / فروقات التحديث / readiness / `accounts` | **كلها PASS** | [كامل وظائف التشغيل](https://github.com/ghadi0alzhrani0/Mezyad/actions/runs/39488077335)؛ فحص `accounts` المطلوب نجح دون تجاوز الحماية |
+
+التثبيت عبر `npm ci` وملفات القفل المنشورة. PostgreSQL تحتوي بيانات اصطناعية داخل اختبار معزول؛ لا بيانات مستخدمين حقيقية. اختبارات المزايدات الناجحة تستخدم أهلية اختبارية، ولا تثبت إرسالًا أو قبولًا أو حجز أموال لدى بنك. لا يُجمع عدد Node وVitest وPlaywright في رقم قبول واحد.
+
+## 2. سلسلة نتائج أقدم — محلية وCI منفصلتان
+
+| التاريخ والمصدر | نوع الدليل/النسخة | النتائج وحدودها |
+| --- | --- | --- |
+| 13 أكتوبر — `c3764b9`، [النتيجة الأصلية أدناه](#historical-testing)، [CI 38427016481](https://github.com/ghadi0alzhrani0/Mezyad/actions/runs/38427016481) | تشغيل محلي macOS/Node 24.19.0 وPostgreSQL 16.15، ثم CI لنفس محتوى التطبيق | Backend 22 وReact 30 وBuild PASS؛ نطاق الحساب/التصفح، لا السوق كاملًا |
+| 13 أكتوبر — [Frontend QA Report](Frontend_QA_Report.md) و[summary.json](summary.json) | حزمة محلية اختُبرت فوق baseline `46a84e7`؛ التقرير يصف ذلك التسليم القديم، وهو الآن ملف منشور في development، أُضيف أصلًا في الكومت `ce0ab08e73ce4100b41a0c133e57aa9b741ae065` | React 47؛ Playwright 12؛ Build PASS. React على macOS/Node 24.19.0؛ المتصفح Docker Playwright/Linux/Node 24.21.0 وPostgreSQL 16. التقرير لا يثبت SHA نهائيًا للـoverlay المختبر؛ لا يُنسب إلى HEAD الحالي |
+| 20 أكتوبر — `3f87ff3` كما يسميه التقرير المحلي، [native PostgreSQL validation](../docs/native-postgresql-validation.md)، [backend handoff](../docs/backend-handoff.md) | تحقق محلي Native PostgreSQL 16.15 في Alpine/QEMU، وليس GitHub CI عند كتابة التقرير؛ تعذر حل المعرّف المحلي `3f87ff3` إلى كومت GitHub وقت الفحص، فلا يُنسب إليه CI أو رابط كومت عام | Backend 110 وBrowser 14، صفر فشل/تجاوز؛ سجل handoff يورد أيضًا 55 اختبار React وBuild ناجحًا في ذلك التسليم. نتيجة PGlite/SQL smoke ليست دليل أقفال PostgreSQL المتزامنة |
+| 20 أكتوبر — [PR #7](https://github.com/ghadi0alzhrani0/Mezyad/pull/7)، دمج `b3f8eab` | وصف PR يسجل الاختبار المحلي على المصدر المدمج وقاعدة PostgreSQL 16 معزولة؛ [CI الدمج](https://github.com/ghadi0alzhrani0/Mezyad/actions/runs/39448638227) ناجح أيضًا | محليًا: Backend 110، React 283، Playwright 83، المشغّل 6، Build والفروقات PASS؛ إصدارات كل أداة المحلية الدقيقة ليست مسجلة في وصف PR. لا ننسب أعداد الوصف إلى سجلات CI دون قراءتها |
+| 20 أكتوبر — [PR #9](https://github.com/ghadi0alzhrani0/Mezyad/pull/9)، دمج `baab54b` | وصف PR يسجل النتائج المحلية ومراجعة متصفح فعلية على PostgreSQL 16 معزولة؛ [CI الدمج](https://github.com/ghadi0alzhrani0/Mezyad/actions/runs/39462589800) ناجح، 20:01–20:09 بتوقيت الرياض | محليًا: Backend 110، React 367، Playwright 87، المشغّل 6، Build والفروقات PASS. تلك أقدم من CI المفصل في §1؛ الزيادة عن PR #7 هي 84 React و4 Playwright، لا حذف أو تجاوز اختبارات للحصول على العدد |
+
+النتائج المحلية محفوظة كما وصفتها الأدلة المنشورة، وليست إعادة تشغيل أجريت لهذه المهمة التوثيقية. لم يُشغّل التطبيق أو أي مجموعة اختبار كاملة محليًا هنا؛ أُجري فحص التوثيق و`git diff --check` فقط، وتبقى فحوص GitHub للرفع الجديد إلزامية.
+
+## 3. QA المنشور وحالة دمجه
+
+| المصدر المقروء فقط | حالة المصدر وقت الفحص | كيفية استخدامه |
+| --- | --- | --- |
+| [Frontend_QA_Report.md](Frontend_QA_Report.md)، تاريخ 13 أكتوبر | موجود في development `e6c69bf`؛ تقرير تاريخي | أعداد 47/12 وقيود الرفع آنذاك ليست الحالة الحالية؛ أدلة 20 أكتوبر واختبارات الصور أحدث |
+| [docs/native-postgresql-validation.md](../docs/native-postgresql-validation.md)، تاريخ 20 أكتوبر ومصدر `3f87ff3` | موجود في development؛ تقرير محلي تاريخي ذو معرّف مختبر لم يمكن حله على GitHub، وعبارة «لم يُرفع» تعكس وقت كتابته | يثبت حدود الاختبار الأصلي؛ نجاح CI الحالي موثق مستقلًا في §1 |
+| [Integration_QA_Traceability.md عند `4d794dd`](https://github.com/ghadi0alzhrani0/Mezyad/blob/4d794dd0725846f9e9b1cf18669416ecd49b864b/Stage_4/Integration_QA_Traceability.md) و[PR #10](https://github.com/ghadi0alzhrani0/Mezyad/pull/10) | **منشور على tala، PR مفتوح وغير مدمج**؛ التقرير يستشهد بمصدر `baab54b` وCI 39462589800 | مرجع مقروء لتتبّع DB-01–12 وQA-01–23، لا يُقدّم كملف مدمج أو قبول نهائي؛ لم يُنسخ أو يُعدّل التقرير أو كود الفرع |
+
+### حدود التغطية الحالية
+
+- اختبارات PostgreSQL الحالية تغطي التسجيل والجلسات والصلاحيات، إنشاء/تصحيح الإعلان والصور، خصوصية المزاد، قواعد الأسعار والوقت والتزامن و`requestId` والإغلاق والنتيجة والنشاط. [مصادر Backend](../backend/tests) هي دليل الحالات المنفذة، لا مجرد وجود route.
+- اختبارات [React](../frontend/tests) و[E2E](../frontend/e2e) تغطي أجزاء واجهات البائع والمشرف والمزايد والحساب، بما فيها الصور المحفوظة وإعادة التقديم والنتيجة بعد Refresh. النجاح يخص الحالات المكتوبة فقط.
+- **QA-07: جزئي** — الفشل عند غياب البنك لا يتحول إلى موافقة؛ نجاح/رفض/Timeout مزوّد حقيقي مؤجل وغير مختبر.
+- **QA-14: جزئي** — حالات Loading/Empty/Error وأحجام 320/390/768/1440px وحركة التركيز مغطاة في حالات محددة؛ لا تدقيق شامل لكل شاشة أو جهاز أو قارئ شاشة. لا ادعاء مطابقة Figma بنسبة 100%.
+- لا تنسب استعادة المسودة بعد Reload كامل إلى الاختبارات؛ المسودة الحالية في حالة React بين خطوات النموذج نفسه وعند فشل الطلب؛ لا يوجد تخزين لاستعادتها بعد مغادرة المسار أو Reload كامل. تحرير الحساب والاستعادة والإشعارات غير متاحة في المصدر المنشور، ونتائج خدماتها المحلية منفصلة تمامًا.
+- [دليل Figma](../docs/figma-flows.md) يميز النجاح التمثيلي عن التكامل الحقيقي. محتوى الشروط والخصوصية والتواصل واعتماد الإنتاج والمنتور غير مثبتين؛ لذلك لا إعلان باكتمال Stage 4.
+
+---
+
+<a id="historical-testing"></a>
+## السجل التاريخي المحفوظ — 12–13 أكتوبر 2026
+
+> النص التالي محفوظ كما كان. الأحكام والأعداد والقيود فيه تخص تاريخه ومصدره، ولا تستبدل الحالة الحالية أعلاه. القوالب ليست محاضر أحداث فعلية.
+
 # Stage 4 — Quality Assurance & Execution Evidence
 
 **Snapshot:** 13 October 2026 · **Status:** Approved Figma account UI, account integration and catalog identity tested locally; full marketplace acceptance remains pending.

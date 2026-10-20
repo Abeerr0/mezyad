@@ -1,3 +1,52 @@
+# MEZYAD — STAGE 4: تحديث التسليم المثبت
+
+**تاريخ الفحص: 20 أكتوبر 2026 — Asia/Riyadh (UTC+3).** المرجع المنشور المفحوص هو [`development` عند `e6c69bf`](https://github.com/ghadi0alzhrani0/Mezyad/commit/e6c69bfbee7405b85bdaea94c89c27181455ccfa)، بعد دمج PR #11. هذا تحديث توثيق فقط؛ لا يشمل خدمات الحساب المحفوظة محليًا وغير المرفوعة، ولا نتائج اختباراتها. نجاح CI دليل تنفيذ اختبارات المصدر المحدد، وليس قبولًا نهائيًا لكل متطلبات Stage 4.
+
+## الحالة الحالية — Tasks 0–4
+
+| المهمة | الحالة المدعومة بالأدلة | ما لا يجوز استنتاجه |
+| --- | --- | --- |
+| Task 0 — التخطيط | [Sprint Plan](Sprint_Plan.md) و[Product Backlog](Product_Backlog.md) منشوران؛ لم يُعدّلا في هذا التحديث | لا مواعيد أو نقاط مقبولة مؤكدة ولا نسب إنجاز مشتقة؛ بعض الحالات قديمة وتحتاج مطابقة من أصحابها |
+| Task 1 — التنفيذ | تكامل الواجهة مع Backend المعتمد عبر [PR #7](https://github.com/ghadi0alzhrani0/Mezyad/pull/7)، ثم تصحيحات [PR #9](https://github.com/ghadi0alzhrani0/Mezyad/pull/9)، وتوثيق الفلوز عبر [PR #11](https://github.com/ghadi0alzhrani0/Mezyad/pull/11) | لا نشر لخدمات الحساب المحلية الجديدة ولا تكامل بنكي أو دفع أو تسوية؛ لا نقل تطبيق development إلى main |
+| Task 2 — التقدم | [Progress Tracker](Progress_Tracker.md) يربط المنجز والمتبقي والمؤجل بـSHA وPR وCI | الاختبارات ليست Story Points أو دليل حضور stand-up |
+| Task 3 — العروض والتحسين | [Sprint Reviews](Sprint_Reviews.md) يسجل التحقق الهندسي المنشور، و[Retrospectives](Retrospectives.md) يفصل القرارات المثبتة عن مقترحات النقاش | لا محاضر حضور/اجتماعات أو قبول منتور موثقة للسبرنتات الأربعة؛ لا اختراع لهذه الأحداث |
+| Task 4 — QA | [Testing Report](Testing_Report.md#current-results): 110 Backend و367 React و87 Playwright و6 للمشغّل وBuild ناجح، كلها للمصدر المنشور `e6c69bf` | ليست شهادة شمول كل الحالات؛ QA-07 الحقيقي مؤجل وQA-14 جزئي؛ لا اعتماد Production أو اكتمال Stage 4 |
+
+### الحالة الوظيفية المنشورة
+
+- الحساب الحالي يدعم التسجيل والدخول والخروج والتحقق من الجلسة وعزل الصلاحيات. **تعديل الحساب والاستعادة والإشعارات الجديدة محفوظة محليًا خارج هذا التحديث وليست متاحة في development المفحوص**؛ لا تُنسب اختبارات حزمة الخدمات المحلية إلى النسخة المنشورة.
+- الواجهة المدمجة تدعم التصفح والأقسام والصور ومعرض المزاد والنشاط، إعلان البائع وصوره وحقول فئته وتصحيحه بعد الرفض، لوحة المشرف والقرار ومراقبة المزادات، إنشاء العام والخاص، وصول المدعوين والمزايدة والنتيجة الشخصية ضمن البيانات المثبتة من الخادم.
+- التسلسل الإلزامي: **إنشاء إعلان → انتظار ADMIN → `APPROVED` → اختيار `PUBLIC` أو `PRIVATE` بواسطة المالك → إعداد الأسعار والمواعيد → إنشاء المزاد**. لا موافقة تلقائية عند الإرسال ولا مزاد ينشئه المشرف نيابة عن البائع.
+- البنك **مؤجل** مع إبقاء `BANK_SANDBOX_UNAVAILABLE` فشلًا صريحًا. أهلية الاختبارات اصطناعية داخل قاعدة مؤقتة؛ لا إثبات لعملية مصرفية أو دفع أو تسوية أو نجاح بنك من Prototype.
+- المسودة تبقى بين خطوات النموذج نفسه وعند فشل الإرسال؛ مغادرة المسار أو Reload كامل لا تحفظها. المطابقة البصرية الشاملة وQA-14، ومحتوى الشروط والخصوصية والتواصل، ومحاضر المراجعة والقبول والإنتاج الفعلي تحتاج أدلتها.
+
+<a id="current-task5"></a>
+## Task 5 — جدول التسليم الحالي وروابطه
+
+| المطلوب | الرابط/الدليل المنشور | الحالة الحقيقية |
+| --- | --- | --- |
+| Sprint Reviews | [Sprint_Reviews.md](Sprint_Reviews.md)؛ [PR #9](https://github.com/ghadi0alzhrani0/Mezyad/pull/9) للمراجعة الهندسية | تجربة متصفح موثقة بوصف المصدر؛ اجتماعات السبرنت والحضور وقبول المنتور غير موثقة |
+| Retrospectives | [Retrospectives.md](Retrospectives.md) | تحسينات مرتبطة بتغييرات منشورة؛ محاضر النقاشات والإجراءات المتفق عليها تنتظر دليلًا |
+| Sprint Planning | [Sprint_Plan.md](Sprint_Plan.md) | خطة أربع دورات أسبوعية موجودة؛ تواريخها الفعلية تحتاج تأكيدًا؛ الملف قُرئ دون تعديله |
+| Product Backlog | [Product_Backlog.md](Product_Backlog.md) | سجل منشور بحالات تاريخية؛ ليس دليل قبول كل القصص؛ لم يُعدّل |
+| Source Repository والنسخة المعتمدة للفحص | [المستودع](https://github.com/ghadi0alzhrani0/Mezyad)، [`development` المثبت `e6c69bf`](https://github.com/ghadi0alzhrani0/Mezyad/tree/e6c69bfbee7405b85bdaea94c89c27181455ccfa)؛ [PR #7](https://github.com/ghadi0alzhrani0/Mezyad/pull/7)، [#9](https://github.com/ghadi0alzhrani0/Mezyad/pull/9)، [#11](https://github.com/ghadi0alzhrani0/Mezyad/pull/11) | نسخة تكامل مدمجة ومختبرة؛ ليست إعلان Release أو نقلًا للتطبيق إلى main. شغل خدمات الحساب المحلي خارجها |
+| Bug Tracking | [Bug_Tracker.md](Bug_Tracker.md)؛ [إصلاحات PR #9](https://github.com/ghadi0alzhrani0/Mezyad/pull/9) | السجل موجود ويحتفظ بفجوات قديمة؛ توجد أدلة إصلاح أحدث، دون إغلاق سجلات صاحبته نيابة عنها أو تغييرها |
+| Testing Evidence and Results | [Testing_Report.md](Testing_Report.md#current-results)، [CI على `e6c69bf`](https://github.com/ghadi0alzhrani0/Mezyad/actions/runs/39488077335)؛ [Frontend QA التاريخي](Frontend_QA_Report.md)؛ [Native PostgreSQL التاريخي](../docs/native-postgresql-validation.md)؛ [QA في PR #10](https://github.com/ghadi0alzhrani0/Mezyad/pull/10) | نتائج محلية وCI مفصولة وبمصادرها؛ PR #10 مفتوح وغير مدمج وقت الفحص ولا يُعدّ جزءًا من development |
+| Production Environment | [README المنشور](../README.md)، [دليل Backend](../backend/README.md)، [سجل Deployments المقروء](https://api.github.com/repos/ghadi0alzhrani0/Mezyad/deployments)، [Environments](https://api.github.com/repos/ghadi0alzhrani0/Mezyad/environments) | **لا URL إنتاج معتمد أو دليل نشر متاح**. Deployments = 0 وEnvironments = 0 وقت الفحص؛ إعدادات localhost وCI وBuild ليست Production؛ لا نجزم بعدم وجود استضافة خارجية لم تُوثّق |
+| Figma Design والفلوز | [دليل الفلوز التسعة المنشور](../docs/figma-flows.md)، [PR #11](https://github.com/ghadi0alzhrani0/Mezyad/pull/11) | المهمة السابقة مكتملة؛ يُستخدم الدليل كما هو، ولا تعديل Figma أو إعادة تنفيذ التوثيق. Figma Make وروابطه محفوظة |
+
+## ضوابط قراءة السجل وما ينتظر الإغلاق
+
+هذا التقرير لا يعلن اكتمال Stage 4: اختبارات المصدر الحالي ناجحة، لكن قبول السبرنتات والإصدار النهائي والمطابقة الشاملة والمحتوى والإنتاج غير مثبتة. يؤجل البنك حسب قرار النطاق، ولا يتحول تأجيله إلى نجاح. التقرير الجديد يميز المرفوع والمدمج عن المحلي، ولا يتدخل في تقارير QA أو التخطيط أو تكليفات الفريق.
+
+الأقسام التالية سجل **12–13 أكتوبر 2026** كما نُشرت، بما فيها Task 5 القديم ومصفوفة «Not executed» وتعليمات التثبيت الأولية. ليست وصفًا لحالة 20 أكتوبر؛ النتائج والقيود الحالية أعلاه وفي [Testing Report](Testing_Report.md#current-results). لم تُحذف الأدلة القديمة أو تعاد كتابة تقارير المراحل السابقة، ولا محتوى Figma Make.
+
+---
+
+## السجل التاريخي المحفوظ — 12–13 أكتوبر 2026
+
+> النص التالي محفوظ كما كان. الأحكام والأعداد والقيود فيه تخص تاريخه ومصدره، ولا تستبدل الحالة الحالية أعلاه. القوالب ليست محاضر أحداث فعلية.
+
 # MEZYAD
 ## STAGE 4 — MVP DEVELOPMENT & SPRINT EXECUTION
 **Holberton School | Portfolio Project | Engineering Delivery Report**
