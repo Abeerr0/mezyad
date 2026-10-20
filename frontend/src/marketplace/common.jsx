@@ -110,7 +110,7 @@ export function Field({ label, id, error, children }) {
     </div>
   );
 }
-export function Confirm({ title, children, pending, onConfirm, onCancel }) {
+export function Confirm({ title, children, pending, onConfirm, onCancel, confirmLabel = "تأكيد" }) {
   const ref = useRef(null),
     previous = useRef(null);
   useEffect(() => {
@@ -123,7 +123,7 @@ export function Confirm({ title, children, pending, onConfirm, onCancel }) {
     if (event.key === "Tab") {
       const elements = [
         ...ref.current.querySelectorAll(
-          "button:not(:disabled),a[href],input:not(:disabled)",
+          "button:not(:disabled),a[href],input:not(:disabled),textarea:not(:disabled),select:not(:disabled)",
         ),
       ];
       const first = elements[0],
@@ -164,7 +164,7 @@ export function Confirm({ title, children, pending, onConfirm, onCancel }) {
             disabled={pending}
             onClick={onConfirm}
           >
-            {pending ? "جارٍ الإرسال…" : "تأكيد"}
+            {pending ? "جارٍ الإرسال…" : confirmLabel}
           </button>
           <button
             className="button secondary"
