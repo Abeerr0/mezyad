@@ -158,6 +158,8 @@ api.post("/auctions", auth, async (req, res, next) => {
       !["PUBLIC", "PRIVATE"].includes(visibility) ||
       !validMoney(startingPrice) ||
       !validMoney(minimumIncrement) ||
+      typeof startTime !== "string" ||
+      typeof endTime !== "string" ||
       !startTime ||
       !endTime ||
       !Number.isFinite(Date.parse(startTime)) ||
@@ -287,7 +289,7 @@ api.post(
     try {
       const a = await auction(req.params.id);
       if (!a || a.visibility !== "PRIVATE")
-        return err(res, 404, "NOT_FOUND", "Private auction not found");
+        return err(res, 403, "INVALID_CODE", "Invalid access code");
       if (a.seller_id === req.user.id)
         return err(res, 403, "OWNER", "Owner cannot join as bidder");
       if (
@@ -369,7 +371,7 @@ api.post("/auctions/:id/bids", auth, async (req, res, next) => {
       );
       if (!access.rowCount) {
         await c.query("ROLLBACK");
-        return err(res, 403, "NO_ACCESS", "Private access required");
+        return err(res, 404, "NOT_FOUND", "Auction not found");
       }
     }
     const prior = await c.query(

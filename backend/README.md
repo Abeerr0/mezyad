@@ -145,3 +145,24 @@ PostgreSQL 16 on pushes to `abeer`.
 Marketplace UI files currently live under `Stage_4/`, outside
 `frontend/src/marketplace/`. Connecting those screens is separate frontend work;
 this branch does not claim a complete browser auction journey.
+
+
+## Review against all four reports
+
+`Stage_4/Report.MD` identifies `Stage_3/Report.MD` as the technical source of truth.
+The original four reports are unchanged. The current implementation keeps
+USER/ADMIN, ten PostgreSQL tables, REST polling and access-triggered closure.
+Anti-sniping and the broader assistant from older stages are not silently added.
+Stage 2 names SABB as the primary sandbox candidate and Al Rajhi as backup;
+neither has a verified operation/credentials contract in Stage 3.
+
+The listing parser accepts both `categoryId` (current UI) and `category` (Stage 3
+API table), and rejects conflicting values. Money conversion separates whole
+riyals and halalas before integer arithmetic to retain valid large prices.
+Unauthorised private bid requests use the same 404 response as nonexistent
+auctions. Incorrect invitation codes and nonexistent invitation targets share
+the same 403 INVALID_CODE response. Neither response discloses private details.
+
+`npm test` includes the seven previously packaged contract checks under
+`tests/acceptance/`. They are normal assertions, not expected failures.
+Their PostgreSQL results remain unverified until executed with TEST_DATABASE_URL.

@@ -12,6 +12,8 @@ before(async()=>{
   uploads=await import('../src/uploads.js');
   png=await sharp({create:{width:5,height:5,channels:3,background:'#eed5ad'}}).png().toBuffer();
   const app=express();app.get('/api/v1/images/:filename',uploads.serveImage);
+  app.post('/upload-check',uploads.uploadImages,(req,res)=>res.json({count:req.files.length}));
+  app.use((error,_req,res,_next)=>res.status(error.code==='LIMIT_FILE_SIZE'?413:400).json({code:error.code||error.apiCode}));
   server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));
   base='http://127.0.0.1:'+server.address().port;
 });
@@ -47,4 +49,17 @@ test('image links are signed; unsigned, altered and expired requests are denied'
   await uploads.removeImages(paths);
   assert.equal((await fetch(base+link)).status,404);
   assert.equal(uploads.imageLink('/images/design.jpg'),'/images/design.jpg');
+});
+
+
+test('multipart parser enforces file count, MIME, extension and 5 MiB limit before storage',async()=>{
+  const send=async({count=1,bytes=png,type='image/png',name='photo.png'}={})=>{
+    const body=new FormData();
+    for(let i=0;i<count;i++)body.append('images',new Blob([bytes],{type}),name);
+    return fetch(base+'/upload-check',{method:'POST',body});
+  };
+  const valid=await send({count:6});assert.equal(valid.status,200);assert.equal((await valid.json()).count,6);
+  for(const options of [{count:7},{name:'script.html'},{type:'image/svg+xml',name:'photo.svg'}])assert.equal((await send(options)).status,400);
+  assert.equal((await send({bytes:Buffer.alloc(5*1024*1024+1)})).status,413);
+  assert.deepEqual(await readdir(process.env.UPLOAD_DIR),[]);
 });

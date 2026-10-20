@@ -1,20 +1,24 @@
-export function validMoney(value) {
-  if (
-    typeof value !== "number" ||
-    !Number.isFinite(value) ||
-    value <= 0 ||
-    value > 999999999999.99
-  )
-    return false;
-  const cents = Math.round(value * 100);
-  return Number.isSafeInteger(cents) && Math.abs(value * 100 - cents) < 1e-7;
-}
+const MAX_CENTS = 99999999999999;
 
 export function toCents(value) {
-  const amount = Number(value);
-  if (!Number.isFinite(amount)) throw new TypeError("Invalid amount");
-  const cents = Math.round(amount * 100);
-  if (!Number.isSafeInteger(cents) || Math.abs(amount * 100 - cents) > 1e-7)
-    throw new RangeError("Invalid currency precision");
+  if (typeof value !== "number" && typeof value !== "string")
+    throw new TypeError("Invalid amount");
+  // نفصل الريال والهللات كنص، عشان المبالغ الكبيرة ما تتأثر بدقة الكسور.
+  const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(String(value));
+  if (!match) throw new RangeError("Invalid currency precision");
+  const cents =
+    Number(match[1]) * 100 + Number((match[2] || "").padEnd(2, "0"));
+  if (!Number.isSafeInteger(cents) || cents > MAX_CENTS)
+    throw new RangeError("Amount out of range");
   return cents;
+}
+
+export function validMoney(value) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0)
+    return false;
+  try {
+    return toCents(value) > 0;
+  } catch {
+    return false;
+  }
 }

@@ -35,7 +35,14 @@ function fields(body, editing) {
       return null;
     }
   }
-  const { title, description, categoryId } = body;
+  const { title, description } = body;
+  const categoryId = body.categoryId ?? body.category;
+  if (
+    body.categoryId !== undefined &&
+    body.category !== undefined &&
+    body.categoryId !== body.category
+  )
+    return null;
   if (
     typeof title !== "string" ||
     !title.trim() ||

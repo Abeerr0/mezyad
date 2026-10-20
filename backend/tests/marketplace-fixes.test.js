@@ -59,3 +59,13 @@ check('review requires nonblank reason and rejects overlong text; history valida
   const a=await q.auction();
   for(const query of ['limit=101','limit=-1','offset=-1','offset=bad'])expectError(await q.api('/auctions/'+a.id+'/bids?'+query,{token:q.bidder.token}),400,'INVALID_INPUT');
 });
+
+
+check('private invitation failures use the same response for missing and hidden auctions',async()=>{
+  const a=await q.auction({visibility:'PRIVATE'});
+  const options={method:'POST',token:q.bidder.token,body:{accessCode:'wrong'}};
+  const hidden=await q.api('/auctions/'+a.id+'/access',options);
+  const missing=await q.api('/auctions/00000000-0000-0000-0000-000000000000/access',options);
+  assert.equal(hidden.status,missing.status);
+  assert.deepEqual(hidden.json,missing.json);
+});

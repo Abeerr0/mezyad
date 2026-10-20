@@ -89,7 +89,7 @@ check('QA-04: pending/rejected listings and another owner\'s approved listing ca
 check('AUCT-01: auction starts at starting price; invalid money/schedule and duplicate item are rejected', async () => {
   const listing=await q.item();
   const body=auctionBody(listing.id);
-  for(const change of [{startingPrice:0},{startingPrice:1000.001},{minimumIncrement:-1},{endTime:body.startTime}])
+  for(const change of [{startingPrice:0},{startingPrice:1000.001},{minimumIncrement:-1},{endTime:body.startTime},{startTime:[body.startTime]},{endTime:123456789}])
     expectError(await q.api('/auctions',{method:'POST',token:q.seller.token,body:{...body,...change}}),400,'INVALID_INPUT');
   const response=await q.api('/auctions',{method:'POST',token:q.seller.token,body});
   assert.equal(response.status,201);
@@ -138,7 +138,7 @@ check('QA-06: direct private details/history/bidding/commitment require an acces
     q.api('/auctions/'+a.id+'/bids',{token:q.bidder.token}),
     q.api('/auctions/'+a.id+'/commitment',{method:'POST',token:q.bidder.token,body:{}}),
   ]) expectError(await request,404,'NOT_FOUND');
-  expectError(await q.bid(a),403,'NO_ACCESS');
+  expectError(await q.bid(a),404,'NOT_FOUND');
   assert.equal((await q.state(a)).bid_count,0);
 });
 
