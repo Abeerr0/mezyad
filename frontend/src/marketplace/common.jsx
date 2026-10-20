@@ -10,13 +10,19 @@ export const validAuction = value => value && uuid(value.id) && typeof value.tit
 export const money = value => /^\d+(?:\.\d{1,2})?$/.test(String(value)) && Number(value)>0 && Number(value)<=999999999999.99;
 export const navigate = value => { window.location.hash=value; };
 
+
 export function useData(path, validate, poll=0) {
-  const {request}=useAuth();
+  const {request,session}=useAuth();
+  const sessionToken=session?.token ?? null;
   const [data,setData]=useState(null),[failure,setFailure]=useState(''),[loading,setLoading]=useState(true),[revision,setRevision]=useState(0);
   const validator=useRef(validate);validator.current=validate;
+  const identity=useRef({path,sessionToken});
   useEffect(()=>{
+    const changedIdentity=identity.current.path!==path||identity.current.sessionToken!==sessionToken;
+    identity.current={path,sessionToken};
     const controller=new AbortController();let busy=false;
-    setData(null);setFailure('');setLoading(true);
+    if(changedIdentity)setData(null);
+    setFailure('');setLoading(true);
     async function load(){
       if(busy)return;busy=true;
       try{const value=await request(path,{signal:controller.signal});if(!validator.current(value))throw new ApiError('INVALID_RESPONSE');
@@ -26,7 +32,7 @@ export function useData(path, validate, poll=0) {
     }
     load();const timer=poll?setInterval(load,poll):null;
     return()=>{controller.abort();if(timer)clearInterval(timer);};
-  },[path,request,poll,revision]);
+  },[path,request,poll,revision,sessionToken]);
   return {data,failure,loading,reload:()=>setRevision(x=>x+1)};
 }
 export function Feedback({failure,loading,reload}) {
