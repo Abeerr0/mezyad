@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../auth/AuthProvider.jsx';
 import { ApiError, errorMessage } from '../api.js';
 import { amount, safeImage, statusLabel } from './Auctions.jsx';
+import {ProfileFields} from './AccountPages.jsx';
+import {ServerImage} from './MediaGallery.jsx';
 import { listingStatus, uuid, validListing } from '../marketplace/common.jsx';
 
 const PAGE_SIZE = 6;
@@ -18,13 +20,13 @@ const validDetail = (detail, id) => detail?.id === id && uuid(detail.seller_id)
 
 export function AccountActivity() {
   const { request, session, status } = useAuth();
-  const userId = session?.user.id;
-  const cache = useRef(freshCache(userId));
+  const userId = session?.user.id,identity=userId+':'+(session?.token||'');
+  const cache = useRef(freshCache(identity));
   const [tab, setTab] = useState('bids');
   const [page, setPage] = useState(1);
   const [revision, setRevision] = useState(0);
   const [view, setView] = useState({ key: '', rows: null, total: 0, failure: '', loading: true });
-  const viewKey = userId + ':' + tab + ':' + page;
+  const viewKey = identity + ':' + tab + ':' + page;
 
   function selectTab(next) { setTab(next); setPage(1); }
   function moveTab(event) {
@@ -50,7 +52,7 @@ export function AccountActivity() {
 
   useEffect(() => {
     if (status !== 'authenticated' || tab === 'profile' || tab === 'deals') return;
-    if (cache.current.userId !== userId) cache.current = freshCache(userId);
+    if (cache.current.userId !== identity) cache.current = freshCache(identity);
     const current = cache.current;
     const controller = new AbortController();
     let busy = false;
@@ -110,7 +112,7 @@ export function AccountActivity() {
           const stale = visible.filter(summary => {
             const entry = current.details.get(summary.id);
             return entry.fetchedAt === -Infinity
-              || (entry.data.status !== 'CLOSED' && Date.now() - entry.fetchedAt >= DETAIL_TTL)
+              || ((entry.data.status !== 'CLOSED'||entry.data.visibility==='PRIVATE') && Date.now() - entry.fetchedAt >= (entry.data.status==='CLOSED'?SUMMARY_TTL:DETAIL_TTL))
               || (current.summaryAt > entry.fetchedAt && (entry.data.status !== summary.status
                 || entry.data.title !== summary.title || (summary.end_time && entry.data.end_time !== summary.end_time)));
           });
@@ -121,9 +123,13 @@ export function AccountActivity() {
         if (controller.signal.aborted) return;
         const currentPage = Math.min(page, Math.max(1, Math.ceil(rows.length / PAGE_SIZE)));
         if (currentPage !== page) setPage(currentPage);
-        setView({ key: userId + ':' + tab + ':' + currentPage, rows: rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE), total: rows.length, failure: '', loading: false });
+        setView({ key: identity + ':' + tab + ':' + currentPage, rows: rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE), total: rows.length, failure: '', loading: false });
       } catch (error) {
-        if (!controller.signal.aborted) setView(previous => ({ ...previous, failure: errorMessage(error), loading: false }));
+        if (!controller.signal.aborted) {
+          const revoked=[401,403,404].includes(error.status);
+          if(revoked){current.summaries=null;current.summaryAt=-Infinity;current.items=null;current.itemsAt=-Infinity;current.details.clear();}
+          setView(previous => ({ ...previous,...(revoked?{rows:null,total:0}:{}), failure: errorMessage(error), loading: false }));
+        }
       } finally { busy = false; }
     }
     let timer;
@@ -143,7 +149,7 @@ export function AccountActivity() {
       document.removeEventListener('visibilitychange', resume);
       window.removeEventListener('focus', resume);
     };
-  }, [request, status, userId, tab, page, viewKey, revision]);
+  }, [request, status, userId, identity, tab, page, viewKey, revision]);
 
   const current = view.key === viewKey ? view : { rows: null, total: 0, failure: '', loading: true };
   const pageCount = Math.max(1, Math.ceil(current.total / PAGE_SIZE));
@@ -157,9 +163,7 @@ export function AccountActivity() {
         onClick={() => selectTab(key)}>{label}</button>)}
     </div>
     <section id="account-activity-panel" role="tabpanel" aria-labelledby={'account-tab-' + tab} aria-busy={tab !== 'profile' && current.loading}>
-      {tab === 'profile' ? <div className="account-profile"><h2>البيانات الشخصية</h2>
-        <dl><dt>الاسم الكامل</dt><dd>{session.user.name}</dd><dt>البريد الإلكتروني</dt><dd><bdi dir="ltr">{session.user.email}</bdi></dd></dl>
-      </div> : <>
+      {tab === 'profile' ? <ProfileFields embedded/> : <>
         <div className="account-section-heading"><h2>{heading}</h2><button className="text-action" type="button" onClick={reload} disabled={current.loading}>تحديث البيانات</button></div>
         {!current.rows && current.loading && <p role="status">جارٍ تحميل نشاط الحساب…</p>}
         {current.failure && <div className="feedback error" role="alert"><p>{current.failure}</p>
@@ -172,9 +176,9 @@ export function AccountActivity() {
           const image = safeImage(auction.images[0]);
           return <article className="account-auction-row" key={auction.id}>
             <div><h3>{auction.title}</h3><p className="eyebrow">مزاد {statusLabel(auction.status)}</p>
-              <p>السعر الحالي: <bdi dir="ltr">{amount(auction.current_price)}</bdi> ر.س</p>
+              <p>{auction.status==='SCHEDULED'&&Number(auction.starting_price)>0?'السعر الابتدائي':'السعر الحالي'}: <bdi dir="ltr">{amount(auction.status==='SCHEDULED'&&Number(auction.starting_price)>0?auction.starting_price:auction.current_price)}</bdi> ر.س</p>
               <a className="button primary" href={'#auction/' + auction.id}>عرض المزاد</a></div>
-            {image ? <img src={image} alt={auction.title}/> : <div className="image-placeholder">لا تتوفر صورة</div>}
+            <ServerImage src={image} alt={auction.title}/>
           </article>;
         }) : <p className="empty-state">{tab === 'bids' ? 'لا توجد مزايدات مرتبطة بحسابك حاليًا.' : 'لم تنشئ مزادًا بعد.'}</p>))}
         {pageCount > 1 && <nav className="account-pagination" aria-label="صفحات نشاط الحساب">

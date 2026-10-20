@@ -56,7 +56,7 @@ export function useData(path, validate, poll = 0) {
           setFailure("");
         }
       } catch (error) {
-        if (!controller.signal.aborted) setFailure(errorMessage(error));
+        if (!controller.signal.aborted) {if([401,403,404].includes(error.status))setData(null);setFailure(errorMessage(error));}
       } finally {
         busy = false;
         if (!controller.signal.aborted) setLoading(false);
@@ -90,7 +90,7 @@ export function Feedback({ failure, loading, reload }) {
 }
 export function Page({ title, trail, children, node }) {
   return (
-    <main className="content-shell workspace-page" data-design-node={node}>
+    <main id="main-content" tabIndex={-1} className="content-shell workspace-page" data-design-node={node}>
       <p className="eyebrow">{trail}</p>
       <h1>{title}</h1>
       {children}

@@ -82,7 +82,7 @@ export function AccountPanel({ initialMode = 'login', onModeChange, children }) 
     finally { setPending(false); }
   }
 
-  if (status === 'authenticated') return <main className="content-shell account-page">
+  if (status === 'authenticated') return <main id="main-content" tabIndex={-1} className="content-shell account-page">
     <p className="eyebrow">حسابي / نظرة عامة</p>
     <h1>مرحبًا، {session.user.name}</h1><p className="section-description">تابع مزايداتك ومزاداتك من مكان واحد.</p>
     {(notice || success) && <p className="feedback success" role="status">{success || notice}</p>}
@@ -97,7 +97,7 @@ export function AccountPanel({ initialMode = 'login', onModeChange, children }) 
     {children}
   </main>;
 
-  return <main className={'auth-view ' + (mode === 'register' ? 'signup-view' : 'login-view')}>
+  return <main id="main-content" tabIndex={-1} className={'auth-view ' + (mode === 'register' ? 'signup-view' : 'login-view')}>
     <img className="auth-photo" src={mode === 'register' ? '/images/signup-interior.png' : '/images/signin-interior.png'} alt=""/>
     <section className="auth-panel" aria-labelledby="account-heading" aria-busy={status === 'checking'}>
       {status === 'checking' ? <><h1 id="account-heading">حسابي</h1><p role="status">جارٍ التحقق من جلسة الدخول…</p></>
@@ -148,7 +148,7 @@ export function AccountPanel({ initialMode = 'login', onModeChange, children }) 
               </div>
               {errors.password && <p id="password-error" className="field-error">{errors.password}</p>}
             </div>
-            {mode === 'login' && <button className="text-action" type="button" disabled title="استعادة كلمة المرور لم تُفعّل بعد">نسيت كلمة المرور؟</button>}
+            {mode === 'login' && <a className="text-action" href="#recovery">نسيت كلمة المرور؟</a>}
             <button className="button primary account-submit" type="submit" disabled={pending}>
               {pending ? mode === 'register' ? 'جارٍ إنشاء الحساب…' : 'جارٍ تسجيل الدخول…' : mode === 'register' ? 'إنشاء الحساب' : 'تسجيل الدخول'}
             </button>
