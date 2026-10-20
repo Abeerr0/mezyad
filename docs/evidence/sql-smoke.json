@@ -1,0 +1,117 @@
+{
+  "engine": "PGlite",
+  "version": "PostgreSQL 18.6 (PGlite 0.5.10) on wasm32-unknown-emscripten, compiled by emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 6.0.5 (1db513782be24469589d7cb8a1f1834e9a33f271), 32-bit",
+  "checks": [
+    {
+      "name": "existing migration creates ten tables",
+      "passed": true
+    },
+    {
+      "name": "category seed repeats without duplicates",
+      "passed": true
+    },
+    {
+      "name": "multipart listing persists canonical fields and image",
+      "passed": true
+    },
+    {
+      "name": "corrupt second photo rolls back listing and removes the first file",
+      "passed": true
+    },
+    {
+      "name": "seller/admin can read listing photos: seller",
+      "passed": true
+    },
+    {
+      "name": "seller/admin can read listing photos: admin",
+      "passed": true
+    },
+    {
+      "name": "another user cannot read the listing",
+      "passed": true
+    },
+    {
+      "name": "admin rejection returns photos",
+      "passed": true
+    },
+    {
+      "name": "conflicting category aliases rejected",
+      "passed": true
+    },
+    {
+      "name": "rejected listing resubmission replaces photos and fields",
+      "passed": true
+    },
+    {
+      "name": "old photo removed after successful replacement",
+      "passed": true
+    },
+    {
+      "name": "new signed photo is retrievable",
+      "passed": true
+    },
+    {
+      "name": "private details hidden from guests",
+      "passed": true
+    },
+    {
+      "name": "private auction absent from discovery",
+      "passed": true
+    },
+    {
+      "name": "wrong and missing private invitations share the same response",
+      "passed": true
+    },
+    {
+      "name": "unavailable bank never creates a SUCCESS from browser input",
+      "passed": true
+    },
+    {
+      "name": "missing verified commitment blocks bidding",
+      "passed": true
+    },
+    {
+      "name": "sequential bid replay creates one bid",
+      "passed": true
+    },
+    {
+      "name": "winner and own participation returned after fresh request",
+      "passed": true
+    },
+    {
+      "name": "losing viewer sees only their persisted participation",
+      "passed": true
+    },
+    {
+      "name": "admin monitoring returns private closure result",
+      "passed": true
+    },
+    {
+      "name": "monitoring finalizes a no-bids auction without a prior detail visit",
+      "passed": true
+    },
+    {
+      "name": "guest result exposes neither personal participation nor bidder identity",
+      "passed": true
+    },
+    {
+      "name": "dashboard reports database counts",
+      "passed": true
+    },
+    {
+      "name": "ordinary user cannot open admin dashboard",
+      "passed": true
+    },
+    {
+      "name": "admin listing filters include photos",
+      "passed": true
+    },
+    {
+      "name": "photo replacement leaves only the two current listing files",
+      "passed": true
+    }
+  ],
+  "passed": 27,
+  "nativePostgresConcurrencyVerified": false,
+  "bankProviderVerified": false
+}

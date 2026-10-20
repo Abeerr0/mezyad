@@ -1,0 +1,40 @@
+{
+  "date": "2026-10-20",
+  "branch": "abeer",
+  "tested_code_revision": "2c09f64",
+  "base": "ecff1653c3917313d8eba3f5634bbf7cd3fe8cc5",
+  "backend_syntax": "pass",
+  "backend_default": {
+    "tests": 96,
+    "pass": 19,
+    "fail": 0,
+    "skipped": 77
+  },
+  "sql_smoke": {
+    "engine": "PGlite PostgreSQL WASM",
+    "passed": 27,
+    "native_concurrency_verified": false
+  },
+  "frontend": {
+    "passed": 55,
+    "build": "pass",
+    "source_changed": true
+  },
+  "browser": {
+    "passed": 14,
+    "failed": 0,
+    "engine": "Chromium 153 + actual React/Express + PGlite 0.5.10 / pglite-socket 0.2.13",
+    "native_postgresql_verified": false,
+    "synthetic_eligibility_fixtures_only": true
+  },
+  "native_postgresql_16": "not run: unavailable locally; CI prepared but not executed",
+  "banking": "deferred by user; no fake success",
+  "github_upload": {
+    "attempted": true,
+    "status": 403,
+    "uploaded": false,
+    "remote_branch": "abeer"
+  },
+  "pull_request": "not created; not authorized by latest instruction",
+  "merge": "not performed; not authorized"
+}
