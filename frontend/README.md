@@ -21,6 +21,17 @@ endpoint before the account is shown. Passwords are never persisted. The stored
 user summary is for display; the backend remains responsible for authorization.
 Failed logout retains the session and offers a retry instead of claiming success.
 
+## Current Figma flow guide — 20 October 2026
+
+[Approved design](https://www.figma.com/design/mbc0Qc5e0hR8dIaqQjbMMN/Mezyad-1?node-id=0-1&t=duPXFdrLWmK9ZKc0-1) ·
+[Interactive prototype](https://www.figma.com/proto/mbc0Qc5e0hR8dIaqQjbMMN/Mezyad-1?node-id=0-1&t=duPXFdrLWmK9ZKc0-1) ·
+[Complete nine-flow walkthrough](../docs/figma-flows.md).
+
+This separate guide documents Figma Design, its current interactions and the
+uploaded development source. Figma Make documentation in the Stage 3 report is
+unchanged. Other stage reports retain their historical evidence; locally
+prepared, unpublished account-service changes are not part of this update.
+
 ## Approved interface
 
 The only application interface follows the approved [Figma Design](https://www.figma.com/design/mbc0Qc5e0hR8dIaqQjbMMN/Mezyad-1?node-id=2-2).
@@ -35,10 +46,12 @@ each card opens its own auction ID. A validated auction ID is retained in the
 login/registration URL, including across reloads. There are no customer-facing
 links to alternative prototypes or Figma pages.
 
-The phone field and password recovery action appear in Figma but have no
-approved Stage 3 storage/API contract. They remain visibly disabled pending owner
-review; registration sends only name, email and password. The footer's policy
-labels remain informational text until approved content is supplied.
+In the uploaded development snapshot reviewed on 20 October 2026, profile
+editing, password-recovery submission and notifications remain unavailable;
+the interface does not claim a save, sent email or an empty server inbox.
+Registration sends only name, email and password; phone storage is unsupported.
+Legal and contact pages explain that approved text or a contact service is not
+yet available. Unpublished local account services are excluded from this snapshot.
 
 Public auction and details data are polled every five seconds. A rejected or
 mismatched API response produces an error instead of another item's screen.
@@ -111,6 +124,8 @@ The test harness restricts its application pool to one connection for this
 single-connection engine. It does not prove native row locking/concurrency.
 PGlite is never imported by the production app.
 
-The latest full browser run passed **14/14** journeys against native PostgreSQL
-16.15 with the normal application pool. The earlier WASM smoke is supplemental.
-Native runtime and evidence: [validation record](../docs/native-postgresql-validation.md).
+Historical native validation on **20 October 2026**, for code `3f87ff3`,
+recorded **14/14** browser journeys against PostgreSQL 16.15 with the normal
+application pool. This is the linked source snapshot, not the current suite's
+total. The earlier WASM smoke is supplemental. Native runtime and evidence:
+[validation record](../docs/native-postgresql-validation.md).
