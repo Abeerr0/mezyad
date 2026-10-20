@@ -29,15 +29,16 @@ export async function requestApi(path, { token, body, signal, method = 'GET', ti
   if (signal?.aborted) abort();
   signal?.addEventListener('abort', abort, { once: true });
   const timer = setTimeout(() => { timedOut = true; controller.abort(); }, timeout);
+  const multipart = typeof FormData !== 'undefined' && body instanceof FormData;
   try {
     const base = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '');
     const response = await fetch(base + path, {
       method,
       headers: {
-        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        ...(body !== undefined && !multipart ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { Authorization: 'Bearer ' + token } : {}),
       },
-      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      ...(body !== undefined ? { body: multipart ? body : JSON.stringify(body) } : {}),
       signal: controller.signal,
       cache: 'no-store',
     });

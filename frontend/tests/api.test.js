@@ -35,3 +35,13 @@ test('slow requests are aborted and reported as a timeout', async () => {
   await vi.advanceTimersByTimeAsync(51);
   await promise;
 });
+
+test('listing images use FormData with the browser multipart boundary', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => ({ok:true,status:201,json:async()=>({data:{id:'listing'}})})));
+  const body=new FormData();body.append('images',new File(['photo'],'photo.png',{type:'image/png'}));
+  await requestApi('/api/v1/items',{method:'POST',token:'test-token',body});
+  const request=fetch.mock.calls[0][1];
+  expect(request.body).toBe(body);
+  expect(request.headers['Content-Type']).toBeUndefined();
+  expect(request.headers.Authorization).toBe('Bearer test-token');
+});

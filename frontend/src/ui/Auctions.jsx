@@ -33,6 +33,7 @@ export function Countdown({ endTime }) {
 }
 export function safeImage(value) {
   if (typeof value !== 'string') return null;
+  if (value.startsWith('/api/v1/images/')) return (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '') + value;
   if (value.startsWith('/') && !value.startsWith('//')) return value;
   try { if (new URL(value).protocol === 'https:') return value; } catch { /* Invalid URL. */ }
   return null;

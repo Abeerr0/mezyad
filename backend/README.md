@@ -65,3 +65,83 @@ existing records. It is not a production seeding command.
 Auction discovery/details now return their own category and image references
 from the existing tables. Private listings remain excluded from public discovery,
 and direct private detail access still requires authorization.
+
+## Marketplace backend — branch `abeer`
+
+From `backend/`, create the PostgreSQL database, set `DATABASE_URL` in `.env`,
+then run `npm run db:setup`. This applies the existing ten-table migration and
+five category seeds together in a transaction. Re-running is safe for the
+existing schema; it is not a schema upgrade tool. Setup creates no customers,
+bids or bank commitments.
+
+### Listings and photos
+
+`POST /api/v1/items` and `PATCH /api/v1/items/:id` accept multipart fields
+`categoryId`, `title`, `description`, `category_fields` (a JSON object string),
+and repeated `images` files, matching the Stage 4 listing form. Multipart
+creation requires at least one photo. JSON remains supported for older clients.
+Title: 1–240 characters; description: 1–20,000; category fields: an object.
+Only the owner can edit a rejected listing. Its category stays fixed. New photos
+replace old photos; omitting photos on edit preserves existing ones. Resubmission
+clears review metadata and returns to `PENDING_REVIEW`. Rejection reasons must
+contain nonblank text, up to 2,000 characters.
+
+Image limits: six JPG/PNG/WebP files, 5 MiB per file, 20 million input pixels.
+The server checks MIME, extension and decoded format, rejects corrupt/animated
+images, strips metadata and writes resized JPEGs with random names. Listing and
+image references are transactional. Failures remove new files; old files are
+removed after a successful replacement.
+
+`UPLOAD_DIR` defaults to `./uploads` relative to the backend working directory.
+Keep it on persistent storage when deploying and back it up with PostgreSQL.
+Uploads are excluded from Git and are not exposed by a static directory.
+Authorized listing/detail responses issue image links valid for ten minutes,
+usable in `<img>` without exposing the session token. Treat them as temporary
+access credentials. Restart invalidates old links; re-fetch details for new ones.
+This MVP uses one backend process: signing keys and attempt counters are local
+to that process.
+
+### Auctions and bidding
+
+Existing `/api/v1` and legacy routes remain supported. Invalid UUID paths return
+400 JSON. `GET /auctions` accepts `categoryId` and `status=SCHEDULED|ACTIVE|CLOSED`.
+Public discovery excludes private auctions. `GET /auctions?scope=all` requires
+ADMIN and supports monitoring all auctions; admins may view private details.
+Invitation attempts allow ten per minute per user/auction, then 429 with
+`Retry-After`. Login allows sixty attempts per fifteen minutes per IP.
+
+Read responses calculate status using database time. Opening details activates
+scheduled auctions when due or finalizes an ended auction exactly once.
+Late bids are rejected even before a page visit. Bidding and closure use the
+same auction row lock. Duplicate `requestId` returns 409. Money, ownership,
+access, commitment and deadline checks precede atomic bid/price persistence.
+`GET /auctions/:id/bids` accepts `limit` (1–100) and `offset` (0 or greater).
+`/me/items` includes image links; `/me/auctions` shows owned and bid-on auctions.
+
+### Open Banking: blocked on provider selection
+
+The team has not selected a sandbox provider. `src/bank.js` is the integration
+boundary, not a working adapter. Environment placeholders do not activate it.
+Commitment POST returns 503 `BANK_SANDBOX_UNAVAILABLE`; it creates no approval.
+Browser status/reference cannot approve a commitment. Private commitment GET
+also requires an access grant.
+
+Before implementing the adapter, supply the provider documentation, authorized
+sandbox account/scopes, supported operation, consent/callback flow, and exact
+rule mapping a trusted server response to SUCCESS. Keep secrets only in the
+backend environment. Genuine success, rejection and timeout evidence remains
+required by Stage 3. No funds-hold, proof-of-funds or transfer API was invented.
+
+### QA
+
+`npm test` now runs database, marketplace, upload, bidding and closure tests in
+addition to account tests. PostgreSQL suites require a disposable
+`TEST_DATABASE_URL` ending in `_test`; otherwise they explicitly skip.
+Fixtures use isolated schemas and temporary photo folders, removed on shutdown.
+Synthetic SUCCESS rows exist only in tests for downstream bidding, and do not
+prove bank integration. The existing GitHub workflow runs these tests against
+PostgreSQL 16 on pushes to `abeer`.
+
+Marketplace UI files currently live under `Stage_4/`, outside
+`frontend/src/marketplace/`. Connecting those screens is separate frontend work;
+this branch does not claim a complete browser auction journey.

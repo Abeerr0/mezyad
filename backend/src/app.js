@@ -1,179 +1,519 @@
-import express from 'express';
-import cors from 'cors';
-import bcrypt from 'bcryptjs';
-import {randomBytes} from 'node:crypto';
-import {query,pool} from './db.js';
-import {auth,admin,hashToken} from './auth.js';
-import {validMoney,toCents} from './money.js';
-import {accounts} from './accounts.js';
+import express from "express";
+import cors from "cors";
+import bcrypt from "bcryptjs";
+import { randomBytes } from "node:crypto";
+import { query, pool } from "./db.js";
+import { auth, admin, hashToken } from "./auth.js";
+import { validMoney, toCents } from "./money.js";
+import { accounts } from "./accounts.js";
+import { listings, withImages } from "./listings.js";
+import { imageLink, serveImage } from "./uploads.js";
+import { attemptLimit } from "./limits.js";
+import { startCommitment } from "./bank.js";
 
-export const app=express();
-app.use(cors({origin:process.env.FRONTEND_ORIGIN||'http://localhost:5173'}));
-app.use(express.json({limit:'100kb'}));
-app.use('/api/v1/auth', accounts);
-app.use('/auth', accounts);
-const api=express.Router();
-app.use('/api/v1',api);
+export const app = express();
+app.use(
+  cors({ origin: process.env.FRONTEND_ORIGIN || "http://localhost:5173" }),
+);
+app.disable("x-powered-by");
+app.use((_req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
+app.use(express.json({ limit: "100kb" }));
+app.use("/api/v1/auth", accounts);
+app.use("/auth", accounts);
+const api = express.Router();
+app.use("/api/v1", api);
 app.use(api);
-const err=(res,status,code,message)=>res.status(status).json({error:{code,message}});
-const validUuid=x=>typeof x==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x);
-const numeric=x=>typeof x==='number'&&Number.isFinite(x)&&x>0&&Number.isSafeInteger(Math.round(x*100))&&Math.abs(x*100-Math.round(x*100))<1e-7;
-const accessible=async(a,user)=>{
- if(a.visibility==='PUBLIC'||a.seller_id===user?.id)return true;
- if(!user)return false;
- const r=await query('SELECT 1 FROM private_auction_access WHERE auction_id=$1 AND user_id=$2',[a.id,user.id]);
- return !!r.rowCount;
+const err = (res, status, code, message) =>
+  res.status(status).json({ error: { code, message } });
+const validUuid = (x) =>
+  typeof x === "string" &&
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x);
+const accessible = async (a, user) => {
+  if (
+    a.visibility === "PUBLIC" ||
+    a.seller_id === user?.id ||
+    user?.role === "ADMIN"
+  )
+    return true;
+  if (!user) return false;
+  const r = await query(
+    "SELECT 1 FROM private_auction_access WHERE auction_id=$1 AND user_id=$2",
+    [a.id, user.id],
+  );
+  return !!r.rowCount;
 };
-async function auction(id){
- const r=await query('SELECT a.*,i.seller_id,i.title FROM auctions a JOIN items i ON i.id=a.item_id WHERE a.id=$1',[id]);
- return r.rows[0];
+async function auction(id) {
+  const r = await query(
+    "SELECT a.*,i.seller_id,i.title FROM auctions a JOIN items i ON i.id=a.item_id WHERE a.id=$1",
+    [id],
+  );
+  return r.rows[0];
 }
-async function closeIfEnded(id){
- const client=await pool.connect();
- try{
-  await client.query('BEGIN');
-  const r=await client.query('SELECT * FROM auctions WHERE id=$1 FOR UPDATE',[id]);
-  if(!r.rowCount){await client.query('ROLLBACK');return}
-  const a=r.rows[0];
-  const time=await client.query('SELECT clock_timestamp() AS current_time');
-  if(a.status!=='CLOSED'&&new Date(a.end_time)<=time.rows[0].current_time){
-   const w=await client.query('SELECT id FROM bids WHERE auction_id=$1 ORDER BY amount DESC,created_at ASC LIMIT 1',[id]);
-   await client.query("UPDATE auctions SET status='CLOSED' WHERE id=$1",[id]);
-   await client.query('INSERT INTO auction_results(auction_id,winner_bid_id) VALUES($1,$2) ON CONFLICT(auction_id) DO NOTHING',[id,w.rows[0]?.id||null]);
+async function closeIfEnded(id) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const r = await client.query(
+      "SELECT * FROM auctions WHERE id=$1 FOR UPDATE",
+      [id],
+    );
+    if (!r.rowCount) {
+      await client.query("ROLLBACK");
+      return;
+    }
+    const a = r.rows[0];
+    const time = await client.query("SELECT clock_timestamp() AS current_time");
+    if (
+      a.status !== "CLOSED" &&
+      new Date(a.end_time) <= time.rows[0].current_time
+    ) {
+      const w = await client.query(
+        "SELECT id FROM bids WHERE auction_id=$1 ORDER BY amount DESC,created_at ASC LIMIT 1",
+        [id],
+      );
+      await client.query("UPDATE auctions SET status='CLOSED' WHERE id=$1", [
+        id,
+      ]);
+      await client.query(
+        "INSERT INTO auction_results(auction_id,winner_bid_id) VALUES($1,$2) ON CONFLICT(auction_id) DO NOTHING",
+        [id, w.rows[0]?.id || null],
+      );
+    }
+    await client.query(
+      "UPDATE auctions SET status='ACTIVE' WHERE id=$1 AND status='SCHEDULED' AND start_time<=clock_timestamp() AND end_time>clock_timestamp()",
+      [id],
+    );
+    await client.query("COMMIT");
+  } catch (e) {
+    await client.query("ROLLBACK");
+    throw e;
+  } finally {
+    client.release();
   }
-  await client.query('COMMIT');
- }catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}
 }
-api.get('/health',(_req,res)=>res.json({data:{status:'ok'}}));
-api.get('/categories',async(_req,res,next)=>{try{res.json({data:(await query('SELECT id,name FROM categories ORDER BY name')).rows})}catch(e){next(e)}});
-api.post('/items',auth,async(req,res,next)=>{
- try{
-  const {categoryId,title,description,categoryFields={}}=req.body||{};
-  if(!validUuid(categoryId)||typeof title!=='string'||!title.trim()||typeof description!=='string'||!description.trim()||typeof categoryFields!=='object'||!categoryFields||Array.isArray(categoryFields))return err(res,400,'INVALID_INPUT','Valid listing fields required');
-  const r=await query('INSERT INTO items(seller_id,category_id,title,description,category_fields) VALUES($1,$2,$3,$4,$5) RETURNING *',[req.user.id,categoryId,title.trim(),description.trim(),JSON.stringify(categoryFields)]);
-  res.status(201).json({data:r.rows[0]});
- }catch(e){if(e.code==='23503')return err(res,400,'INVALID_CATEGORY','Unknown category');next(e)}
+api.get("/health", (_req, res) => res.json({ data: { status: "ok" } }));
+api.get("/categories", async (_req, res, next) => {
+  try {
+    res.json({
+      data: (await query("SELECT id,name FROM categories ORDER BY name")).rows,
+    });
+  } catch (e) {
+    next(e);
+  }
 });
-api.get('/items',auth,async(req,res,next)=>{
- try{const r=req.user.role==='ADMIN'&&req.query.status==='PENDING_REVIEW'
- ?await query("SELECT * FROM items WHERE status='PENDING_REVIEW' ORDER BY id")
- :await query('SELECT * FROM items WHERE seller_id=$1 ORDER BY id',[req.user.id]);
- res.json({data:r.rows})}catch(e){next(e)}
+// كل معرّف يمر من هنا قبل ما يوصل للاستعلام.
+api.param("id", (req, res, next, id) =>
+  validUuid(id) ? next() : err(res, 400, "INVALID_ID", "Invalid ID"),
+);
+listings.param("id", (req, res, next, id) =>
+  validUuid(id) ? next() : err(res, 400, "INVALID_ID", "Invalid ID"),
+);
+api.use(listings);
+api.get("/images/:filename", serveImage);
+api.post("/admin/items/:id/review", auth, admin, async (req, res, next) => {
+  try {
+    const { decision, reason } = req.body || {};
+    if (
+      !["APPROVED", "REJECTED"].includes(decision) ||
+      (decision === "REJECTED" &&
+        (typeof reason !== "string" || !reason.trim() || reason.length > 2000))
+    )
+      return err(
+        res,
+        400,
+        "INVALID_INPUT",
+        "Valid decision and rejection reason required",
+      );
+    const r = await query(
+      "UPDATE items SET status=$1,review_reason=$2,reviewed_by=$3,reviewed_at=now() WHERE id=$4 AND status='PENDING_REVIEW' RETURNING *",
+      [
+        decision,
+        decision === "REJECTED" ? reason.trim() : null,
+        req.user.id,
+        req.params.id,
+      ],
+    );
+    if (!r.rowCount)
+      return err(res, 409, "INVALID_STATE", "Listing not pending review");
+    res.json({ data: r.rows[0] });
+  } catch (e) {
+    next(e);
+  }
 });
-api.get('/items/:id',auth,async(req,res,next)=>{
- try{if(!validUuid(req.params.id))return err(res,400,'INVALID_ID','Invalid ID');
- const r=await query('SELECT * FROM items WHERE id=$1',[req.params.id]);
- if(!r.rowCount)return err(res,404,'NOT_FOUND','Item not found');
- if(r.rows[0].seller_id!==req.user.id&&req.user.role!=='ADMIN')return err(res,403,'FORBIDDEN','Not your item');
- res.json({data:r.rows[0]})}catch(e){next(e)}
-});
-api.patch('/items/:id',auth,async(req,res,next)=>{
- try{const {title,description}=req.body||{};
- if(!validUuid(req.params.id)||typeof title!=='string'||!title.trim()||typeof description!=='string'||!description.trim())return err(res,400,'INVALID_INPUT','Title and description required');
- const r=await query("UPDATE items SET title=$1,description=$2,status='PENDING_REVIEW',review_reason=NULL,reviewed_by=NULL,reviewed_at=NULL WHERE id=$3 AND seller_id=$4 AND status='REJECTED' RETURNING *",[title.trim(),description.trim(),req.params.id,req.user.id]);
- if(!r.rowCount)return err(res,409,'INVALID_STATE','Only your rejected items can be resubmitted');
- res.json({data:r.rows[0]})}catch(e){next(e)}
-});
-api.post('/admin/items/:id/review',auth,admin,async(req,res,next)=>{
- try{const {decision,reason}=req.body||{};
- if(!['APPROVED','REJECTED'].includes(decision)||decision==='REJECTED'&&(!reason||typeof reason!=='string'))return err(res,400,'INVALID_INPUT','Valid decision and rejection reason required');
- const r=await query("UPDATE items SET status=$1,review_reason=$2,reviewed_by=$3,reviewed_at=now() WHERE id=$4 AND status='PENDING_REVIEW' RETURNING *",[decision,decision==='REJECTED'?reason:null,req.user.id,req.params.id]);
- if(!r.rowCount)return err(res,409,'INVALID_STATE','Listing not pending review');
- res.json({data:r.rows[0]})}catch(e){next(e)}
-});
-api.post('/auctions',auth,async(req,res,next)=>{
- try{const {itemId,visibility,startingPrice,minimumIncrement,startTime,endTime}=req.body||{};
- if(!validUuid(itemId)||!['PUBLIC','PRIVATE'].includes(visibility)||!validMoney(startingPrice)||!validMoney(minimumIncrement)||!startTime||!endTime||!Number.isFinite(Date.parse(startTime))||!Number.isFinite(Date.parse(endTime))||new Date(endTime)<=new Date(startTime))return err(res,400,'INVALID_INPUT','Invalid auction parameters');
- const accessCode=visibility==='PRIVATE'?randomBytes(12).toString('hex'):null;
- const codeHash=accessCode?await bcrypt.hash(accessCode,12):null;
- const r=await query(`INSERT INTO auctions(item_id,visibility,access_code_hash,starting_price,current_price,minimum_increment,start_time,end_time)
+api.post("/auctions", auth, async (req, res, next) => {
+  try {
+    const {
+      itemId,
+      visibility,
+      startingPrice,
+      minimumIncrement,
+      startTime,
+      endTime,
+    } = req.body || {};
+    if (
+      !validUuid(itemId) ||
+      !["PUBLIC", "PRIVATE"].includes(visibility) ||
+      !validMoney(startingPrice) ||
+      !validMoney(minimumIncrement) ||
+      !startTime ||
+      !endTime ||
+      !Number.isFinite(Date.parse(startTime)) ||
+      !Number.isFinite(Date.parse(endTime)) ||
+      new Date(endTime) <= new Date(startTime)
+    )
+      return err(res, 400, "INVALID_INPUT", "Invalid auction parameters");
+    const accessCode =
+      visibility === "PRIVATE" ? randomBytes(12).toString("hex") : null;
+    const codeHash = accessCode ? await bcrypt.hash(accessCode, 12) : null;
+    const r = await query(
+      `INSERT INTO auctions(item_id,visibility,access_code_hash,starting_price,current_price,minimum_increment,start_time,end_time)
  SELECT id,$2,$3,$4,$4,$5,$6,$7 FROM items WHERE id=$1 AND seller_id=$8 AND status='APPROVED'
- RETURNING id,item_id,visibility,starting_price,current_price,minimum_increment,start_time,end_time,status`,[itemId,visibility,codeHash,startingPrice,minimumIncrement,startTime,endTime,req.user.id]);
- if(!r.rowCount)return err(res,403,'NOT_APPROVED','Only approved owned items can be auctioned');
- res.status(201).json({data:{...r.rows[0],...(accessCode?{accessCode}:{})}});
- }catch(e){if(e.code==='23505')return err(res,409,'DUPLICATE_AUCTION','Item already has auction');next(e)}
-});
-api.get('/auctions',async(_req,res,next)=>{try{const r=await query(`SELECT a.id,a.item_id,a.starting_price,a.current_price,a.start_time,a.end_time,a.status,
- i.title,c.name AS category_name,
- (SELECT image_url FROM item_images WHERE item_id=i.id ORDER BY id LIMIT 1) AS image_url,
- (SELECT count(*)::int FROM bids WHERE auction_id=a.id) AS bid_count
- FROM auctions a JOIN items i ON i.id=a.item_id JOIN categories c ON c.id=i.category_id
- WHERE a.visibility='PUBLIC' ORDER BY a.start_time DESC,a.id`);res.json({data:r.rows})}catch(e){next(e)}});
-api.get('/auctions/:id',async(req,res,next)=>{
- try{if(!validUuid(req.params.id))return err(res,400,'INVALID_ID','Invalid ID');
- const a=await auction(req.params.id);if(!a)return err(res,404,'NOT_FOUND','Auction not found');
- const token=req.headers.authorization?.match(/^Bearer (\S+)$/)?.[1];let user=null;
- if(token){const r=await query('SELECT u.id FROM user_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now()',[hashToken(token)]);user=r.rows[0]}
- if(!await accessible(a,user))return err(res,404,'NOT_FOUND','Auction not found');
- await closeIfEnded(a.id);
- const current=await auction(a.id);delete current.access_code_hash;
- const result=await query('SELECT winner_bid_id,closed_at FROM auction_results WHERE auction_id=$1',[a.id]);
- const item=await query('SELECT i.description,c.name AS category_name FROM items i JOIN categories c ON c.id=i.category_id WHERE i.id=$1',[current.item_id]);
- const images=await query('SELECT image_url FROM item_images WHERE item_id=$1 ORDER BY id',[current.item_id]);
- res.json({data:{...current,...item.rows[0],images:images.rows.map(image=>image.image_url),result:result.rows[0]||null}})}catch(e){next(e)}
-});
-api.post('/auctions/:id/access',auth,async(req,res,next)=>{
- try{const a=await auction(req.params.id);
- if(!a||a.visibility!=='PRIVATE')return err(res,404,'NOT_FOUND','Private auction not found');
- if(a.seller_id===req.user.id)return err(res,403,'OWNER','Owner cannot join as bidder');
- if(typeof req.body?.accessCode!=='string'||!await bcrypt.compare(req.body.accessCode,a.access_code_hash))return err(res,403,'INVALID_CODE','Invalid access code');
- await query('INSERT INTO private_auction_access(auction_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING',[a.id,req.user.id]);
- res.json({data:{accessGranted:true}})}catch(e){next(e)}
-});
-api.post('/auctions/:id/commitment',auth,async(req,res,next)=>{
- try{const a=await auction(req.params.id);
- if(!a||!await accessible(a,req.user))return err(res,404,'NOT_FOUND','Auction not found');
- if(a.seller_id===req.user.id)return err(res,403,'OWNER','Cannot commit to own auction');
- return err(res,503,'BANK_SANDBOX_UNAVAILABLE','Official sandbox provider and operation have not been verified; no commitment approved');
- }catch(e){next(e)}
-});
-api.get('/auctions/:id/commitment',auth,async(req,res,next)=>{
- try{const r=await query('SELECT id,status,sandbox_reference,created_at FROM bid_commitments WHERE auction_id=$1 AND user_id=$2',[req.params.id,req.user.id]);
- if(!r.rowCount)return err(res,404,'NOT_FOUND','No commitment');
- res.json({data:r.rows[0]})}catch(e){next(e)}
-});
-api.post('/auctions/:id/bids',auth,async(req,res,next)=>{
- const {amount,requestId}=req.body||{};
- if(!validMoney(amount)||!validUuid(requestId)||!validUuid(req.params.id))return err(res,400,'INVALID_INPUT','Valid amount and UUID requestId required');
- const c=await pool.connect();
- try{
-  await c.query('BEGIN');
-  const ar=await c.query('SELECT a.*,i.seller_id FROM auctions a JOIN items i ON i.id=a.item_id WHERE a.id=$1 FOR UPDATE OF a',[req.params.id]);
-  if(!ar.rowCount){await c.query('ROLLBACK');return err(res,404,'NOT_FOUND','Auction not found')}
-  const a=ar.rows[0];
-  if(a.seller_id===req.user.id){await c.query('ROLLBACK');return err(res,403,'OWNER','Cannot bid on own auction')}
-  if(a.visibility==='PRIVATE'){
-   const access=await c.query('SELECT 1 FROM private_auction_access WHERE auction_id=$1 AND user_id=$2',[a.id,req.user.id]);
-   if(!access.rowCount){await c.query('ROLLBACK');return err(res,403,'NO_ACCESS','Private access required')}
+ RETURNING id,item_id,visibility,starting_price,current_price,minimum_increment,start_time,end_time,status`,
+      [
+        itemId,
+        visibility,
+        codeHash,
+        startingPrice,
+        minimumIncrement,
+        startTime,
+        endTime,
+        req.user.id,
+      ],
+    );
+    if (!r.rowCount)
+      return err(
+        res,
+        403,
+        "NOT_APPROVED",
+        "Only approved owned items can be auctioned",
+      );
+    res
+      .status(201)
+      .json({ data: { ...r.rows[0], ...(accessCode ? { accessCode } : {}) } });
+  } catch (e) {
+    if (e.code === "23505")
+      return err(res, 409, "DUPLICATE_AUCTION", "Item already has auction");
+    next(e);
   }
-  const prior=await c.query('SELECT id,amount FROM bids WHERE request_id=$1',[requestId]);
-  if(prior.rowCount){await c.query('ROLLBACK');return err(res,409,'DUPLICATE_REQUEST','Bid request already processed')}
-  const commitment=await c.query("SELECT 1 FROM bid_commitments WHERE auction_id=$1 AND user_id=$2 AND status='SUCCESS'",[a.id,req.user.id]);
-  if(!commitment.rowCount){await c.query('ROLLBACK');return err(res,403,'COMMITMENT_REQUIRED','Verified commitment required')}
-  const clock=await c.query('SELECT clock_timestamp() AS current_time');
-  const now=clock.rows[0].current_time;
-  if(now<new Date(a.start_time)||now>=new Date(a.end_time)||a.status==='CLOSED'){await c.query('ROLLBACK');return err(res,409,'AUCTION_NOT_ACTIVE','Auction not active')}
-  const count=await c.query('SELECT 1 FROM bids WHERE auction_id=$1 LIMIT 1',[a.id]);
-  const minimumCents=count.rowCount?toCents(a.current_price)+toCents(a.minimum_increment):toCents(a.starting_price);
-  if(toCents(amount)<minimumCents){await c.query('ROLLBACK');return err(res,409,'BID_TOO_LOW','Bid below minimum')}
-  const bid=await c.query('INSERT INTO bids(auction_id,bidder_id,amount,request_id) VALUES($1,$2,$3,$4) RETURNING id,amount',[a.id,req.user.id,amount,requestId]);
-  await c.query("UPDATE auctions SET current_price=$1,status='ACTIVE' WHERE id=$2",[amount,a.id]);
-  await c.query('COMMIT');
-  res.status(201).json({data:{bidId:bid.rows[0].id,amount,currentPrice:amount}});
- }catch(e){await c.query('ROLLBACK').catch(()=>{});if(e.code==='23505')return err(res,409,'DUPLICATE_REQUEST','Bid request already processed');next(e)}finally{c.release()}
 });
-api.get('/auctions/:id/bids',auth,async(req,res,next)=>{
- try{const a=await auction(req.params.id);
- if(!a||!await accessible(a,req.user))return err(res,404,'NOT_FOUND','Auction not found');
- const r=await query('SELECT id,amount,created_at FROM bids WHERE auction_id=$1 ORDER BY created_at DESC LIMIT 100',[a.id]);
- res.json({data:r.rows})}catch(e){next(e)}
+// الحالة تنحسب بوقت قاعدة البيانات حتى لو ما أحد زايد أو فتح الصفحة.
+const auctionStatus = `CASE WHEN a.status='CLOSED' OR a.end_time<=clock_timestamp() THEN 'CLOSED'
+ WHEN a.start_time<=clock_timestamp() THEN 'ACTIVE' ELSE 'SCHEDULED' END`;
+api.get(
+  "/auctions",
+  (req, res, next) =>
+    req.query.scope === "all" ? auth(req, res, next) : next(),
+  async (req, res, next) => {
+    try {
+      if (req.query.scope === "all" && req.user.role !== "ADMIN")
+        return err(res, 403, "FORBIDDEN", "Admin only");
+      const { categoryId, status } = req.query;
+      if (
+        (categoryId !== undefined && !validUuid(categoryId)) ||
+        (status !== undefined &&
+          !["SCHEDULED", "ACTIVE", "CLOSED"].includes(status))
+      )
+        return err(res, 400, "INVALID_INPUT", "Invalid auction filters");
+      const r = await query(
+        `SELECT a.id,a.item_id,a.visibility,a.starting_price,a.current_price,a.minimum_increment,a.start_time,a.end_time,${auctionStatus} AS status,
+   i.title,c.name AS category_name,
+   (SELECT image_url FROM item_images WHERE item_id=i.id ORDER BY id LIMIT 1) AS image_url,
+   (SELECT count(*)::int FROM bids WHERE auction_id=a.id) AS bid_count
+   FROM auctions a JOIN items i ON i.id=a.item_id JOIN categories c ON c.id=i.category_id
+   WHERE (a.visibility='PUBLIC' OR $1::boolean) AND ($2::uuid IS NULL OR i.category_id=$2)
+   AND ($3::text IS NULL OR (${auctionStatus})=$3) ORDER BY a.start_time DESC,a.id`,
+        [req.query.scope === "all", categoryId || null, status || null],
+      );
+      res.json({
+        data: r.rows.map((a) => ({ ...a, image_url: imageLink(a.image_url) })),
+      });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+api.get("/auctions/:id", async (req, res, next) => {
+  try {
+    if (!validUuid(req.params.id))
+      return err(res, 400, "INVALID_ID", "Invalid ID");
+    const a = await auction(req.params.id);
+    if (!a) return err(res, 404, "NOT_FOUND", "Auction not found");
+    const token = req.headers.authorization?.match(/^Bearer (\S+)$/)?.[1];
+    let user = null;
+    if (token) {
+      const r = await query(
+        "SELECT u.id,u.role FROM user_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now()",
+        [hashToken(token)],
+      );
+      user = r.rows[0];
+    }
+    if (!(await accessible(a, user)))
+      return err(res, 404, "NOT_FOUND", "Auction not found");
+    await closeIfEnded(a.id);
+    const current = await auction(a.id);
+    delete current.access_code_hash;
+    const result = await query(
+      "SELECT winner_bid_id,closed_at FROM auction_results WHERE auction_id=$1",
+      [a.id],
+    );
+    const item = await query(
+      "SELECT i.description,i.category_fields,c.name AS category_name FROM items i JOIN categories c ON c.id=i.category_id WHERE i.id=$1",
+      [current.item_id],
+    );
+    const images = await query(
+      "SELECT image_url FROM item_images WHERE item_id=$1 ORDER BY id",
+      [current.item_id],
+    );
+    res.json({
+      data: {
+        ...current,
+        ...item.rows[0],
+        images: images.rows.map((image) => imageLink(image.image_url)),
+        result: result.rows[0] || null,
+      },
+    });
+  } catch (e) {
+    next(e);
+  }
 });
-api.get('/me/items',auth,async(req,res,next)=>{try{res.json({data:(await query('SELECT * FROM items WHERE seller_id=$1 ORDER BY id',[req.user.id])).rows})}catch(e){next(e)}});
-api.get('/me/auctions',auth,async(req,res,next)=>{try{res.json({data:(await query('SELECT DISTINCT a.id,a.status,a.end_time,i.title FROM auctions a JOIN items i ON i.id=a.item_id LEFT JOIN bids b ON b.auction_id=a.id WHERE i.seller_id=$1 OR b.bidder_id=$1',[req.user.id])).rows})}catch(e){next(e)}});
-app.use((error,req,res,next)=>{
- if(res.headersSent)return next(error);
- if(error.type==='entity.parse.failed')return err(res,400,'INVALID_JSON','Invalid JSON body');
- if(error.type==='entity.too.large')return err(res,413,'PAYLOAD_TOO_LARGE','Request body too large');
- console.error('API error',error.code||'INTERNAL_ERROR');
- err(res,500,'INTERNAL_ERROR','Unexpected server error');
+api.post(
+  "/auctions/:id/access",
+  auth,
+  attemptLimit({ key: (req) => req.user.id + ":" + req.params.id }),
+  async (req, res, next) => {
+    try {
+      const a = await auction(req.params.id);
+      if (!a || a.visibility !== "PRIVATE")
+        return err(res, 404, "NOT_FOUND", "Private auction not found");
+      if (a.seller_id === req.user.id)
+        return err(res, 403, "OWNER", "Owner cannot join as bidder");
+      if (
+        typeof req.body?.accessCode !== "string" ||
+        req.body.accessCode.length > 128 ||
+        !(await bcrypt.compare(req.body.accessCode, a.access_code_hash))
+      )
+        return err(res, 403, "INVALID_CODE", "Invalid access code");
+      await query(
+        "INSERT INTO private_auction_access(auction_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING",
+        [a.id, req.user.id],
+      );
+      res.json({ data: { accessGranted: true } });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+api.post("/auctions/:id/commitment", auth, async (req, res, next) => {
+  try {
+    const a = await auction(req.params.id);
+    if (!a || !(await accessible(a, req.user)))
+      return err(res, 404, "NOT_FOUND", "Auction not found");
+    if (a.seller_id === req.user.id)
+      return err(res, 403, "OWNER", "Cannot commit to own auction");
+    if (a.status === "CLOSED" || new Date(a.end_time) <= new Date())
+      return err(res, 409, "AUCTION_NOT_ACTIVE", "Auction ended");
+    await startCommitment({ auctionId: a.id, userId: req.user.id });
+  } catch (e) {
+    next(e);
+  }
+});
+api.get("/auctions/:id/commitment", auth, async (req, res, next) => {
+  try {
+    const a = await auction(req.params.id);
+    if (!a || !(await accessible(a, req.user)))
+      return err(res, 404, "NOT_FOUND", "Auction not found");
+    const r = await query(
+      "SELECT id,status,sandbox_reference,created_at FROM bid_commitments WHERE auction_id=$1 AND user_id=$2",
+      [req.params.id, req.user.id],
+    );
+    if (!r.rowCount) return err(res, 404, "NOT_FOUND", "No commitment");
+    res.json({ data: r.rows[0] });
+  } catch (e) {
+    next(e);
+  }
+});
+api.post("/auctions/:id/bids", auth, async (req, res, next) => {
+  const { amount, requestId } = req.body || {};
+  if (!validMoney(amount) || !validUuid(requestId) || !validUuid(req.params.id))
+    return err(
+      res,
+      400,
+      "INVALID_INPUT",
+      "Valid amount and UUID requestId required",
+    );
+  // نفس قفل الإغلاق يحافظ على ترتيب المزايدات ويمنع تضارب السعر.
+  let c;
+  try {
+    c = await pool.connect();
+    await c.query("BEGIN");
+    const ar = await c.query(
+      "SELECT a.*,i.seller_id FROM auctions a JOIN items i ON i.id=a.item_id WHERE a.id=$1 FOR UPDATE OF a",
+      [req.params.id],
+    );
+    if (!ar.rowCount) {
+      await c.query("ROLLBACK");
+      return err(res, 404, "NOT_FOUND", "Auction not found");
+    }
+    const a = ar.rows[0];
+    if (a.seller_id === req.user.id) {
+      await c.query("ROLLBACK");
+      return err(res, 403, "OWNER", "Cannot bid on own auction");
+    }
+    if (a.visibility === "PRIVATE") {
+      const access = await c.query(
+        "SELECT 1 FROM private_auction_access WHERE auction_id=$1 AND user_id=$2",
+        [a.id, req.user.id],
+      );
+      if (!access.rowCount) {
+        await c.query("ROLLBACK");
+        return err(res, 403, "NO_ACCESS", "Private access required");
+      }
+    }
+    const prior = await c.query(
+      "SELECT id,amount FROM bids WHERE request_id=$1",
+      [requestId],
+    );
+    if (prior.rowCount) {
+      await c.query("ROLLBACK");
+      return err(
+        res,
+        409,
+        "DUPLICATE_REQUEST",
+        "Bid request already processed",
+      );
+    }
+    const commitment = await c.query(
+      "SELECT 1 FROM bid_commitments WHERE auction_id=$1 AND user_id=$2 AND status='SUCCESS'",
+      [a.id, req.user.id],
+    );
+    if (!commitment.rowCount) {
+      await c.query("ROLLBACK");
+      return err(
+        res,
+        403,
+        "COMMITMENT_REQUIRED",
+        "Verified commitment required",
+      );
+    }
+    const clock = await c.query("SELECT clock_timestamp() AS current_time");
+    const now = clock.rows[0].current_time;
+    if (
+      now < new Date(a.start_time) ||
+      now >= new Date(a.end_time) ||
+      a.status === "CLOSED"
+    ) {
+      await c.query("ROLLBACK");
+      return err(res, 409, "AUCTION_NOT_ACTIVE", "Auction not active");
+    }
+    const count = await c.query(
+      "SELECT 1 FROM bids WHERE auction_id=$1 LIMIT 1",
+      [a.id],
+    );
+    const minimumCents = count.rowCount
+      ? toCents(a.current_price) + toCents(a.minimum_increment)
+      : toCents(a.starting_price);
+    if (toCents(amount) < minimumCents) {
+      await c.query("ROLLBACK");
+      return err(res, 409, "BID_TOO_LOW", "Bid below minimum");
+    }
+    const bid = await c.query(
+      "INSERT INTO bids(auction_id,bidder_id,amount,request_id) VALUES($1,$2,$3,$4) RETURNING id,amount",
+      [a.id, req.user.id, amount, requestId],
+    );
+    await c.query(
+      "UPDATE auctions SET current_price=$1,status='ACTIVE' WHERE id=$2",
+      [amount, a.id],
+    );
+    await c.query("COMMIT");
+    res
+      .status(201)
+      .json({ data: { bidId: bid.rows[0].id, amount, currentPrice: amount } });
+  } catch (e) {
+    if (c) await c.query("ROLLBACK").catch(() => {});
+    if (e.code === "23505")
+      return err(
+        res,
+        409,
+        "DUPLICATE_REQUEST",
+        "Bid request already processed",
+      );
+    next(e);
+  } finally {
+    c?.release();
+  }
+});
+api.get("/auctions/:id/bids", auth, async (req, res, next) => {
+  try {
+    const a = await auction(req.params.id);
+    if (!a || !(await accessible(a, req.user)))
+      return err(res, 404, "NOT_FOUND", "Auction not found");
+    const limit = Number(req.query.limit ?? 100),
+      offset = Number(req.query.offset ?? 0);
+    if (
+      !Number.isInteger(limit) ||
+      limit < 1 ||
+      limit > 100 ||
+      !Number.isSafeInteger(offset) ||
+      offset < 0
+    )
+      return err(res, 400, "INVALID_INPUT", "Invalid paging");
+    const r = await query(
+      "SELECT id,amount,created_at FROM bids WHERE auction_id=$1 ORDER BY created_at DESC,id LIMIT $2 OFFSET $3",
+      [a.id, limit, offset],
+    );
+    res.json({ data: r.rows });
+  } catch (e) {
+    next(e);
+  }
+});
+api.get("/me/items", auth, async (req, res, next) => {
+  try {
+    res.json({
+      data: await Promise.all(
+        (
+          await query("SELECT * FROM items WHERE seller_id=$1 ORDER BY id", [
+            req.user.id,
+          ])
+        ).rows.map((item) => withImages(item)),
+      ),
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+api.get("/me/auctions", auth, async (req, res, next) => {
+  try {
+    res.json({
+      data: (
+        await query(
+          `SELECT DISTINCT a.id,${auctionStatus} AS status,a.end_time,i.title FROM auctions a JOIN items i ON i.id=a.item_id LEFT JOIN bids b ON b.auction_id=a.id WHERE i.seller_id=$1 OR b.bidder_id=$1`,
+          [req.user.id],
+        )
+      ).rows,
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+app.use((_req, res) => err(res, 404, "NOT_FOUND", "Route not found"));
+app.use((error, req, res, next) => {
+  if (res.headersSent) return next(error);
+  if (error.apiCode)
+    return err(res, error.status || 400, error.apiCode, error.message);
+  if (error.name === "MulterError")
+    return err(
+      res,
+      error.code === "LIMIT_FILE_SIZE" ? 413 : 400,
+      error.code === "LIMIT_FILE_SIZE" ? "PAYLOAD_TOO_LARGE" : "INVALID_IMAGE",
+      "Up to six JPG, PNG or WebP images, 5 MiB each",
+    );
+  if (error.type === "entity.parse.failed")
+    return err(res, 400, "INVALID_JSON", "Invalid JSON body");
+  if (error.type === "entity.too.large")
+    return err(res, 413, "PAYLOAD_TOO_LARGE", "Request body too large");
+  console.error("API error", error.code || "INTERNAL_ERROR");
+  err(res, 500, "INTERNAL_ERROR", "Unexpected server error");
 });
