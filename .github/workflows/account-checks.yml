@@ -1,68 +1,492 @@
-name: Account integration checks
+name: Mezyad repository checks
 
 on:
-  pull_request:
-    branches: [development, main]
   push:
-    branches:
-      - main
-      - development
-      - ghadi
-      - aseel
-      - abeer
-      - tala
-      - 'feature/account-*'
+    branches: [aseel, ghadi, abeer, tala, development, main]
+  pull_request:
+    branches: [aseel, ghadi, abeer, tala, development, main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
-  accounts:
+  readiness:
+    name: Test readiness
+    if: contains(fromJSON('["aseel","ghadi","abeer","tala","development","main"]'), github.head_ref || github.ref_name)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: account-ci-only
-          POSTGRES_DB: mezyad_accounts_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d mezyad_accounts_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    env:
-      TEST_DATABASE_URL: postgresql://postgres:account-ci-only@localhost:5432/mezyad_accounts_test
+    outputs:
+      full: ${{ steps.inspect.outputs.full }}
+      runner: ${{ steps.inspect.outputs.runner }}
+      browser: ${{ steps.inspect.outputs.browser }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: '24'
+          node-version: "24"
+      - name: Prepare result directory
+        run: mkdir -p "$RUNNER_TEMP/ci-results"
+      - name: Inspect branch test capability
+        id: inspect
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+          TARGET: ${{ github.base_ref }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const p=JSON.parse(fs.readFileSync('frontend/package.json'));
+          const full=['ghadi','development'].includes(process.env.BRANCH)||process.env.TARGET==='development';
+          const runner=p.scripts?.['test:runner']==='node --test scripts/browser-runner.test.mjs'&&fs.existsSync('frontend/scripts/browser-runner.test.mjs');
+          const browser=p.scripts?.['test:e2e']==='node scripts/run-browser-tests.mjs'&&fs.existsSync('frontend/scripts/run-browser-tests.mjs');
+          for(const [key,value] of Object.entries({full,runner,browser}))fs.appendFileSync(process.env.GITHUB_OUTPUT,`${key}=${value}\n`);
+          const report={fullRequired:full,runnerAvailable:runner,browserAvailable:browser};
+          fs.writeFileSync(process.env.RUNNER_TEMP+'/ci-results/readiness.json',JSON.stringify(report,null,2));
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,`## Test readiness\nFull suite required: ${full}\n\nRunner: ${runner?'available':'NOT AVAILABLE — not counted as passed'}\n\nBrowser suite: ${browser?'available':'NOT AVAILABLE — not counted as passed'}\n`);
+          NODE
+      - name: Save readiness results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: readiness-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/ci-results
+
+  yaml:
+    name: YAML and actionlint
+    needs: readiness
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+      - name: Prepare result directory
+        run: mkdir -p "$RUNNER_TEMP/ci-results"
+      - name: Validate YAML
+        run: |
+          ruby -e 'require "yaml"; Dir[".github/workflows/*.{yml,yaml}"].each { |f| Psych.parse_file(f); puts "Valid YAML: #{f}" }' | tee "$RUNNER_TEMP/ci-results/yaml.txt"
+      - name: Validate GitHub Actions configuration
+        run: |
+          curl --fail --silent --show-error --location --retry 3 https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz -o "$RUNNER_TEMP/actionlint.tar.gz"
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $RUNNER_TEMP/actionlint.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -color -shellcheck= -pyflakes= 2>&1 | tee "$RUNNER_TEMP/ci-results/actionlint.txt"
+      - name: Save yaml results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: yaml-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/ci-results
+
+  changes:
+    name: Update whitespace check
+    needs: readiness
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+      - name: Prepare result directory
+        run: mkdir -p "$RUNNER_TEMP/ci-results"
+      - name: Check update diff
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          if [[ "$BRANCH" == ghadi ]] && git merge-base --is-ancestor origin/development "$HEAD_SHA"; then
+            BASE_SHA="$(git rev-parse origin/development)"
+          fi
+          if [[ -z "$BASE_SHA" || "$BASE_SHA" =~ ^0+$ ]]; then BASE_SHA="$(git rev-parse HEAD^)"; fi
+          printf 'Checking update against %s
+          ' "$BASE_SHA" | tee "$RUNNER_TEMP/ci-results/diff-base.txt"
+          git diff --check "$BASE_SHA" "$HEAD_SHA" | tee "$RUNNER_TEMP/ci-results/diff-check.txt"
+          printf 'PASS: update diff has no whitespace errors
+          ' >> "$RUNNER_TEMP/ci-results/diff-check.txt"
+      - name: Save changes results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: changes-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/ci-results
+
+  backend-syntax:
+    name: Backend syntax
+    needs: readiness
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+      - name: Prepare result directory
+        run: mkdir -p "$RUNNER_TEMP/ci-results"
+      - name: Install Backend
+        working-directory: backend
+        run: |
+          npm ci
+      - name: Check all Backend syntax
+        working-directory: backend
+        run: |
+          npm run check 2>&1 | tee "$RUNNER_TEMP/ci-results/backend-syntax.txt"
+      - name: Save backend-syntax results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: backend-syntax-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/ci-results
+
+  backend:
+    name: Backend PostgreSQL tests
+    needs: readiness
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-test-only
+          POSTGRES_DB: mezyad_ci_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mezyad_ci_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:ci-test-only@localhost:5432/mezyad_ci_test
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+      - name: Prepare result directory
+        run: mkdir -p "$RUNNER_TEMP/ci-results"
+      - name: Install Backend
+        working-directory: backend
+        run: |
+          npm ci
+      - name: Run every Backend test on PostgreSQL 16
+        working-directory: backend
+        run: |
+          npm test 2>&1 | tee "$RUNNER_TEMP/ci-results/backend-tests.txt"
+      - name: Reject skipped Backend tests
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const text=fs.readFileSync(process.env.RUNNER_TEMP+'/ci-results/backend-tests.txt','utf8');
+          const count=name=>Number(text.match(new RegExp('^(?:#|ℹ) '+name+' ([0-9]+)','m'))?.[1]??NaN);
+          const data={tests:count('tests'),passed:count('pass'),failed:count('fail'),skipped:count('skipped')};
+          fs.writeFileSync(process.env.RUNNER_TEMP+'/ci-results/backend.json',JSON.stringify(data,null,2));
+          if(!(data.tests>0)||data.failed!==0||data.skipped!==0||data.passed!==data.tests)process.exit(1);
+          NODE
+      - name: Save backend results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: backend-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/ci-results
+
+  react:
+    name: React tests
+    needs: readiness
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+      - name: Prepare result directory
+        run: mkdir -p "$RUNNER_TEMP/ci-results"
+      - name: Install Frontend
+        working-directory: frontend
+        run: |
+          npm ci
+      - name: Run all React tests
+        working-directory: frontend
+        run: |
+          npm test -- --reporter=default --reporter=json --outputFile="$RUNNER_TEMP/ci-results/react.json" 2>&1 | tee "$RUNNER_TEMP/ci-results/react.txt"
+      - name: Reject skipped React tests
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const d=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/ci-results/react.json'));
+          if(!d.success||!(d.numTotalTests>0)||d.numPassedTests!==d.numTotalTests||d.numFailedTests||d.numPendingTests)process.exit(1);
+          NODE
+      - name: Save react results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: react-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/ci-results
+
+  runner:
+    name: Browser runner tests
+    needs: readiness
+    if: needs.readiness.outputs.runner == 'true' || needs.readiness.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+      - name: Prepare result directory
+        run: mkdir -p "$RUNNER_TEMP/ci-results"
+      - name: Install Frontend
+        working-directory: frontend
+        run: |
+          npm ci
+      - name: Check browser runner failure handling
+        working-directory: frontend
+        run: |
+          npm run test:runner 2>&1 | tee "$RUNNER_TEMP/ci-results/runner.txt"
+      - name: Validate browser runner results
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import {stripVTControlCharacters} from 'node:util';
+          const text=stripVTControlCharacters(fs.readFileSync(process.env.RUNNER_TEMP+'/ci-results/runner.txt','utf8'));
+          const count=name=>{
+           const values=[...text.matchAll(new RegExp('^\\s*(?:#|ℹ)\\s+'+name+'\\s+([0-9]+)\\s*$','gm'))];
+           return values.length===1?Number(values[0][1]):NaN;
+          };
+          const data={tests:count('tests'),passed:count('pass'),failed:count('fail'),skipped:count('skipped')};
+          fs.writeFileSync(process.env.RUNNER_TEMP+'/ci-results/runner.json',JSON.stringify(data,null,2));
+          if(!(data.tests>0)||data.passed!==data.tests||data.failed!==0||data.skipped!==0)process.exit(1);
+          NODE
+      - name: Save runner results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: runner-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/ci-results
+
+  browser:
+    name: Playwright integration tests
+    needs: readiness
+    if: needs.readiness.outputs.browser == 'true' || needs.readiness.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-test-only
+          POSTGRES_DB: mezyad_ci_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mezyad_ci_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:ci-test-only@localhost:5432/mezyad_ci_test
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
           cache: npm
           cache-dependency-path: |
             backend/package-lock.json
             frontend/package-lock.json
-      - name: Install backend
-        run: npm ci
+      - name: Prepare result directory
+        run: mkdir -p "$RUNNER_TEMP/ci-results"
+      - name: Install Backend
         working-directory: backend
-      - name: Check backend syntax
-        run: npm run check
-        working-directory: backend
-      - name: Run HTTP and PostgreSQL account tests
-        run: npm test
-        working-directory: backend
-      - name: Install frontend
-        run: npm ci
+        run: |
+          npm ci
+      - name: Install Frontend
         working-directory: frontend
-      - name: Run account UI tests
-        run: npm test
+        run: |
+          npm ci
+      - name: Install Chromium and system dependencies
         working-directory: frontend
-      - name: Build frontend
-        run: npm run build
+        run: |
+          npx --no-install playwright install --with-deps chromium
+      - name: Run every browser spec with a fresh server and schema
         working-directory: frontend
+        env:
+          E2E_RESULTS_DIR: ${{ runner.temp }}/browser-results
+          E2E_JSON_FILE: ${{ runner.temp }}/ci-results/playwright.json
+        run: |
+          npm run test:e2e 2>&1 | tee "$RUNNER_TEMP/ci-results/browser.txt"
+      - name: Save browser results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: browser-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/ci-results
+            ${{ runner.temp }}/browser-results
+
+  build:
+    name: Production build
+    needs: readiness
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+      - name: Prepare result directory
+        run: mkdir -p "$RUNNER_TEMP/ci-results"
+      - name: Install Frontend
+        working-directory: frontend
+        run: |
+          npm ci
+      - name: Build Frontend
+        working-directory: frontend
+        run: |
+          npm run build 2>&1 | tee "$RUNNER_TEMP/ci-results/build.txt"
+      - name: Save build results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: build-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/ci-results
+
+  accounts:
+    name: accounts
+    needs: [readiness, yaml, changes, backend-syntax, backend, react, runner, browser, build]
+    if: always() && needs.readiness.result != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+      - name: Download result reports
+        if: always()
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: "*-${{ github.run_attempt }}"
+          path: ${{ runner.temp }}/all-results
+      - name: Summarize and enforce required checks
+        env:
+          CHECKS: ${{ toJSON(needs) }}
+          FULL: ${{ needs.readiness.outputs.full }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';import path from 'node:path';
+          const needs=JSON.parse(process.env.CHECKS),full=process.env.FULL==='true';
+          let failed=false,summary='## Mezyad checks\n\n| Check | Result |\n| --- | --- |\n';
+          const reject=message=>{failed=true;summary+=`\nERROR: ${message}\n`;};
+          const reports=new Map();
+          function visit(dir){
+           if(!fs.existsSync(dir))return;
+           for(const entry of fs.readdirSync(dir,{withFileTypes:true})){
+            const file=path.join(dir,entry.name);
+            if(entry.isDirectory())visit(file);
+            else if(['readiness.json','react.json','backend.json','runner.json','playwright.json'].includes(entry.name)){
+             if(!reports.has(entry.name))reports.set(entry.name,[]);
+             reports.get(entry.name).push(file);
+            }
+           }
+          }
+          visit(process.env.RUNNER_TEMP+'/all-results');
+          function report(name,validate){
+           const files=reports.get(name)||[];
+           if(files.length!==1){reject(`${name}: expected exactly one current-run report; found ${files.length}.`);return null;}
+           try{
+            const data=JSON.parse(fs.readFileSync(files[0],'utf8'));
+            if(!validate(data))throw new Error('invalid, incomplete, or unsuccessful results');
+            return data;
+           }catch(error){reject(`${name}: ${error.message}.`);return null;}
+          }
+          const count=value=>Number.isSafeInteger(value)&&value>=0;
+          const cleanCounts=d=>d&&['tests','passed','failed','skipped'].every(k=>count(d[k]))&&d.tests>0&&d.passed===d.tests&&d.failed===0&&d.skipped===0;
+          const readiness=report('readiness.json',d=>d&&typeof d.fullRequired==='boolean'&&typeof d.runnerAvailable==='boolean'&&typeof d.browserAvailable==='boolean'&&d.fullRequired===full);
+          const required=new Set(['readiness','yaml','changes','backend-syntax','backend','react','build']);
+          if(full){required.add('runner');required.add('browser');}
+          for(const id of required)if(needs[id]?.result!=='success')reject(`${id}: mandatory job did not succeed.`);
+          for(const [id,value] of Object.entries(needs)){
+           const optional=['runner','browser'].includes(id);
+           const available=readiness?.[id+'Available'];
+           const missing=optional&&!full&&available===false&&value.result==='skipped';
+           summary+=`| ${id} | ${missing?'NOT AVAILABLE on this branch; not counted as passed':value.result} |\n`;
+           if(!missing&&value.result!=='success')reject(`${id}: job did not succeed.`);
+          }
+          summary+=full?'\nFull suite is mandatory on this update.\n':'\nThis branch has core checks. Any missing browser tooling is explicitly not verified.\n';
+          const backend=report('backend.json',cleanCounts);
+          if(backend)summary+=`\nBackend: ${backend.passed} passed; ${backend.failed} failed; ${backend.skipped} skipped.\n`;
+          const react=report('react.json',d=>d&&d.success===true&&['numTotalTests','numPassedTests','numFailedTests','numPendingTests'].every(k=>count(d[k]))&&d.numTotalTests>0&&d.numPassedTests===d.numTotalTests&&d.numFailedTests===0&&d.numPendingTests===0&&(d.numTodoTests===undefined||d.numTodoTests===0));
+          if(react)summary+=`\nReact: ${react.numPassedTests} passed; ${react.numFailedTests} failed; ${react.numPendingTests} skipped.\n`;
+          if(full||needs.runner?.result==='success'){
+           const runner=report('runner.json',cleanCounts);
+           if(runner)summary+=`\nRunner: ${runner.passed} passed; ${runner.failed} failed; ${runner.skipped} skipped.\n`;
+          }
+          if(full||needs.browser?.result==='success'){
+           const browser=report('playwright.json',d=>d&&d.success===true&&d.status==='finished'&&Array.isArray(d.errors)&&d.errors.length===0&&d.stats&&['expected','unexpected','skipped','flaky'].every(k=>count(d.stats[k]))&&d.stats.expected>0&&d.stats.unexpected===0&&d.stats.skipped===0&&d.stats.flaky===0);
+           if(browser)summary+=`\nPlaywright: ${browser.stats.expected} passed; ${browser.stats.unexpected} failed; ${browser.stats.skipped} skipped; ${browser.stats.flaky} flaky.\n`;
+          }
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,summary);console.log(summary);if(failed)process.exit(1);
+          NODE
