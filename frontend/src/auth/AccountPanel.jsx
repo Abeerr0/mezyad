@@ -89,7 +89,7 @@ export function AccountPanel({ initialMode = 'login', onModeChange, children }) 
     {failure && <p className="feedback error" role="alert">{failure}</p>}
     <div className="account-summary">
       <div className="account-avatar" aria-label="رمز الحساب">{[...session.user.name.trim()][0]}</div>
-      <div><h2>{session.user.name}</h2><p className="account-email" dir="ltr">{session.user.email}</p></div>
+      <div><h2>{session.user.name}</h2><p className="section-description">المعلومات الشخصية والمزادات النشطة</p></div>
       <button className="button secondary logout-button" type="button" onClick={logout} disabled={pending}>
         {pending ? 'جارٍ تسجيل الخروج…' : 'تسجيل الخروج'}
       </button>
@@ -155,7 +155,7 @@ export function AccountPanel({ initialMode = 'login', onModeChange, children }) 
           </form>
           {mode === 'login' && <p className="account-prompt">ليس لديك حساب؟</p>}
           <button className="button secondary account-switch" type="button" disabled={pending} onClick={() => changeMode(mode === 'register' ? 'login' : 'register')}>
-            {mode === 'register' ? 'تسجيل الدخول' : 'إنشاء حساب'}
+            {mode === 'register' ? 'لدي حساب بالفعل' : 'إنشاء حساب'}
           </button>
         </>}
     </section>

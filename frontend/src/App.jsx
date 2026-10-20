@@ -3,6 +3,8 @@ import { AccountPanel } from './auth/AccountPanel.jsx';
 import { useAuth } from './auth/AuthProvider.jsx';
 import { SiteHeader, SiteFooter } from './ui/SiteChrome.jsx';
 import { AuctionDetails, AuctionList, categories } from './ui/Auctions.jsx';
+import { BrowsePage } from './ui/BrowsePage.jsx';
+import { AccountActivity } from './ui/AccountActivity.jsx';
 import {Activity,ListingDetails} from './marketplace/Activity.jsx';
 import {ListingForm} from './marketplace/ListingForm.jsx';
 import {AdminReview} from './marketplace/AdminReview.jsx';
@@ -62,26 +64,14 @@ export function App() {
   if(workspaceView)workspace=<React.Fragment key={route.view+'/'+(route.id||'')}>{workspace}</React.Fragment>;
   const accountView = ['login', 'register', 'account'].includes(route.view);
   return <>
-    <SiteHeader signedIn={status === 'authenticated'} accountView={accountView}/>
+    <SiteHeader signedIn={status === 'authenticated'} accountView={accountView || workspaceView}/>
     {workspaceView?workspace:accountView ? <AccountPanel initialMode={route.view === 'register' ? 'register' : 'login'}
       onModeChange={mode => go((mode === 'register' ? 'register' : 'login') + (route.authAuction ? '?auction=' + route.authAuction : route.returnTo?'?return='+encodeURIComponent(route.returnTo):''))}>
+        {route.view === 'account' && <AccountActivity/>}
         <div className="workspace-actions"><a className="button primary" href="#activity">مزاداتي ونشاطي</a><a className="button secondary" href="#listing/new">إنشاء إعلان</a><a className="button secondary" href="#private">الدخول إلى مزاد خاص</a>{session?.user.role==='ADMIN'&&<a className="button secondary" href="#admin">مراجعة الإعلانات</a>}</div>
       </AccountPanel>
       : route.view === 'auction' ? <AuctionDetails id={route.id} receipt={receipt} onParticipate={()=>go('commitment/'+route.id)} onRequireLogin={() => go('login?auction=' + route.id)}/>
-        : route.view === 'auctions' ? <main className="content-shell browse-page">
-          <p className="eyebrow">المزادات / {categories.find(c => c.key === route.category)?.label || 'جميع الأقسام'}</p>
-          <h1>المزادات</h1><p className="section-description">تصفح المزادات</p>
-          <nav className="category-filters" aria-label="تصفية المزادات">
-            <a className={'button ' + (!route.category ? 'primary' : 'secondary')} href="#auctions" aria-current={!route.category ? 'page' : undefined}>الكل</a>
-            {categories.map(category => <a key={category.key} href={'#auctions/' + category.key}
-              className={'button ' + (route.category === category.key ? 'primary' : 'secondary')}
-              aria-current={route.category === category.key ? 'page' : undefined}>{category.label}</a>)}
-          </nav>
-          <AuctionList category={route.category}/>
-          <section className="browse-editorial"><p className="eyebrow">أقسام مِزياد</p><h2>اعثر على ما تبحث عنه</h2>
-            <p>يمكنك الانتقال بين الأقسام ومتابعة المزادات بحسب اهتماماتك.</p>
-            <a className="button secondary" href="#home">العودة إلى الرئيسية</a></section>
-        </main> : <main>
+        : route.view === 'auctions' ? <BrowsePage category={route.category}/> : <main>
           <section className="home-hero">
             <img className="hero-photo" src="/images/home-interior.jpg" alt="مساحة داخلية سعودية بتفاصيل معمارية هادئة"/>
             <div className="hero-panel"><h1>مزادات مختارة<br/>لمعروضات عالية القيمة</h1>

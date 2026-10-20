@@ -40,13 +40,16 @@ export function safeImage(value) {
 
 export function AuctionCard({ auction, index = 0 }) {
   const image = safeImage(auction.image_url);
+  const scheduled = auction.status === 'SCHEDULED';
+  const hasStartingPrice = Number.isFinite(Number(auction.starting_price)) && Number(auction.starting_price) > 0;
   return <article className="auction-card">
     <a className="auction-image-link" href={'#auction/' + auction.id} aria-label={'عرض مزاد ' + auction.title}>
       {image ? <img src={image} alt={auction.title}/> : <div className="image-placeholder">لا تتوفر صورة</div>}
     </a>
     <div className="card-title"><h3>{auction.title}</h3><span dir="ltr">{String(index + 1).padStart(2, '0')}</span></div>
-    <div className="price"><span>{Number(auction.bid_count) > 0 ? 'أعلى مزايدة' : 'السعر الافتتاحي'}</span>
-      <strong><bdi dir="ltr">{amount(auction.current_price)}</bdi> ر.س</strong></div>
+    <div className="price"><span>{scheduled ? 'حالة المزاد' : Number(auction.bid_count) > 0 ? 'أعلى مزايدة' : 'السعر الابتدائي'}</span>
+      <strong>{scheduled ? 'قريبًا' : <><bdi dir="ltr">{amount(auction.current_price)}</bdi> ر.س</>}</strong></div>
+    {scheduled && <p className="scheduled-price">{hasStartingPrice ? 'السعر الابتدائي' : 'السعر الحالي'}: <bdi dir="ltr">{amount(hasStartingPrice ? auction.starting_price : auction.current_price)}</bdi> ر.س</p>}
     <a className="button secondary" href={'#auction/' + auction.id}>
       {auction.status === 'SCHEDULED' ? 'اعرض تفاصيل المزاد' : 'عرض المزاد'}
     </a>
@@ -58,6 +61,8 @@ export function AuctionList({ category, home = false }) {
   const [auctions, setAuctions] = useState([]);
   const [failure, setFailure] = useState('');
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  useEffect(() => setPage(1), [category]);
   useEffect(() => {
     const controller = new AbortController();
     let busy = false;
@@ -81,14 +86,24 @@ export function AuctionList({ category, home = false }) {
   }, [request]);
   const selectedCategory = categories.find(value => value.key === category);
   const visible = auctions.filter(value => !selectedCategory || value.category_name === selectedCategory.name);
-  const displayed = home ? visible.filter(auction => auction.status === 'ACTIVE').slice(0, 3) : visible;
+  const pageCount = Math.max(1, Math.ceil(visible.length / 6));
+  useEffect(() => setPage(value => Math.min(value, pageCount)), [pageCount]);
+  const currentPage = Math.min(page, pageCount);
+  const displayed = home ? visible.filter(auction => auction.status === 'ACTIVE').slice(0, 3)
+    : visible.slice((currentPage - 1) * 6, currentPage * 6);
   return <>
     {failure && <p className="feedback error" role="alert">{failure}</p>}
     <div className="auction-grid" aria-busy={loading}>
       {loading ? <p className="empty-state" role="status">جارٍ تحميل المزادات…</p>
-        : displayed.length ? displayed.map((auction, index) => <AuctionCard key={auction.id} auction={auction} index={index}/>)
+        : displayed.length ? displayed.map((auction, index) => <AuctionCard key={auction.id} auction={auction} index={index + (home ? 0 : (currentPage - 1) * 6)}/>)
           : <p className="empty-state">لا توجد مزادات متاحة في هذا القسم حاليًا.</p>}
     </div>
+    {!home && !loading && pageCount > 1 && <nav className="browse-pagination" aria-label="صفحات المزادات">
+      <span>الصفحات</span>
+      {Array.from({ length: pageCount }, (_, index) => <button key={index} type="button"
+        aria-label={'الصفحة ' + (index + 1)} aria-current={currentPage === index + 1 ? 'page' : undefined}
+        onClick={() => setPage(index + 1)}>{index + 1}</button>)}
+    </nav>}
   </>;
 }
 
