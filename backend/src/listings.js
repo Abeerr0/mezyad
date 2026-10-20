@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { isDeepStrictEqual } from "node:util";
 import { pool, query } from "./db.js";
 import { auth } from "./auth.js";
 import {
@@ -22,19 +23,36 @@ export async function withImages(item, connection = { query }) {
   );
   return {
     ...item,
+    categoryFields: item.category_fields,
     images: images.rows.map((row) => imageLink(row.image_url)),
   };
 }
 
-function fields(body, editing) {
-  let categoryFields = body.category_fields ?? body.categoryFields;
-  if (typeof categoryFields === "string") {
-    try {
-      categoryFields = JSON.parse(categoryFields);
-    } catch {
-      return null;
+export function parseListingFields(body, editing = false) {
+  const parse = (value) => {
+    if (typeof value === "string") {
+      try {
+        value = JSON.parse(value);
+      } catch {
+        return null;
+      }
     }
-  }
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? value
+      : null;
+  };
+  const hasCamel = Object.hasOwn(body, "categoryFields");
+  const hasSnake = Object.hasOwn(body, "category_fields");
+  const camel = hasCamel ? parse(body.categoryFields) : undefined;
+  const snake = hasSnake ? parse(body.category_fields) : undefined;
+  // الاسم الموحد categoryFields؛ نقبل الاسم القديم عشان نموذج الفريق يظل متوافق.
+  if (
+    (hasCamel && !camel) ||
+    (hasSnake && !snake) ||
+    (hasCamel && hasSnake && !isDeepStrictEqual(camel, snake))
+  )
+    return null;
+  const categoryFields = camel ?? snake;
   const { title, description } = body;
   const categoryId = body.categoryId ?? body.category;
   if (
@@ -68,7 +86,7 @@ function fields(body, editing) {
 
 async function writeListing(req, res, next) {
   const editing = req.method === "PATCH";
-  const input = fields(req.body || {}, editing);
+  const input = parseListingFields(req.body || {}, editing);
   if (!input)
     return fail(res, 400, "INVALID_INPUT", "Valid listing fields required");
   if (!editing && req.is("multipart/form-data") && !req.files?.length)
@@ -180,11 +198,16 @@ listings.post("/items", auth, uploadImages, writeListing);
 listings.patch("/items/:id", auth, uploadImages, writeListing);
 listings.get("/items", auth, async (req, res, next) => {
   try {
+    if (
+      req.query.status !== undefined &&
+      !["PENDING_REVIEW", "APPROVED", "REJECTED"].includes(req.query.status)
+    )
+      return fail(res, 400, "INVALID_INPUT", "Invalid listing status");
     const result =
-      req.user.role === "ADMIN" && req.query.status === "PENDING_REVIEW"
-        ? await query(
-            "SELECT * FROM items WHERE status='PENDING_REVIEW' ORDER BY id",
-          )
+      req.user.role === "ADMIN" && req.query.status
+        ? await query("SELECT * FROM items WHERE status=$1 ORDER BY id", [
+            req.query.status,
+          ])
         : await query("SELECT * FROM items WHERE seller_id=$1 ORDER BY id", [
             req.user.id,
           ]);

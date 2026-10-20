@@ -87,3 +87,21 @@ check('private listing image URL is absent from public discovery and unauthorize
   const detail=await q.api('/auctions/'+id,{token:q.seller.token});
   assert.equal(detail.json.data.images.length,1);
 });
+
+check('canonical categoryFields and images persist on create and resubmission; invalid aliases make no change',async()=>{
+  const input=form();input.delete('category_fields');input.set('categoryFields',JSON.stringify({year:2024,condition:'جديد'}));
+  const created=await send(input);assert.equal(created.status,201);
+  const item=created.json.data;
+  assert.deepEqual(item.categoryFields,{year:2024,condition:'جديد'});
+  assert.deepEqual(item.category_fields,item.categoryFields);
+  const review=await q.api('/admin/items/'+item.id+'/review',{method:'POST',token:q.admin.token,body:{decision:'REJECTED',reason:'تحديث الحالة'}});
+  assert.equal(review.json.data.images.length,1);
+  const corrected=form();corrected.delete('category_fields');corrected.set('categoryFields','{"year":2024,"condition":"مستعمل"}');
+  const response=await send(corrected,'/items/'+item.id,q.seller.token,'PATCH');
+  assert.equal(response.status,200);
+  assert.deepEqual(response.json.data.categoryFields,{year:2024,condition:'مستعمل'});
+  const stored=(await q.pool.query('SELECT category_fields FROM items WHERE id=$1',[item.id])).rows[0];
+  assert.deepEqual(stored.category_fields,response.json.data.categoryFields);
+  const invalid=form();invalid.set('categoryFields','{"conflict":true}');
+  expectError(await send(invalid),400,'INVALID_INPUT');
+});

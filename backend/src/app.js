@@ -10,6 +10,15 @@ import { listings, withImages } from "./listings.js";
 import { imageLink, serveImage } from "./uploads.js";
 import { attemptLimit } from "./limits.js";
 import { startCommitment } from "./bank.js";
+import {
+  accessible,
+  auction,
+  closeIfEnded,
+  auctionStatus,
+  resultFor,
+  participationFor,
+} from "./auctions.js";
+import { monitoring } from "./monitoring.js";
 
 export const app = express();
 app.use(
@@ -31,69 +40,6 @@ const err = (res, status, code, message) =>
 const validUuid = (x) =>
   typeof x === "string" &&
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x);
-const accessible = async (a, user) => {
-  if (
-    a.visibility === "PUBLIC" ||
-    a.seller_id === user?.id ||
-    user?.role === "ADMIN"
-  )
-    return true;
-  if (!user) return false;
-  const r = await query(
-    "SELECT 1 FROM private_auction_access WHERE auction_id=$1 AND user_id=$2",
-    [a.id, user.id],
-  );
-  return !!r.rowCount;
-};
-async function auction(id) {
-  const r = await query(
-    "SELECT a.*,i.seller_id,i.title FROM auctions a JOIN items i ON i.id=a.item_id WHERE a.id=$1",
-    [id],
-  );
-  return r.rows[0];
-}
-async function closeIfEnded(id) {
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-    const r = await client.query(
-      "SELECT * FROM auctions WHERE id=$1 FOR UPDATE",
-      [id],
-    );
-    if (!r.rowCount) {
-      await client.query("ROLLBACK");
-      return;
-    }
-    const a = r.rows[0];
-    const time = await client.query("SELECT clock_timestamp() AS current_time");
-    if (
-      a.status !== "CLOSED" &&
-      new Date(a.end_time) <= time.rows[0].current_time
-    ) {
-      const w = await client.query(
-        "SELECT id FROM bids WHERE auction_id=$1 ORDER BY amount DESC,created_at ASC LIMIT 1",
-        [id],
-      );
-      await client.query("UPDATE auctions SET status='CLOSED' WHERE id=$1", [
-        id,
-      ]);
-      await client.query(
-        "INSERT INTO auction_results(auction_id,winner_bid_id) VALUES($1,$2) ON CONFLICT(auction_id) DO NOTHING",
-        [id, w.rows[0]?.id || null],
-      );
-    }
-    await client.query(
-      "UPDATE auctions SET status='ACTIVE' WHERE id=$1 AND status='SCHEDULED' AND start_time<=clock_timestamp() AND end_time>clock_timestamp()",
-      [id],
-    );
-    await client.query("COMMIT");
-  } catch (e) {
-    await client.query("ROLLBACK");
-    throw e;
-  } finally {
-    client.release();
-  }
-}
 api.get("/health", (_req, res) => res.json({ data: { status: "ok" } }));
 api.get("/categories", async (_req, res, next) => {
   try {
@@ -112,6 +58,7 @@ listings.param("id", (req, res, next, id) =>
   validUuid(id) ? next() : err(res, 400, "INVALID_ID", "Invalid ID"),
 );
 api.use(listings);
+api.use(monitoring);
 api.get("/images/:filename", serveImage);
 api.post("/admin/items/:id/review", auth, admin, async (req, res, next) => {
   try {
@@ -138,7 +85,7 @@ api.post("/admin/items/:id/review", auth, admin, async (req, res, next) => {
     );
     if (!r.rowCount)
       return err(res, 409, "INVALID_STATE", "Listing not pending review");
-    res.json({ data: r.rows[0] });
+    res.json({ data: await withImages(r.rows[0]) });
   } catch (e) {
     next(e);
   }
@@ -202,8 +149,6 @@ api.post("/auctions", auth, async (req, res, next) => {
   }
 });
 // الحالة تنحسب بوقت قاعدة البيانات حتى لو ما أحد زايد أو فتح الصفحة.
-const auctionStatus = `CASE WHEN a.status='CLOSED' OR a.end_time<=clock_timestamp() THEN 'CLOSED'
- WHEN a.start_time<=clock_timestamp() THEN 'ACTIVE' ELSE 'SCHEDULED' END`;
 api.get(
   "/auctions",
   (req, res, next) =>
@@ -257,10 +202,8 @@ api.get("/auctions/:id", async (req, res, next) => {
     await closeIfEnded(a.id);
     const current = await auction(a.id);
     delete current.access_code_hash;
-    const result = await query(
-      "SELECT winner_bid_id,closed_at FROM auction_results WHERE auction_id=$1",
-      [a.id],
-    );
+    const result = await resultFor(a.id, user?.id);
+    const participation = await participationFor(a.id, user?.id);
     const item = await query(
       "SELECT i.description,i.category_fields,c.name AS category_name FROM items i JOIN categories c ON c.id=i.category_id WHERE i.id=$1",
       [current.item_id],
@@ -274,7 +217,8 @@ api.get("/auctions/:id", async (req, res, next) => {
         ...current,
         ...item.rows[0],
         images: images.rows.map((image) => imageLink(image.image_url)),
-        result: result.rows[0] || null,
+        result,
+        participation,
       },
     });
   } catch (e) {

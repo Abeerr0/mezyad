@@ -10,7 +10,9 @@
     "check": "node scripts/check.js",
     "test:accounts": "node --test tests/accounts.integration.test.js",
     "seed:design-demo": "node scripts/seed-design-demo.js",
-    "db:setup": "node scripts/setup-db.js"
+    "db:setup": "node scripts/setup-db.js",
+    "test:sql-smoke": "node scripts/pglite-smoke.js",
+    "test:postgres": "node scripts/test-postgres.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

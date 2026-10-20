@@ -1,4 +1,4 @@
-# Backend account development
+# Mezyad backend
 
 Requires Node.js 20+ and PostgreSQL. From this directory:
 
@@ -66,7 +66,7 @@ Auction discovery/details now return their own category and image references
 from the existing tables. Private listings remain excluded from public discovery,
 and direct private detail access still requires authorization.
 
-## Marketplace backend — branch `abeer`
+## Marketplace backend — `feature/abeer-backend-api`
 
 From `backend/`, create the PostgreSQL database, set `DATABASE_URL` in `.env`,
 then run `npm run db:setup`. This applies the existing ten-table migration and
@@ -139,8 +139,8 @@ addition to account tests. PostgreSQL suites require a disposable
 `TEST_DATABASE_URL` ending in `_test`; otherwise they explicitly skip.
 Fixtures use isolated schemas and temporary photo folders, removed on shutdown.
 Synthetic SUCCESS rows exist only in tests for downstream bidding, and do not
-prove bank integration. The existing GitHub workflow runs these tests against
-PostgreSQL 16 on pushes to `abeer`.
+prove bank integration. The GitHub workflow runs these tests against PostgreSQL 16 on this Feature
+branch and on pull requests targeting development.
 
 Marketplace UI files currently live under `Stage_4/`, outside
 `frontend/src/marketplace/`. Connecting those screens is separate frontend work;
@@ -166,3 +166,47 @@ the same 403 INVALID_CODE response. Neither response discloses private details.
 `npm test` includes the seven previously packaged contract checks under
 `tests/acceptance/`. They are normal assertions, not expected failures.
 Their PostgreSQL results remain unverified until executed with TEST_DATABASE_URL.
+
+
+## Admin, results and categoryFields
+
+See [API.md](API.md) for the canonical categoryFields contract, legacy aliases,
+returned image paths, dashboard/monitoring routes and viewer-specific results.
+The active frontend now uses FormData, resolves signed images against the API
+origin, and displays seller/admin photos, dashboard counts and persisted results.
+The existing Stage 4 screens were brought into frontend/src/marketplace.
+
+## Optional local SQL smoke
+
+When native PostgreSQL is unavailable, a separate optional SQL check can run
+against PGlite. It executes the actual migration, seed and HTTP routes using the
+PostgreSQL WASM engine, with a test-only database adapter and synthetic users.
+It is NOT a native multi-client PostgreSQL or locking/concurrency result and
+never proves provider access. No PGlite dependency enters the production app.
+
+Install the optional tool in a separate directory, for example:
+
+```sh
+npm install --prefix /tmp/mezyad-sql-qa @electric-sql/pglite@0.5.10
+PGLITE_INSTALL_DIR=/tmp/mezyad-sql-qa npm run test:sql-smoke
+```
+
+The script creates a disposable in-memory database and temporary image directory,
+then removes both. Synthetic SUCCESS rows test only the code after commitment.
+For authoritative integration/concurrency tests, use TEST_DATABASE_URL with
+PostgreSQL 16 and `npm test`, or the prepared GitHub CI workflow.
+
+
+## Required native PostgreSQL validation
+
+Use a disposable database ending in `_test`, then run:
+
+```sh
+TEST_DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/mezyad_test npm run test:postgres
+```
+
+This command fails if the test database is missing; it cannot silently pass by
+skipping every integration test. The normal `npm test` still permits unit-only
+work without a database. The CI uses PostgreSQL 16 and the required command,
+then runs the actual public/private browser journeys. CI has not run for these
+local commits while GitHub write access is blocked.
