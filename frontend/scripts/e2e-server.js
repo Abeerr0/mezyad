@@ -1,6 +1,6 @@
 import {createRequire} from 'node:module';
 import {randomUUID,randomBytes} from 'node:crypto';
-import {readFile,writeFile,mkdir} from 'node:fs/promises';
+import {readFile,writeFile,mkdir,mkdtemp,rm} from 'node:fs/promises';
 import {spawn} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import os from 'node:os';
@@ -11,7 +11,9 @@ if(!process.env.TEST_DATABASE_URL)throw new Error('Set a disposable TEST_DATABAS
 const url=new URL(process.env.TEST_DATABASE_URL);if(!url.pathname.endsWith('_test'))throw new Error('Database name must end in _test');
 const schema='frontend_browser_'+randomBytes(6).toString('hex'),control=new Pool({connectionString:url.toString()});
 await control.query('CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public');await control.query(`CREATE SCHEMA "${schema}"`);
+if(process.env.E2E_SCHEMA_FILE)await writeFile(process.env.E2E_SCHEMA_FILE,JSON.stringify({schema}));
 url.searchParams.set('options',`-c search_path=${schema},public`);process.env.DATABASE_URL=url.toString();process.env.FRONTEND_ORIGIN='http://127.0.0.1:44018';
+const uploadDir=await mkdtemp(path.join(os.tmpdir(),'mezyad-browser-uploads-'));process.env.UPLOAD_DIR=uploadDir;
 const {app}=await import('../../backend/src/app.js'),{pool}=await import('../../backend/src/db.js');
 await pool.query(await readFile(new URL('../../database/migrations/001_schema.sql',import.meta.url),'utf8'));
 const hash=await bcrypt.hash('Browser-QA-Only-2026',12),users={};
@@ -30,5 +32,5 @@ const output=process.env.E2E_FIXTURE_FILE||path.join(os.tmpdir(),'frontend-brows
 const server=app.listen(44017,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));
 const vite=spawn(process.execPath,[fileURLToPath(new URL('../node_modules/vite/bin/vite.js',import.meta.url)),'--host','127.0.0.1','--port','44018','--strictPort'],{cwd:fileURLToPath(new URL('../',import.meta.url)),env:{...process.env,VITE_API_URL:'http://127.0.0.1:44017'},stdio:'inherit'});
 let stopping=false;
-async function stop(){if(stopping)return;stopping=true;vite.kill('SIGTERM');server.closeAllConnections();await new Promise(resolve=>server.close(resolve));await pool.end();await control.query(`DROP SCHEMA "${schema}" CASCADE`);await control.end();process.exit(0);}
+async function stop(){if(stopping)return;stopping=true;vite.kill('SIGTERM');server.closeAllConnections();await new Promise(resolve=>server.close(resolve));await pool.end();await control.query(`DROP SCHEMA "${schema}" CASCADE`);await control.end();await rm(uploadDir,{recursive:true,force:true});process.exit(0);}
 process.on('SIGTERM',stop);process.on('SIGINT',stop);vite.on('exit',()=>{if(!stopping)stop();});
