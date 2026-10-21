@@ -356,32 +356,65 @@ app.patch("/items/:id", auth, async (req, res, next) => {
     next(e);
   }
 });
+// مسار الادمن لقبول الاعلان المعلق او رفضه
+//نحدث حاله الاعلان ونحفظ سبب الرفض اذا كان القرار رفض
+//نستقبل طلب مراجعه الاعلان بعد التحقق من الجلسه وصلاحيه الادمن
 app.post("/admin/items/:id/review", auth, admin, async (req, res, next) => {
+  //ننفذ هذي الخطوات واذا حدث خطا تروح لكاتش
   try {
-    const { decision, reason } = req.body || {};
+    //نأخذ بيانات الطلب وإذا لم توجد نستخدم كائن فارغ.
+    const data = req.body || {};
+    //ناخذ قرار الادمن من بيانات الطلب
+    const decision = data.decision;
+    // نأخذ سبب الرفض المرسل مع الطلب.
+    const reason = data.reason;
+    // اذا انطبق عليه
     if (
-      !["APPROVED", "REJECTED"].includes(decision) ||
-      (decision === "REJECTED" && (!reason || typeof reason !== "string"))
+      //اذا كان القرار اللي الادمن القادم من الطلب غير مقبول وغير مرفوض يعني حاله pending او قيمه غير موجوده
+      (decision !== "APPROVED" && decision !== "REJECTED") ||
+      // هنا عند رفض الاعلان لازم يكون السبب نص مكتوب مو فارغ او مسافات فقط
+      (decision === "REJECTED" &&
+        (typeof reason !== "string" || !reason.trim()))
     )
+      //نرسل رد الخطا وننهي معالجه الطلب
+      // err دالة موجودة أعلى الملف، تجهّز رد الخطأ وترسله
+      // return: بعد تنفيذ err، تنتهي دالة معالجة هذا الطلب. ويبقى السيرفر شغّالًا يستقبل طلبات أخرى.
       return err(
+        // نمرر كائن الرد res إلى دالة err عشان ترسل رد الخطأ.
         res,
+        // الرمز ٤٠٠ يعني ان بيانات الطلب غير صحيحه
         400,
+        //رمز الخطا اللي نستخدمه داخل بيانات الرد
         "INVALID_INPUT",
+        // رساله توضيح ان القرار او سبب الرفض يحتاج تصحيح
         "Valid decision and rejection reason required",
+        //مهايه استدعاء الداله
       );
+    //rنرسل استعلام تحديث الاعلان وننتظر نتيجته ونحفظها في
     const r = await query(
+      // نحدّث حالة الإعلان وبيانات مراجعته، بشرط أن يكون بانتظار المراجعة.
       "UPDATE items SET status=$1,review_reason=$2,reviewed_by=$3,reviewed_at=now() WHERE id=$4 AND status='PENDING_REVIEW' RETURNING *",
       [
+        //القيمه الاولى قرار الادمن قبول الاعلان او رفضه
         decision,
+        //هذا شرط مختصر هل القرار رفض ؟ اذا رفض نرسل سبب الرفض اذا لا نرسل nullيعني لا يوجد سبب للرفض
         decision === "REJECTED" ? reason : null,
+        //معرف المستخدم اللي ارسل الطلب هنا هو الادمن لان الطلب اللي مر بالدالتين auth وadmin يستخدم مكان ٣$
         req.user.id,
+        //معرف الاعلان
         req.params.id,
       ],
+      // انهاء استدعاءquery
     );
+    //اذا ماتحدث اي اعلان نرسل خطا وتوقف الطلب
+    // rowCount عدد الصفوف اللي تحدثت
     if (!r.rowCount)
       return err(res, 409, "INVALID_STATE", "Listing not pending review");
+    //نرسل بيانات الاعلان بعد تحديثه
     res.json({ data: r.rows[0] });
+    //نستقبل المتغير e اذا حدث خطا في تراي
   } catch (e) {
+    // نفس الشي يمرر الخطا الى معالج الاخطاء في express
     next(e);
   }
 });
