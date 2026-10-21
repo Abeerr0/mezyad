@@ -138,41 +138,41 @@ app.post("/auth/register", async (req, res, next) => {
 app.post("/auth/login", async (req, res, next) => {
   try {
     // ياخذ بيانات الطلب وإذا ما وصلت بيانات يستخدم كائن فارغ.
-const data = req.body || {};
+    const data = req.body || {};
 
-// ياخذ الإيميل الموجود في بيانات الطلب.
-const email = data.email;
+    // ياخذ الإيميل الموجود في بيانات الطلب.
+    const email = data.email;
 
-// ياخذ كلمة المرور الموجودة في بيانات الطلب.
-const password = data.password;
+    // ياخذ كلمة المرور الموجودة في بيانات الطلب.
+    const password = data.password;
     // نرفض الطلب إذا تحقق أي شرط من الشروط التالية.
-if (
-  // الإيميل لازم يكون نصًا.
-  typeof email !== "string" ||
-
-  // نرفض الإيميل الفارغ أو الذي يحتوي مسافات فقط.
-  !email.trim() ||
-
-  // طول الإيميل بعد تنظيفه لا يتجاوز حد قاعدة البيانات.
-  email.trim().toLowerCase().length > 254 ||
-
-  // كلمة المرور لازم تكون نصًا.
-  typeof password !== "string" ||
-
-  // نرفض كلمة المرور الفارغة.
-  password.length === 0 ||
-
-  // حجم كلمة المرور لا يتجاوز الحد الذي تستخدمه bcrypt.
-  Buffer.byteLength(password, "utf8") > 72
-) {
-  // نرسل خطأ 400 ونوقف معالجة طلب الدخول الحالي.
-  return err(res, 400, "INVALID_INPUT", "Valid email and password required");
-}
-//     rيبحث  في جدول المستخدمين عن االحساب باستخدام الايميمل ويحفظ نتيجه البحث في r
-const r = await query("SELECT * FROM users WHERE email=$1", [
-//نشيل المسافات من اطرف الايميمل ويحول حروفه الى سمول احرف صغيره يعني
-    email.trim().toLowerCase(),
-    //هذا اخر جزء من التعليمات اللي عطيناهاquery
+    if (
+      // الإيميل لازم يكون نصًا.
+      typeof email !== "string" ||
+      // نرفض الإيميل الفارغ أو الذي يحتوي مسافات فقط.
+      !email.trim() ||
+      // طول الإيميل بعد تنظيفه لا يتجاوز حد قاعدة البيانات.
+      email.trim().toLowerCase().length > 254 ||
+      // كلمة المرور لازم تكون نصًا.
+      typeof password !== "string" ||
+      // نرفض كلمة المرور الفارغة.
+      password.length === 0 ||
+      // حجم كلمة المرور لا يتجاوز الحد الذي تستخدمه bcrypt.
+      Buffer.byteLength(password, "utf8") > 72
+    ) {
+      // نرسل خطأ 400 ونوقف معالجة طلب الدخول الحالي.
+      return err(
+        res,
+        400,
+        "INVALID_INPUT",
+        "Valid email and password required",
+      );
+    }
+    //     rيبحث  في جدول المستخدمين عن االحساب باستخدام الايميمل ويحفظ نتيجه البحث في r
+    const r = await query("SELECT * FROM users WHERE email=$1", [
+      //نشيل المسافات من اطرف الايميمل ويحول حروفه الى سمول احرف صغيره يعني
+      email.trim().toLowerCase(),
+      //هذا اخر جزء من التعليمات اللي عطيناهاquery
     ]);
     // التحقق من وجود سبب لرفض تسجيل الدخول
     if (
@@ -256,18 +256,63 @@ app.post("/items", auth, async (req, res, next) => {
     next(e);
   }
 });
+//الاعلانات المعلقه للادمن وارجاع الاعلانات للمستخدم
+//قائمه الاعلانات اللي تتظر مراجعه من الادمن فقط الادمن مسموح له يشوفها المستخدم لا ترجع له ٤٠٣
+// مسار لطلب قائمة الإعلانات في الباك إن
 app.get("/items", auth, async (req, res, next) => {
+  // نفذ التعليمات داخل تراي واذا حدث خطا تنروح لكاتش
   try {
-    const r =
-      req.user.role === "ADMIN" && req.query.status === "PENDING_REVIEW"
-        ? await query(
-            "SELECT * FROM items WHERE status='PENDING_REVIEW' ORDER BY id",
-          )
-        : await query("SELECT * FROM items WHERE seller_id=$1 ORDER BY id", [
-            req.user.id,
-          ]);
+    // قائمة الإعلانات المعلقة مخصصة للأدمن.
+    // نرفض الطلب إذا طلب مستخدم غير أدمن قائمة الإعلانات المعلقة.
+    if (
+      // نتحقق أن الطلب يطلب الإعلانات المعلقة.
+      req.query.status === "PENDING_REVIEW" &&
+      // نتحقق أن المستخدم ليس أدمن.
+      req.user.role !== "ADMIN"
+    ) {
+      // نرسل رفض برمز 403، وننهي معالجة الطلب الحالي.
+      return err(res, 403, "FORBIDDEN", "Admin only");
+    }
+    // متغير نحفظ فيه نتيجة استعلام الإعلانات.
+    let r;
+    // إذا كان الطلب للإعلانات المعلقة، نجلبها للأدمن.
+    if (req.query.status === "PENDING_REVIEW") {
+      // نرسل الاستعلام وننتظر نتيجته ونحفظها في rالمتغير اللي جهزناه
+      r = await query(
+        // استعلام بلغه sql يقرا الاعلانات المعلقه فقط ويرتبها حسب الا دي تبعها
+        "SELECT * FROM items WHERE status='PENDING_REVIEW' ORDER BY id",
+      );
+      // الفرع يعمل لما الطلب يكون غير مخصص لقائمه الاعلانات المعلقه اذا ماتحقق الشرط السابق نستخدم هذا
+    } else {
+      // نرسل الاستعلام وننتظر النتيجه ونحفظها في rلكن هذي المره يجيب لنا اعلانات المستخدم نفسه .
+      r = await query(
+        // بلغه sql يقرا جميع الاعمده المطابقه من جدول الايتمز مرتبه حسب الا دي
+        "SELECT * FROM items WHERE seller_id=$1 ORDER BY id",
+        //القائمه فيها قيمه وحده معرف المستخدم الحالي هي اللي مقصوده ب ١ دولا بالاستعلام اللي قبل وكذا نطلب الاعلانات اللي صاحبها المستخدم
+        [req.user.id],
+        //نقفل الاستدعا
+      );
+      //نهاية فرع else. أصبح r يحتوي نتيجة أحد الاستعلامين، إذا اكتمل الاستعلام بنجاح
+    }
+    // نكرر الخطوات التالية لكل إعلان موجود في قائمة نتائج الإعلانات.
+    for (const item of r.rows) {
+      // ننفذ استعلام صور الإعلان الحالي ونحفظ نتيجته بعد اكتماله.
+      const imagesResult = await query(
+        // نجلب معرف الصورة ورابطها للصور المرتبطة بالإعلان المحدد، ونرتبها حسب معرف الصورة.
+        "SELECT id, image_url FROM item_images WHERE item_id=$1 ORDER BY id",
+        // نرسل معرف الإعلان الحالي ليستخدمه الاستعلام مكان $1.
+        [item.id],
+        // نهايه الاستدعاء
+      );
+      // نضيف الصور التي رجعت من الاستعلام إلى بيانات الإعلان الحالي.
+      item.images = imagesResult.rows;
+    }
+    // نرسل قائمة الإعلانات مع صور كل إعلان، وإذا لم توجد إعلانات نرسل قائمة فارغة.
+    //يرسل قائمة الإعلانات إلى الجهة التي طلبتها اذا ما وجد الاستعلام اعلانات مطابقه تكون القائمه فارغه
     res.json({ data: r.rows });
+    // ننهي try، وإذا حدث خطأ داخلها نستقبله في المتغير e.
   } catch (e) {
+    // يروح الخطأ إلى معالج الأخطاء في Express.
     next(e);
   }
 });
@@ -311,32 +356,65 @@ app.patch("/items/:id", auth, async (req, res, next) => {
     next(e);
   }
 });
+// مسار الادمن لقبول الاعلان المعلق او رفضه
+//نحدث حاله الاعلان ونحفظ سبب الرفض اذا كان القرار رفض
+//نستقبل طلب مراجعه الاعلان بعد التحقق من الجلسه وصلاحيه الادمن
 app.post("/admin/items/:id/review", auth, admin, async (req, res, next) => {
+  //ننفذ هذي الخطوات واذا حدث خطا تروح لكاتش
   try {
-    const { decision, reason } = req.body || {};
+    //نأخذ بيانات الطلب وإذا لم توجد نستخدم كائن فارغ.
+    const data = req.body || {};
+    //ناخذ قرار الادمن من بيانات الطلب
+    const decision = data.decision;
+    // نأخذ سبب الرفض المرسل مع الطلب.
+    const reason = data.reason;
+    // اذا انطبق عليه
     if (
-      !["APPROVED", "REJECTED"].includes(decision) ||
-      (decision === "REJECTED" && (!reason || typeof reason !== "string"))
+      //اذا كان القرار اللي الادمن القادم من الطلب غير مقبول وغير مرفوض يعني حاله pending او قيمه غير موجوده
+      (decision !== "APPROVED" && decision !== "REJECTED") ||
+      // هنا عند رفض الاعلان لازم يكون السبب نص مكتوب مو فارغ او مسافات فقط
+      (decision === "REJECTED" &&
+        (typeof reason !== "string" || !reason.trim()))
     )
+      //نرسل رد الخطا وننهي معالجه الطلب
+      // err دالة موجودة أعلى الملف، تجهّز رد الخطأ وترسله
+      // return: بعد تنفيذ err، تنتهي دالة معالجة هذا الطلب. ويبقى السيرفر شغّالًا يستقبل طلبات أخرى.
       return err(
+        // نمرر كائن الرد res إلى دالة err عشان ترسل رد الخطأ.
         res,
+        // الرمز ٤٠٠ يعني ان بيانات الطلب غير صحيحه
         400,
+        //رمز الخطا اللي نستخدمه داخل بيانات الرد
         "INVALID_INPUT",
+        // رساله توضيح ان القرار او سبب الرفض يحتاج تصحيح
         "Valid decision and rejection reason required",
+        //مهايه استدعاء الداله
       );
+    //rنرسل استعلام تحديث الاعلان وننتظر نتيجته ونحفظها في
     const r = await query(
+      // نحدّث حالة الإعلان وبيانات مراجعته، بشرط أن يكون بانتظار المراجعة.
       "UPDATE items SET status=$1,review_reason=$2,reviewed_by=$3,reviewed_at=now() WHERE id=$4 AND status='PENDING_REVIEW' RETURNING *",
       [
+        //القيمه الاولى قرار الادمن قبول الاعلان او رفضه
         decision,
+        //هذا شرط مختصر هل القرار رفض ؟ اذا رفض نرسل سبب الرفض اذا لا نرسل nullيعني لا يوجد سبب للرفض
         decision === "REJECTED" ? reason : null,
+        //معرف المستخدم اللي ارسل الطلب هنا هو الادمن لان الطلب اللي مر بالدالتين auth وadmin يستخدم مكان ٣$
         req.user.id,
+        //معرف الاعلان
         req.params.id,
       ],
+      // انهاء استدعاءquery
     );
+    //اذا ماتحدث اي اعلان نرسل خطا وتوقف الطلب
+    // rowCount عدد الصفوف اللي تحدثت
     if (!r.rowCount)
       return err(res, 409, "INVALID_STATE", "Listing not pending review");
+    //نرسل بيانات الاعلان بعد تحديثه
     res.json({ data: r.rows[0] });
+    //نستقبل المتغير e اذا حدث خطا في تراي
   } catch (e) {
+    // نفس الشي يمرر الخطا الى معالج الاخطاء في express
     next(e);
   }
 });
