@@ -7,6 +7,9 @@ function App(){
  const [accountBusy, setAccountBusy] = useState(false);
  const [auctionsLoading, setAuctionsLoading] = useState(true);
 const [auctionsError, setAuctionsError] = useState('');
+const [auctionId, setAuctionId] = useState(null);
+const [detailsLoading, setDetailsLoading] = useState(false);
+const [detailsError, setDetailsError] = useState('');
  async function request(path,options={}){
   const r=await fetch(API+path,{...options,headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{}),...(options.headers||{})}});
   const json=await r.json();if(!r.ok)throw Error(json.error?.message||'Request failed');return json.data;
@@ -57,6 +60,7 @@ if (type === 'login') {
 
   setToken(data.token);
   setSelected(null);
+  setAuctionId(null);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
     setMessage(
@@ -74,14 +78,52 @@ async function logout() {
   try {
     await request('/auth/logout', { method: 'POST' });
     setToken('');
-    setSelected(null);
+    setSelected(null);setAuctionId(null);
     setForm({ name: '', email: '', password: '' });
     setMessage('تم تسجيل الخروج');
   } catch (error) {
     setMessage('تعذّر تسجيل الخروج، حاولي مرة ثانية');
   }
 }
- async function openAuction(id){try{setSelected(await request('/auctions/'+id))}catch(e){setMessage(e.message)}}
+ function openAuction(id) {
+    if (id === auctionId) return;
+  setSelected(null);
+  setDetailsError('');
+  setDetailsLoading(true);
+  setAuctionId(id);
+}
+
+useEffect(() => {
+  if (!auctionId) return;
+
+  let active = true;
+  let timer;
+
+  async function loadDetails() {
+    try {
+      const data = await request('/auctions/' + auctionId);
+
+      if (active) {
+        setSelected(data);
+        setDetailsError('');
+      }
+    } catch (error) {
+      if (active) setDetailsError(error.message);
+    } finally {
+      if (active) {
+        setDetailsLoading(false);
+        timer = setTimeout(loadDetails, 5000);
+      }
+    }
+  }
+
+  loadDetails();
+
+  return () => {
+    active = false;
+    clearTimeout(timer);
+  };
+}, [auctionId, token]);
  return <main><header><h1>مِزياد</h1><p>منصة المزادات للأصول المميزة</p></header><section className="hero"><h2>مزادات مختارة</h2><p>تابعي المزادات العامة، مع تحديث البيانات من الخادم كل خمس ثوانٍ.</p></section><section className="cards">
   {auctionsLoading ? (
     <p role="status">جاري تحميل المزادات…</p>
@@ -116,7 +158,50 @@ async function logout() {
       </article>
     ))
   )}
-</section>{selected&&<section className="panel"><button onClick={()=>setSelected(null)}>إغلاق</button><h2>{selected.title}</h2><p>السعر: {selected.current_price}</p><p>نهاية المزاد: {new Date(selected.end_time).toLocaleString('ar-SA')}</p><p>المزايدة تتطلب حسابًا والتزامًا معتمدًا. الربط البنكي التجريبي غير مفعّل بعد.</p></section>}<section className="panel"><h2>حسابي</h2><input placeholder="الاسم" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input placeholder="البريد الإلكتروني" type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/><input placeholder="كلمة المرور" type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/><div className="actions"><button disabled={accountBusy} onClick={()=>account('register')}>تسجيل جديد</button><button disabled={accountBusy} onClick={()=>account('login')}>دخول</button>{token && (
+</section>{auctionId && (
+  <section className="panel">
+    <button onClick={() => {
+      setAuctionId(null);
+      setSelected(null);
+    }}>
+      إغلاق
+    </button>
+
+    {detailsLoading ? (
+      <p role="status">جاري تحميل التفاصيل…</p>
+    ) : detailsError ? (
+      <p role="alert">{detailsError}</p>
+    ) : selected && selected.id === auctionId ? (
+      <>
+        <h2>{selected.title}</h2>
+
+        {selected.images?.length ? (
+          selected.images.map(image => (
+            <img
+              key={image}
+              src={new URL(image, API).href}
+              alt={selected.title}
+              style={{ width: '100%', maxWidth: 400 }}
+            />
+          ))
+        ) : (
+          <p>لا توجد صور</p>
+        )}
+
+        <p>{selected.description || 'الوصف غير متاح'}</p>
+        <p>السعر الحالي: {selected.current_price} ريال</p>
+        <p>
+          بداية المزاد:
+          {' '}{new Date(selected.start_time).toLocaleString('ar-SA')}
+        </p>
+        <p>
+          نهاية المزاد:
+          {' '}{new Date(selected.end_time).toLocaleString('ar-SA')}
+        </p>
+      </>
+    ) : null}
+  </section>
+)}<section className="panel"><h2>حسابي</h2><input placeholder="الاسم" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input placeholder="البريد الإلكتروني" type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/><input placeholder="كلمة المرور" type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/><div className="actions"><button disabled={accountBusy} onClick={()=>account('register')}>تسجيل جديد</button><button disabled={accountBusy} onClick={()=>account('login')}>دخول</button>{token && (
   <button type="button" disabled={accountBusy} onClick={logout}>
     خروج
   </button>
