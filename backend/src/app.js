@@ -418,59 +418,143 @@ app.post("/admin/items/:id/review", auth, admin, async (req, res, next) => {
     next(e);
   }
 });
+// انشاء مزاد. من اعلان معتمد يملكه المستخدم ويحدد نوعه والسعر والموعد للمزاد
 app.post("/auctions", auth, async (req, res, next) => {
+  //
   try {
-    const {
-      itemId,
-      visibility,
-      startingPrice,
-      minimumIncrement,
-      startTime,
-      endTime,
-    } = req.body || {};
+    // ناخذ بيانات الطلب واذا مافي نحط كائن فارغ ناخذ بيانات الطلب ونحطها بالمتغير داتا
+    const data = req.body || {};
+    //  وراح نستخدمه بعدين للبحث عن مزاد / نأخذ معرف الإعلان الذي سننشئ له المزاد.
+    const itemId = data.itemId;
+    //  نقرأ نوع المزاد من بيانات الطلب ونحفظه في visibility.
+    const visibility = data.visibility;
+    // نحفظه في متغير بدايه المزاد او سعر بدايه المزاد نأخذ سعر بداية المزاد.
+    const startingPrice = data.startingPrice;
+    //  نحفظها بمتغير اقل زياده او مزايده مسموحه نأخذ أقل زيادة مسموحة للمزايدة.
+    const minimumIncrement = data.minimumIncrement;
+    // نأخذ موعد بداية المزاد.نفس الشى نسجله في متغير باسمه ستارت تايم
+    const startTime = data.startTime;
+    //  نسجله في متغير نهايه الوقت للمزاد نأخذ موعد نهاية المزاد.
+    const endTime = data.endTime;
     if (
+      // نرفض الطلب إذا كان معرف الإعلان بصيغة غير صحيحة.
       !validUuid(itemId) ||
-      !["PUBLIC", "PRIVATE"].includes(visibility) ||
+      // نرفض الطلب إذا كان نوع المزاد غير عام وغير خاص.
+      (visibility !== "PUBLIC" && visibility !== "PRIVATE") ||
+      // الدالة تتحقق أن القيمة رقم موجب وصالح كمبلغ مالي، ضمن حدود قاعدة البيانات
+      // نرفض الطلب إذا كان سعر بداية المزاد غير صالح.
       !validMoney(startingPrice) ||
+      // نرفض الطلب إذا كانت قيمة أقل زيادة غير صالحة.
       !validMoney(minimumIncrement) ||
-      !startTime ||
-      !endTime ||
+      //وقت المزاد
+      // نرفض موعد البداية إذا لم يكن نصًا.
+      typeof startTime !== "string" ||
+      // نرفض موعد البداية إذا كان فارغًا أو مسافات فقط.
+      !startTime.trim() ||
+      // نرفض موعد النهاية إذا لم يكن نصًا.
+      typeof endTime !== "string" ||
+      // نرفض موعد النهاية إذا كان فارغًا أو مسافات فقط.
+      !endTime.trim() ||
+      //جافا  ترفض موعد البدايه اذا ما قراءته كتاريخ
       !Number.isFinite(Date.parse(startTime)) ||
+      //جافا ترفض موعد النهايه اذا ما قراءته كتاريخ
       !Number.isFinite(Date.parse(endTime)) ||
+      //هنا ترفض اذا كانت انهايه قبل البدايه او مساويه لها
+      // <= تعني هل النهايه قبل البدايه او مساويه لها اذا اي ترفض الطلب
       new Date(endTime) <= new Date(startTime)
     )
+      // اذا تحقق شرط الرفض نرسل رمز الخطا و ننهي معالجه الطلب
       return err(res, 400, "INVALID_INPUT", "Invalid auction parameters");
-    const accessCode =
-      visibility === "PRIVATE" ? randomBytes(12).toString("hex") : null;
-    const codeHash = accessCode ? await bcrypt.hash(accessCode, 12) : null;
+    //رمز الدخول للمزاد الخاص لو انطبق عليه انو خاص نسوي الرمز المشفر له
+    // نبدأ بدون رمز دخول، لأن المزاد قد يكون عام.
+    // استخدمنا let لان قيمه المتغير ستتغير من null الى رمز اذا كان المزاذ خاص
+    // accessCode: نحفظ فيه رمز الدخول الأصلي الذي يحصل عليه صاحب المزاد الخاص
+    let accessCode = null;
+    // نبدأ بدون بصمة للرمز.
+    // codeHash: نحفظ فيه بصمة الرمز الناتجة من bcrypt، وهي التي سنخزنها في قاعدة البيانات بدل الرمز الأصلي
+    let codeHash = null;
+    // إذا كان المزاد خاصًا، ننشئ له رمز دخول وبصمة.
+    if (visibility === "PRIVATE") {
+      // نولد بيانات عشوائية بحجم 12 بايت.
+      // randomBytes دالة جاهزة من Node.js
+      const randomValue = randomBytes(12);
+      // نحول البيانات العشوائية إلى نص يمثل رمز الدخول.
+      //مكتوب ١٢ بايت لان كل بايت يظهر فيه حرفين بحسب hex التوتال ٢٤ حرف الرمز الخاص بدخول المزاد
+      accessCode = randomValue.toString("hex");
+      // نحسب بصمة الرمز باستخدام bcrypt لحفظها في قاعدة البيانات.
+      //بنفس الوقت ١٢ هنا لا يعني طول الرمز أو عدد البايتات
+      codeHash = await bcrypt.hash(accessCode, 12);
+    }
+    // نرسل استعلام إنشاء المزاد، وننتظر نتيجته ونحفظها في r.
     const r = await query(
+      // نحدد جدول المزادات والأعمدة التي سنضيف فيها بيانات المزاد.
       `INSERT INTO auctions(item_id,visibility,access_code_hash,starting_price,current_price,minimum_increment,start_time,end_time)
- SELECT id,$2,$3,$4,$4,$5,$6,$7 FROM items WHERE id=$1 AND seller_id=$8 AND status='APPROVED'
- RETURNING id,item_id,visibility,starting_price,current_price,minimum_increment,start_time,end_time,status`,
+  -- نختار الإعلان المعتمد الذي يخص المستخدم الحالي. رموز الارقام تاخذ قيمتها من القائمه الموجودهد تحت الاستعلام
+SELECT id, $2, $3, $4, $4, $5, $6, $7
+FROM items
+WHERE id = $1
+-- يشترط ان يكون صاحب الاعلان هو المستخدم اللي ارسل الطلب
+  AND seller_id = $8
+  -- يشترط ان يكون الاعلان معتمد
+  AND status = 'APPROVED'
+  -- إذا لم يوجد إعلان يحقق الشروط الثلاثة، فلن يُضاف مزاد.
+  -- بعد اضافه المزاد بنجاح يرجع البيانات الخاصه بالاعلان للباك اند
+   RETURNING id,item_id,visibility,starting_price,current_price,minimum_increment,start_time,end_time,status`,
+      // هذه القيم نرسلها للاستعلام، وكل قيمة تقابل رقمًا مثل $1 أو $2.
+      // نرسل قيم الاستعلام بالترتيب؛ الأولى لـ $1 والثانية لـ $2، وهكذا.
       [
+        // داخل SQL نستخدم رموزًا مثل $1 و$2 لتحديد أين تُستخدم هذه القيم.
+        // $1: معرّف الإعلان الذي ننشئ له المزاد.
         itemId,
+        // $2: نوع المزاد، عام أو خاص.
         visibility,
+        // $3: بصمة رمز الدخول، أو null إذا كان المزاد عامًا.
         codeHash,
+        // $4: سعر البداية، ونستخدمه أيضًا كسعر حالي عند الإنشاء.
         startingPrice,
+        // $5: أقل زيادة مسموحة للمزايدة.
         minimumIncrement,
+        // $6: موعد بداية المزاد.
         startTime,
+        // $7: موعد نهاية المزاد.
         endTime,
+        // $8: معرّف المستخدم الحالي الذي تحققت منه دالة auth.
         req.user.id,
       ],
     );
+    // اذا ما اضاف الاستعلام اي مزاد نرفض الطلب
+    // r.rowCount: عدد المزادات التي أضافها الاستعلام.
+    // كان 0، يعني ما وجد إعلانًا يطابق الشروط، فلم يُنشأ مزاد إذا
     if (!r.rowCount)
+      // يرفض الطلب لعدم وجود اعلان معتمد يخص المستخدم الحالي
       return err(
         res,
+        // ٤٠٠ الطلب غير مسموح يعني
         403,
         "NOT_APPROVED",
+        // يمكن إنشاء مزاد فقط لإعلان معتمد يملكه المستخدم
         "Only approved owned items can be auctioned",
       );
-    res
-      .status(201)
-      .json({ data: { ...r.rows[0], ...(accessCode ? { accessCode } : {}) } });
+    //رد  نجاح انشاء مزاد جديد
+    // نأخذ بيانات المزاد الذي أُضيف من أول صف في نتيجة الاستعلام.
+    // ٠ يعني اول صف وهو بيانات المزاد الجديد
+    const createdAuction = r.rows[0];
+    // إذا كان المزاد خاصًا، نضيف رمز الدخول إلى بيانات الرد.
+    // هذه إضافة لبيانات الرد فقط قاعدة البيانات تحفظ البصمة.
+    if (visibility === "PRIVATE") {
+      createdAuction.accessCode = accessCode;
+    }
+    // نرسل بيانات المزاد، والرمز 201 يعني نجاح إنشاء سجل جديد.
+    res.status(201).json({ data: createdAuction });
+    // التعامل مع الخطا اثناء انشاء المزاد
+    // إذا حصل خطأ أثناء محاولة إنشاء المزاد، نستقبل الخطأ هنا
   } catch (e) {
+    //نفحص هل رمز الخطأ من قاعدة البيانات هو منع التكرار
     if (e.code === "23505")
+      // نرسل 409 لأن الإعلان لديه مزاد بالفعل، وننهي الطلب
+      // ٤٠٩ هنا يوجد تعارض وتجي اذا كان الخطا بسبب التكرار
       return err(res, 409, "DUPLICATE_AUCTION", "Item already has auction");
+    // اذا كان الخطا من نوع اخر نمرره لمعالج الاخطا بالباك هو يتعامل معاه
     next(e);
   }
 });
