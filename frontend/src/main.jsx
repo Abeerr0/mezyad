@@ -38,8 +38,15 @@ setMessage('جاري تنفيذ الطلب…');
       body: JSON.stringify(form)
     });
 
-    if (data.token) setToken(data.token);
+if (type === 'login') {
+  if (!data.token) {
+    throw new Error('تعذّر تسجيل الدخول، حاولي مرة ثانية');
+  }
 
+  setToken(data.token);
+  setSelected(null);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
     setMessage(
       type === 'login'
         ? 'تم تسجيل الدخول'
