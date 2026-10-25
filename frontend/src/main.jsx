@@ -5,11 +5,23 @@ const API=import.meta.env.VITE_API_URL||'http://localhost:3000';
 function App(){
  const [auctions,setAuctions]=useState([]),[selected,setSelected]=useState(null),[form,setForm]=useState({name:'',email:'',password:''}),[token,setToken]=useState(''),[message,setMessage]=useState('');
  const [accountBusy, setAccountBusy] = useState(false);
+ const [auctionsLoading, setAuctionsLoading] = useState(true);
+const [auctionsError, setAuctionsError] = useState('');
  async function request(path,options={}){
   const r=await fetch(API+path,{...options,headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{}),...(options.headers||{})}});
   const json=await r.json();if(!r.ok)throw Error(json.error?.message||'Request failed');return json.data;
  }
- async function load(){try{setAuctions(await request('/auctions'))}catch(e){setMessage(e.message)}}
+ async function load() {
+  try {
+    const data = await request('/auctions');
+    setAuctions(data);
+    setAuctionsError('');
+  } catch (error) {
+    setAuctionsError('تعذّر تحميل المزادات، تأكدي من الاتصال');
+  } finally {
+    setAuctionsLoading(false);
+  }
+}
  useEffect(()=>{load();const id=setInterval(load,5000);return()=>clearInterval(id)},[]);
 async function account(type) {
   if (accountBusy) return;
@@ -70,7 +82,41 @@ async function logout() {
   }
 }
  async function openAuction(id){try{setSelected(await request('/auctions/'+id))}catch(e){setMessage(e.message)}}
- return <main><header><h1>مِزياد</h1><p>منصة المزادات للأصول المميزة</p></header><section className="hero"><h2>مزادات مختارة</h2><p>تابعي المزادات العامة، مع تحديث البيانات من الخادم كل خمس ثوانٍ.</p></section><section className="cards">{auctions.length?auctions.map(a=><article key={a.id}><h3>{a.title}</h3><p>السعر الحالي: {a.current_price}</p><p>الحالة: {a.status}</p><button onClick={()=>openAuction(a.id)}>تفاصيل المزاد</button></article>):<p>لا توجد مزادات عامة متاحة حاليًا.</p>}</section>{selected&&<section className="panel"><button onClick={()=>setSelected(null)}>إغلاق</button><h2>{selected.title}</h2><p>السعر: {selected.current_price}</p><p>نهاية المزاد: {new Date(selected.end_time).toLocaleString('ar-SA')}</p><p>المزايدة تتطلب حسابًا والتزامًا معتمدًا. الربط البنكي التجريبي غير مفعّل بعد.</p></section>}<section className="panel"><h2>حسابي</h2><input placeholder="الاسم" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input placeholder="البريد الإلكتروني" type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/><input placeholder="كلمة المرور" type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/><div className="actions"><button disabled={accountBusy} onClick={()=>account('register')}>تسجيل جديد</button><button disabled={accountBusy} onClick={()=>account('login')}>دخول</button>{token && (
+ return <main><header><h1>مِزياد</h1><p>منصة المزادات للأصول المميزة</p></header><section className="hero"><h2>مزادات مختارة</h2><p>تابعي المزادات العامة، مع تحديث البيانات من الخادم كل خمس ثوانٍ.</p></section><section className="cards">
+  {auctionsLoading ? (
+    <p role="status">جاري تحميل المزادات…</p>
+  ) : auctionsError ? (
+    <p role="alert">{auctionsError}</p>
+  ) : auctions.length === 0 ? (
+    <p>لا توجد مزادات عامة متاحة حاليًا.</p>
+  ) : (
+    auctions.map(a => (
+      <article key={a.id}>
+        {a.image_url ? (
+          <img
+            src={new URL(a.image_url, API).href}
+            alt={a.title}
+            style={{ width: '100%', height: 180, objectFit: 'cover' }}
+          />
+        ) : (
+          <p>لا توجد صورة</p>
+        )}
+        <h3>{a.title}</h3>
+        <p>السعر الحالي: {a.current_price} ريال</p>
+        <p>
+          الحالة: {{
+            SCHEDULED: 'قادم',
+            ACTIVE: 'نشط',
+            CLOSED: 'منتهي'
+          }[a.status] || a.status}
+        </p>
+        <button onClick={() => openAuction(a.id)}>
+          تفاصيل المزاد
+        </button>
+      </article>
+    ))
+  )}
+</section>{selected&&<section className="panel"><button onClick={()=>setSelected(null)}>إغلاق</button><h2>{selected.title}</h2><p>السعر: {selected.current_price}</p><p>نهاية المزاد: {new Date(selected.end_time).toLocaleString('ar-SA')}</p><p>المزايدة تتطلب حسابًا والتزامًا معتمدًا. الربط البنكي التجريبي غير مفعّل بعد.</p></section>}<section className="panel"><h2>حسابي</h2><input placeholder="الاسم" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input placeholder="البريد الإلكتروني" type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/><input placeholder="كلمة المرور" type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/><div className="actions"><button disabled={accountBusy} onClick={()=>account('register')}>تسجيل جديد</button><button disabled={accountBusy} onClick={()=>account('login')}>دخول</button>{token && (
   <button type="button" disabled={accountBusy} onClick={logout}>
     خروج
   </button>
