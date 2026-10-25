@@ -1,6 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import{createRoot}from'react-dom/client';
 import './style.css';
+import ListingForm from './ListingForm';
 const API=import.meta.env.VITE_API_URL||'http://localhost:3000';
 function App(){
  const [auctions,setAuctions]=useState([]),[selected,setSelected]=useState(null),[form,setForm]=useState({name:'',email:'',password:''}),[token,setToken]=useState(''),[message,setMessage]=useState('');
@@ -201,7 +202,7 @@ useEffect(() => {
       </>
     ) : null}
   </section>
-)}<section className="panel"><h2>حسابي</h2><input placeholder="الاسم" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input placeholder="البريد الإلكتروني" type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/><input placeholder="كلمة المرور" type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/><div className="actions"><button disabled={accountBusy} onClick={()=>account('register')}>تسجيل جديد</button><button disabled={accountBusy} onClick={()=>account('login')}>دخول</button>{token && (
+)}{token && <ListingForm key={token} api={API} token={token} />}<section className="panel"><h2>حسابي</h2><input placeholder="الاسم" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input placeholder="البريد الإلكتروني" type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/><input placeholder="كلمة المرور" type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/><div className="actions"><button disabled={accountBusy} onClick={()=>account('register')}>تسجيل جديد</button><button disabled={accountBusy} onClick={()=>account('login')}>دخول</button>{token && (
   <button type="button" disabled={accountBusy} onClick={logout}>
     خروج
   </button>
