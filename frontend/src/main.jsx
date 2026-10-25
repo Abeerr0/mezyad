@@ -10,7 +10,41 @@ function App(){
  }
  async function load(){try{setAuctions(await request('/auctions'))}catch(e){setMessage(e.message)}}
  useEffect(()=>{load();const id=setInterval(load,5000);return()=>clearInterval(id)},[]);
- async function account(type){try{const data=await request('/auth/'+type,{method:'POST',body:JSON.stringify(form)});if(data.token)setToken(data.token);setMessage(type==='login'?'تم تسجيل الدخول':'تم إنشاء الحساب')}catch(e){setMessage(e.message)}}
+async function account(type) {
+  if (type === 'register') {
+    if (!form.name.trim()) {
+      setMessage('اكتبي الاسم');
+      return;
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(form.email)) {
+      setMessage('اكتبي بريدًا إلكترونيًا صحيحًا');
+      return;
+    }
+
+    if (form.password.length < 8) {
+      setMessage('كلمة المرور لازم تكون 8 أحرف على الأقل');
+      return;
+    }
+  }
+
+  try {
+    const data = await request('/auth/' + type, {
+      method: 'POST',
+      body: JSON.stringify(form)
+    });
+
+    if (data.token) setToken(data.token);
+
+    setMessage(
+      type === 'login'
+        ? 'تم تسجيل الدخول'
+        : 'تم إنشاء الحساب'
+    );
+  } catch (error) {
+    setMessage(error.message);
+  }
+}
 async function logout() {
   try {
     await request('/auth/logout', { method: 'POST' });
