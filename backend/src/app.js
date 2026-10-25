@@ -33,10 +33,42 @@ const accessible = async (a, user) => {
 };
 async function auction(id) {
   const r = await query(
-    "SELECT a.*,i.seller_id,i.title FROM auctions a JOIN items i ON i.id=a.item_id WHERE a.id=$1",
+    // نجلب بيانات المزاد مع عنوان الإعلان ووصفه وفئته ومواصفاته.
+    "SELECT a.*,i.seller_id,i.title,i.description,i.category_id,i.category_fields FROM auctions a JOIN items i ON i.id=a.item_id WHERE a.id=$1",
+    //يرسل معرف id المزاد ليستخدم الاستعلام مكانه ١$
     [id],
+    //نهايه استدعاء الداله
   );
+  // r.rows هي قائمة نتائج الاستعلام، و[0] تعني أول صف.
+  // نرجع بيانات المزاد إلى المكان الذي استدعى الدالة.
   return r.rows[0];
+  // نهايه داله جلب بيانات المزاد
+}
+//  نحدد الحالة التي ستظهر مع المزاد حسب مواعيده والوقت الحالي.
+function getAuctionDisplayStatus(auctionData, currentTime) {
+  // إذا كان المزاد مغلقًا بالفعل، تبقى حالته مغلقًا.
+  if (auctionData.status === "CLOSED") {
+    return "CLOSED";
+  }
+
+  // نحول موعد النهاية إلى رقم حتى نقارنه بالوقت الحالي.
+  const endTime = new Date(auctionData.end_time).getTime();
+
+  // نحول موعد البداية إلى رقم للمقارنة أيضًا.
+  const startTime = new Date(auctionData.start_time).getTime();
+
+  // إذا وصلنا لموعد النهاية أو تجاوزناه، نرجع مغلقًا.
+  if (endTime <= currentTime) {
+    return "CLOSED";
+  }
+
+  // إذا بدأ المزاد ولم ينتهِ، نرجع نشطًا.
+  if (startTime <= currentTime) {
+    return "ACTIVE";
+  }
+
+  // إذا لم يبدأ المزاد بعد، نرجع مجدولًا.
+  return "SCHEDULED";
 }
 async function closeIfEnded(id) {
   const client = await pool.connect();
@@ -558,18 +590,53 @@ WHERE id = $1
     next(e);
   }
 });
+//عرض قائمة المزادات العامة مع بياناتها وصورها وحالتها.
 app.get("/auctions", async (_req, res, next) => {
+  // ننفذ التعليمات التالية، وإذا حدث خطأ ننتقل إلى catch.
   try {
+    // نرسل استعلام قراءة المزادات إلى قاعدة البيانات ونحفظ نتيجته في r.
     const r = await query(
+      // نجلب بيانات المزادات العامة وعنوان إعلان كل مزاد، ونرتبها حسب موعد البداية تنازليًا.
       "SELECT a.id,a.item_id,a.starting_price,a.current_price,a.start_time,a.end_time,a.status,i.title FROM auctions a JOIN items i ON i.id=a.item_id WHERE a.visibility='PUBLIC' ORDER BY a.start_time DESC",
+      //نهايه داله الاستدعاء
     );
+    // نقرأ الوقت الحالي من قاعدة البيانات مرة واحدة لهذا الطلب.
+    const timeResult = await query("SELECT clock_timestamp() AS current_time");
+    // نحول الوقت إلى رقم حتى نقارنه بمواعيد المزادات.
+    const currentTime = new Date(timeResult.rows[0].current_time).getTime();
+    // نمر على كل مزاد رجع من استعلام القائمة.
+    for (const auctionData of r.rows) {
+      // نحدد حالة المزاد التي سترجع في القائمة باستخدام وقت قاعدة البيانات.
+      auctionData.status = getAuctionDisplayStatus(auctionData, currentTime);
+      // نجلب صور الإعلان المرتبط بالمزاد الحالي.
+      //نرسل استعلامًا لقاعدة البيانات، وننتظر نتيجته، ثم نحفظها في imagesResult.
+      const imagesResult = await query(
+        // نقرأ معرف الصورة ورابطها.
+        "SELECT id, image_url FROM item_images WHERE item_id=$1 ORDER BY id",
+        // نرسل معرف الإعلان ليستخدمه الاستعلام مكان $1.
+        //استخدمنا item_id لأن الصور مرتبطة بالإعلان.
+        [auctionData.item_id],
+        //نهايه الاستدعاء
+      );
+
+      // نضيف الصور إلى بيانات المزاد.
+      //خذ الصور التي وجدناها، وضعها داخل بيانات هذا المزاد في الرد.
+      auctionData.images = imagesResult.rows;
+    }
+    // نرسل قائمة المزادات في الرد، وإذا لم توجد نتائج نرسل قائمة فارغة.
     res.json({ data: r.rows });
+    // استقبال الخطا في المتغير e اذا حدث خلل داخل تراي
   } catch (e) {
+    // نمرر الخطأ إلى معالج الأخطاء في Express.
     next(e);
   }
+  //// ننهي دالة معالجة الطلب واستدعاء app.get
 });
+// // عرض تفاصيل مزاد واحد حسب معرّفه، مع بيانات الإعلان والصور والحالة.ة.
 app.get("/auctions/:id", async (req, res, next) => {
+  // ننفذ التعليمات التالية، وإذا حدث خطأ ننتقل إلى catch.
   try {
+    //
     if (!validUuid(req.params.id))
       return err(res, 400, "INVALID_ID", "Invalid ID");
     const a = await auction(req.params.id);
@@ -585,9 +652,26 @@ app.get("/auctions/:id", async (req, res, next) => {
     }
     if (!(await accessible(a, user)))
       return err(res, 404, "NOT_FOUND", "Auction not found");
+    // نقرأ وقت قاعدة البيانات قبل فحص إغلاق المزاد.
+    const timeResult = await query("SELECT clock_timestamp() AS current_time");
+
+    // نحول الوقت إلى رقم لاستخدامه في تحديد الحالة.
+    const currentTime = new Date(timeResult.rows[0].current_time).getTime();
     await closeIfEnded(a.id);
     const current = await auction(a.id);
+    // نحدد حالة المزاد التي سترجع في تفاصيله.
+    current.status = getAuctionDisplayStatus(current, currentTime);
     delete current.access_code_hash;
+    // إضافة صور الإعلان إلى تفاصيل مزاد واحد
+    // نقرأ روابط صور الإعلان من قاعدة البيانات ونضيفها إلى بيانات تفاصيل المزاد المرسلة للواجهة
+    const imagesResult = await query(
+      // نقرأ معرّف كل صورة ورابطها من جدول الصور.
+      "SELECT id, image_url FROM item_images WHERE item_id=$1 ORDER BY id",
+      // نرسل معرّف الإعلان ليستخدمه الاستعلام مكان $1.
+      [current.item_id],
+    );
+    // نضيف قائمة الصور إلى بيانات المزاد التي سترجع للواجهة.
+    current.images = imagesResult.rows;
     const result = await query(
       "SELECT winner_bid_id,closed_at FROM auction_results WHERE auction_id=$1",
       [a.id],
