@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-export default function ListingForm({ api, token }) {
+export default function ListingForm({ api, token, item, onSaved, onCancel }) {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categoryError, setCategoryError] = useState('');
@@ -33,7 +33,7 @@ export default function ListingForm({ api, token }) {
     const title = data.get('title').trim();
     const description = data.get('description').trim();
     const images = Array.from(form.elements.images.files);
-    const categoryFields = {};
+    let categoryFields = {};
     for (const line of data.get('specifications').split('\n')) {
       if (!line.trim()) continue;
       const separator = line.indexOf(':');
@@ -45,12 +45,15 @@ export default function ListingForm({ api, token }) {
       }
       Object.defineProperty(categoryFields, name, { value, enumerable: true });
     }
+    if (item && data.get('specifications') === specifications) {
+      categoryFields = item.categoryFields ?? item.category_fields ?? {};
+    }
     if (!data.get('categoryId') || !title || !description) {
       setMessage('اختاري القسم واكتبي العنوان والوصف');
       return;
     }
-    if (images.length < 1 || images.length > 6) {
-      setMessage('اختاري من صورة إلى 6 صور');
+    if ((!item && images.length < 1) || images.length > 6) {
+      setMessage('اختاري حتى 6 صور، وصورة واحدة على الأقل للإعلان الجديد');
       return;
     }
     const types = ['image/jpeg', 'image/png', 'image/webp'];
@@ -65,18 +68,21 @@ export default function ListingForm({ api, token }) {
     setBusy(true);
     setMessage('جاري إرسال الإعلان…');
     try {
-      const response = await fetch(api + '/items', {
-        method: 'POST',
+      const response = await fetch(api + '/items' + (item ? '/' + item.id : ''), {
+        method: item ? 'PATCH' : 'POST',
         headers: { Authorization: 'Bearer ' + token },
         body: data
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error?.message || 'تعذّر إرسال الإعلان');
-      if (!result.data?.id || !Array.isArray(result.data.images) || result.data.images.length !== images.length) {
+      if (!result.data?.id || result.data.status !== 'PENDING_REVIEW' ||
+          (item && result.data.id !== item.id) ||
+          (images.length > 0 && (!Array.isArray(result.data.images) || result.data.images.length !== images.length))) {
         throw new Error('تعذّر تأكيد حفظ الإعلان والصور؛ تحققي من إعلاناتك قبل إعادة الإرسال');
       }
       form.reset();
       setMessage('تم إرسال الإعلان، بانتظار مراجعة المشرف');
+      onSaved?.(result.data);
     } catch (error) {
       setMessage(error instanceof TypeError ? 'تعذّر الاتصال بالخادم، حاولي لاحقًا' : error.message);
     } finally {
@@ -84,24 +90,28 @@ export default function ListingForm({ api, token }) {
     }
   }
 
+  const specifications = Object.entries(item?.categoryFields ?? item?.category_fields ?? {})
+    .map(([name, value]) => name + ': ' + (typeof value === 'object' ? JSON.stringify(value) : value)).join('\n');
+
   if (loading) return <p role="status">جاري تحميل أقسام الإعلان…</p>;
   if (categoryError) return <p role="alert">{categoryError}</p>;
   if (!categories.length) return <p>لا توجد أقسام للإعلان حاليًا.</p>;
 
   return (
     <section className="panel listing-form">
-      <h2>إعلان جديد</h2>
+      <h2>{item ? 'تعديل الإعلان المرفوض' : 'إعلان جديد'}</h2>
       <form onSubmit={submitListing}>
         <fieldset disabled={busy}>
-          <label>القسم<select name="categoryId" required defaultValue="">
+          <label>القسم<select name="categoryId" required defaultValue={item?.category_id ?? ''}>
             <option value="" disabled>اختاري القسم</option>
-            {categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
+            {categories.filter(category => !item || category.id === item.category_id).map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
           </select></label>
-          <label>عنوان الإعلان<input name="title" required maxLength={240} /></label>
-          <label>الوصف<textarea name="description" required maxLength={20000} rows={4} /></label>
-          <label>مواصفات القسم — اختيارية<textarea name="specifications" rows={3} placeholder={'كل مواصفة بسطر، مثل:\nاللون: بني'} /></label>
-          <label>الصور — من صورة إلى 6<input name="images" type="file" accept="image/jpeg,image/png,image/webp" multiple required /></label>
-          <button type="submit">{busy ? 'جاري الإرسال…' : 'إرسال الإعلان'}</button>
+          <label>عنوان الإعلان<input name="title" required maxLength={240} defaultValue={item?.title ?? ''} /></label>
+          <label>الوصف<textarea name="description" required maxLength={20000} rows={4} defaultValue={item?.description ?? ''} /></label>
+          <label>مواصفات القسم — اختيارية<textarea name="specifications" rows={3} defaultValue={specifications} placeholder={'كل مواصفة بسطر، مثل:\nاللون: بني'} /></label>
+          <label>{item ? 'صور بديلة — اتركيها فارغة للاحتفاظ بالصور الحالية' : 'الصور — من صورة إلى 6'}<input name="images" type="file" accept="image/jpeg,image/png,image/webp" multiple required={!item} /></label>
+          <button type="submit">{busy ? 'جاري الإرسال…' : item ? 'إعادة الإرسال للمراجعة' : 'إرسال الإعلان'}</button>
+          {item && <button type="button" onClick={onCancel}>إلغاء التعديل</button>}
         </fieldset>
       </form>
       <p role="status">{message}</p>
