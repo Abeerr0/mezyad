@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import ListingForm from './ListingForm';
+import AuctionForm from './AuctionForm';
 
 export default function MyListings({ api, token }) {
   const [items, setItems] = useState([]);
@@ -53,6 +54,7 @@ export default function MyListings({ api, token }) {
               <p>سبب الرفض: {item.review_reason || 'لم يذكر سبب'}</p>
               <button disabled={Boolean(editing)} onClick={() => { setEditing(item); setMessage(''); }}>تعديل وإعادة إرسال</button>
             </>}
+            {item.status === 'APPROVED' && <AuctionForm api={api} token={token} item={item} />}
           </article>
         ))}
       {editing && <ListingForm key={editing.id} api={api} token={token} item={editing} onSaved={saved} onCancel={() => setEditing(null)} />}
