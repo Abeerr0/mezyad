@@ -75,12 +75,15 @@ if (type === 'login') {
         : 'تم إنشاء الحساب'
     );
   } catch (error) {
-    setMessage(error.message);
+    setMessage(error instanceof TypeError ? 'تعذّر الاتصال بالخادم، حاولي مرة ثانية' : error.message);
     } finally {
     setAccountBusy(false);
   }
 }
 async function logout() {
+  if (accountBusy) return;
+  setAccountBusy(true);
+  setMessage('جاري تسجيل الخروج…');
   try {
     await request('/auth/logout', { method: 'POST' });
     setToken('');
@@ -90,6 +93,8 @@ async function logout() {
     setMessage('تم تسجيل الخروج');
   } catch (error) {
     setMessage('تعذّر تسجيل الخروج، حاولي مرة ثانية');
+  } finally {
+    setAccountBusy(false);
   }
 }
  function openAuction(id) {
@@ -115,7 +120,7 @@ useEffect(() => {
         setDetailsError('');
       }
     } catch (error) {
-      if (active) setDetailsError(error.message);
+      if (active) setDetailsError(error instanceof TypeError ? 'تعذّر تحميل التفاصيل، تأكدي من الاتصال' : error.message);
     } finally {
       if (active) {
         setDetailsLoading(false);
