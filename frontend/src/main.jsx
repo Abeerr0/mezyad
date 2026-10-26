@@ -4,6 +4,7 @@ import './style.css';
 import ListingForm from './ListingForm';
 import MyListings from './MyListings';
 import AdminReview from './AdminReview';
+import PrivateAccess from './PrivateAccess';
 const API=import.meta.env.VITE_API_URL||'http://localhost:3000';
 function App(){
  const [auctions,setAuctions]=useState([]),[selected,setSelected]=useState(null),[form,setForm]=useState({name:'',email:'',password:''}),[token,setToken]=useState(''),[message,setMessage]=useState('');
@@ -130,7 +131,7 @@ useEffect(() => {
     clearTimeout(timer);
   };
 }, [auctionId, token]);
- return <main><header><h1>مِزياد</h1><p>منصة المزادات للأصول المميزة</p></header><section className="hero"><h2>مزادات مختارة</h2><p>تابعي المزادات العامة، مع تحديث البيانات من الخادم كل خمس ثوانٍ.</p></section><section className="cards">
+ return <main><header><h1>مِزياد</h1><p>منصة المزادات للأصول المميزة</p></header><section className="hero"><h2>مزادات مختارة</h2><p>تابعي المزادات العامة، مع تحديث البيانات من الخادم كل خمس ثوانٍ.</p></section>{token && <PrivateAccess key={token} api={API} token={token} onOpen={openAuction} />}<section className="cards">
   {auctionsLoading ? (
     <p role="status">جاري تحميل المزادات…</p>
   ) : auctionsError ? (
