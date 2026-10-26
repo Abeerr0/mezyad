@@ -3,9 +3,11 @@ import{createRoot}from'react-dom/client';
 import './style.css';
 import ListingForm from './ListingForm';
 import MyListings from './MyListings';
+import AdminReview from './AdminReview';
 const API=import.meta.env.VITE_API_URL||'http://localhost:3000';
 function App(){
  const [auctions,setAuctions]=useState([]),[selected,setSelected]=useState(null),[form,setForm]=useState({name:'',email:'',password:''}),[token,setToken]=useState(''),[message,setMessage]=useState('');
+ const [user, setUser] = useState(null);
  const [accountBusy, setAccountBusy] = useState(false);
  const [auctionsLoading, setAuctionsLoading] = useState(true);
 const [auctionsError, setAuctionsError] = useState('');
@@ -61,6 +63,7 @@ if (type === 'login') {
   }
 
   setToken(data.token);
+  setUser(data.user);
   setSelected(null);
   setAuctionId(null);
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -80,6 +83,7 @@ async function logout() {
   try {
     await request('/auth/logout', { method: 'POST' });
     setToken('');
+    setUser(null);
     setSelected(null);setAuctionId(null);
     setForm({ name: '', email: '', password: '' });
     setMessage('تم تسجيل الخروج');
@@ -203,7 +207,7 @@ useEffect(() => {
       </>
     ) : null}
   </section>
-)}{token && <><ListingForm key={token} api={API} token={token} /><MyListings key={token + '-items'} api={API} token={token} /></>}<section className="panel"><h2>حسابي</h2><input placeholder="الاسم" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input placeholder="البريد الإلكتروني" type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/><input placeholder="كلمة المرور" type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/><div className="actions"><button disabled={accountBusy} onClick={()=>account('register')}>تسجيل جديد</button><button disabled={accountBusy} onClick={()=>account('login')}>دخول</button>{token && (
+)}{token && <><ListingForm key={token} api={API} token={token} /><MyListings key={token + '-items'} api={API} token={token} /></>}{token && user?.role === 'ADMIN' && <AdminReview key={token + '-admin'} api={API} token={token} />}<section className="panel"><h2>حسابي</h2><input placeholder="الاسم" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input placeholder="البريد الإلكتروني" type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/><input placeholder="كلمة المرور" type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/><div className="actions"><button disabled={accountBusy} onClick={()=>account('register')}>تسجيل جديد</button><button disabled={accountBusy} onClick={()=>account('login')}>دخول</button>{token && (
   <button type="button" disabled={accountBusy} onClick={logout}>
     خروج
   </button>
