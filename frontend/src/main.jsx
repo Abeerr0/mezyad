@@ -140,9 +140,9 @@ useEffect(() => {
   ) : (
     auctions.map(a => (
       <article key={a.id}>
-        {a.image_url ? (
+        {(a.image_url || a.images?.[0]?.image_url) ? (
           <img
-            src={new URL(a.image_url, API).href}
+            src={new URL(a.image_url || a.images[0].image_url, API).href}
             alt={a.title}
             style={{ width: '100%', height: 180, objectFit: 'cover' }}
           />
@@ -184,8 +184,8 @@ useEffect(() => {
         {selected.images?.length ? (
           selected.images.map(image => (
             <img
-              key={image}
-              src={new URL(image, API).href}
+              key={typeof image === 'string' ? image : image.id}
+              src={new URL(typeof image === 'string' ? image : image.image_url, API).href}
               alt={selected.title}
               style={{ width: '100%', maxWidth: 400 }}
             />
