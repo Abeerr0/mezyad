@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import {randomBytes} from 'node:crypto';
@@ -178,4 +178,5 @@ app.get('/auctions/:id/bids',auth,async(req,res,next)=>{
 });
 app.get('/me/items',auth,async(req,res,next)=>{try{res.json({data:(await query('SELECT * FROM items WHERE seller_id=$1 ORDER BY id',[req.user.id])).rows})}catch(e){next(e)}});
 app.get('/me/auctions',auth,async(req,res,next)=>{try{res.json({data:(await query('SELECT DISTINCT a.id,a.status,a.end_time,i.title FROM auctions a JOIN items i ON i.id=a.item_id LEFT JOIN bids b ON b.auction_id=a.id WHERE i.seller_id=$1 OR b.bidder_id=$1',[req.user.id])).rows})}catch(e){next(e)}});
-app.use((error,req,res,next)=>{console.error('API error',error.code||error.message);if(res.headersSent)return next(error);err(res,500,'INTERNAL_ERROR','Unexpected server error')});
+app.use((error,req,res,next)=>{console.error('API error',error);if(res.headersSent)return next(error);err(res,500,'INTERNAL_ERROR','Unexpected server error')});
+
