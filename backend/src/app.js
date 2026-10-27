@@ -5,21 +5,11 @@ import { randomBytes } from "node:crypto";
 import { query, pool } from "./db.js";
 import { auth, admin, hashToken, newToken } from "./auth.js";
 import { validMoney, toCents } from "./money.js";
-import express from "express";
-import cors from "cors";
-import bcrypt from "bcryptjs";
-import { randomBytes } from "node:crypto";
-import { query, pool } from "./db.js";
-import { auth, admin, hashToken, newToken } from "./auth.js";
-import { validMoney, toCents } from "./money.js";
 import { listings, withImages, withListingImages } from "./listings.js";
 import { imageLink, serveImage } from "./uploads.js";
 import { attemptLimit } from "./limits.js";
 import { startCommitment } from "./bank.js";
 import {
-  auction,
-  accessible,
-  closeIfEnded,
   auctionStatus,
   resultFor,
   participationFor,
@@ -42,8 +32,7 @@ const numeric = (x) =>
   Number.isSafeInteger(Math.round(x * 100)) &&
   Math.abs(x * 100 - Math.round(x * 100)) < 1e-7;
 const accessible = async (a, user) => {
-  if (a.visibility === "PUBLIC" || a.seller_id === user?.id) return true;
-  if (!user) return false;
+  if (a.visibility === "PUBLIC" || a.seller_id === user?.id || user?.role === "ADMIN") return true;  if (!user) return false;
   const r = await query(
     "SELECT 1 FROM private_auction_access WHERE auction_id=$1 AND user_id=$2",
     [a.id, user.id],
@@ -119,6 +108,10 @@ async function closeIfEnded(id) {
         [id, w.rows[0]?.id || null],
       );
     }
+        await client.query(
+      "UPDATE auctions SET status='ACTIVE' WHERE id=$1 AND status='SCHEDULED' AND start_time<=clock_timestamp() AND end_time>clock_timestamp()",
+      [id],
+    );
     await client.query("COMMIT");
   } catch (e) {
     await client.query("ROLLBACK");
@@ -185,18 +178,7 @@ app.post("/auth/register", async (req, res, next) => {
       return err(res, 409, "DUPLICATE_EMAIL", "Email already registered");
     next(e);
   }
-export const app = express();
-app.use(
-  cors({ origin: process.env.FRONTEND_ORIGIN || "http://localhost:5173" }),
-);
-app.use(express.json({ limit: "100kb" }));
-
-const err = (res, status, code, message) =>
-  res.status(status).json({ error: { code, message } });
-const validUuid = (x) =>
-  typeof x === "string" &&
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x);
-app.get("/health", (_req, res) => res.json({ data: { status: "ok" } }));
+});
 const accounts = express.Router();
 app.use("/auth", accounts);
 app.use("/api/v1/auth", accounts);
@@ -296,6 +278,7 @@ app.post("/auth/login", async (req, res, next) => {
 app.get("/auth/me", auth, (req, res) => {
   // نرسل بيانات المستخدم التي جهزتها دالة auth.
   res.json({ data: { user: req.user } });
+  });
 accounts.post("/login", async (req, res, next) => {
   try {
     const { email, password } = req.body || {};
@@ -346,6 +329,7 @@ app.get("/categories", async (_req, res, next) => {
     next(e);
   }
 });
+app.post("/items", listings);
 app.post("/items", auth, async (req, res, next) => {
   try {
     const {
@@ -441,6 +425,7 @@ app.get("/items", auth, async (req, res, next) => {
     // يروح الخطأ إلى معالج الأخطاء في Express.
     next(e);
   }
+  });
 accounts.post("/logout", auth, async (req, res, next) => {
   try {
     // نحذف الجلسة عشان الرمز ما عاد يدخل بعد الخروج.
@@ -566,6 +551,7 @@ app.post("/admin/items/:id/review", auth, admin, async (req, res, next) => {
     // نفس الشي يمرر الخطا الى معالج الاخطاء في express
     next(e);
   }
+  });
 // هنا نتأكد إن صيغة المعرّف صحيحة قبل الاستعلام.
 api.param("id", (req, res, next, id) =>
   validUuid(id) ? next() : err(res, 400, "INVALID_ID", "Invalid ID"),
@@ -746,6 +732,7 @@ WHERE id = $1
     // اذا كان الخطا من نوع اخر نمرره لمعالج الاخطا بالباك هو يتعامل معاه
     next(e);
   }
+  });
 api.post("/auctions", auth, async (req, res, next) => {
   try {
     const {
@@ -895,6 +882,7 @@ app.get("/auctions/:id", async (req, res, next) => {
   } catch (e) {
     next(e);
   }
+  });
 // الحالة تنحسب بوقت قاعدة البيانات حتى لو ما أحد زايد أو فتح الصفحة.
 api.get(
   "/auctions",
@@ -1010,6 +998,7 @@ app.post("/auctions/:id/commitment", auth, async (req, res, next) => {
   } catch (e) {
     next(e);
   }
+  });
 api.post(
   "/auctions/:id/access",
   auth,
@@ -1063,6 +1052,7 @@ app.get("/auctions/:id/commitment", auth, async (req, res, next) => {
   } catch (e) {
     next(e);
   }
+  });
 api.get("/auctions/:id/commitment", auth, async (req, res, next) => {
   try {
     const a = await auction(req.params.id);
@@ -1185,6 +1175,7 @@ app.post("/auctions/:id/bids", auth, async (req, res, next) => {
   } finally {
     c.release();
   }
+  });
 api.post("/auctions/:id/bids", auth, async (req, res, next) => {
   const { amount, requestId } = req.body || {};
   if (!validMoney(amount) || !validUuid(requestId) || !validUuid(req.params.id))
@@ -1314,6 +1305,7 @@ app.get("/auctions/:id/bids", auth, async (req, res, next) => {
   } catch (e) {
     next(e);
   }
+  });
 api.get("/auctions/:id/bids", auth, async (req, res, next) => {
   try {
     const a = await auction(req.params.id);
@@ -1364,11 +1356,6 @@ app.get("/me/auctions", auth, async (req, res, next) => {
   } catch (e) {
     next(e);
   }
-});
-app.use((error, req, res, next) => {
-  console.error("API error", error.code || error.message);
-  if (res.headersSent) return next(error);
-  err(res, 500, "INTERNAL_ERROR", "Unexpected server error");
 });
 api.get("/me/items", auth, async (req, res, next) => {
   try {
