@@ -129,6 +129,7 @@ useEffect(() => {
   async function loadDetails() {
     try {
       const data = await request('/auctions/' + auctionId);
+      if (!data || data.id !== auctionId) throw new Error('تعذّر تحميل التفاصيل، حاولي لاحقًا');
 
       if (active) {
         setSelected(data);

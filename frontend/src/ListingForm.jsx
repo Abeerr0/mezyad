@@ -68,6 +68,7 @@ export default function ListingForm({ api, token, item, onSaved, onCancel }) {
         const response = await fetch(api + '/categories');
         const result = await response.json();
         if (!response.ok) throw new Error();
+        if (!Array.isArray(result.data)) throw new Error();
         if (active) setCategories(result.data);
       } catch {
         if (active) setCategoryError('تعذّر تحميل الأقسام، حاولي لاحقًا');
