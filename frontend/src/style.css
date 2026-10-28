@@ -283,3 +283,44 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
   .private-access .account-form { padding: 24px 20px; }
   .private-access .account-form h1 { font-size: 32px; }
 }
+
+
+.review-list { padding: 0; background: transparent; font-family: 'Listing Noto Sans Arabic', 'Segoe UI', sans-serif; }
+.review-list > h2 { font-size: 40px; font-weight: 700; margin: 0 0 28px; }
+.review-list > .breadcrumb { color: #b69a70; font-size: 12px; margin: 0 0 26px; }
+.review-list > .page-intro { color: #6d655d; font-size: 14px; margin: 0 0 48px; }
+.review-list [role='status'], .review-list [role='alert'] { overflow-wrap: anywhere; }
+.review-list [role='status']:empty { display: none; }
+.review-list button:focus-visible, .review-list textarea:focus-visible { outline: 2px solid #b69a70; outline-offset: 3px; }
+.review-list label { margin: 24px 0; font-size: 14px; }
+.review-list textarea { min-height: 58px; }
+.review-list .review-card { min-height: 0; display: grid; grid-template-columns: 168px minmax(0,1fr) 220px; gap: 24px; align-items: center; background: #f8f5ef; border: 1px solid #d8cbb8; padding: 24px; margin-top: 16px; }
+.review-list .listing-photo { float: none; width: 100%; max-width: none; height: 168px; object-fit: cover; margin: 0; }
+.review-list .listing-info { grid-column: 2; min-width: 0; overflow-wrap: anywhere; }
+.review-list .listing-info h3 { font-size: 26px; font-weight: 600; margin: 0 0 12px; }
+.review-list .listing-info p { font-size: 14px; color: #6d655d; }
+.review-list .listing-info .listing-status { color: #b69a70; }
+.review-list .review-card > .review-images { grid-column: 1; grid-row: 1; }
+.review-list .review-card > button { grid-column: 3; grid-row: 1; background: #e8d9bb; border-color: #292520; margin-top: 0; min-width: 0; }
+.review-list .review-detail { min-height: 0; padding: 0; border: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-top: 48px; }
+.review-list .review-detail > .listing-info { grid-column: 1; }
+.review-list .review-detail > .review-images { grid-column: 2; grid-row: 1; }
+.review-list .review-detail .listing-photo { height: auto; max-height: 520px; margin-bottom: 16px; }
+.review-list .review-detail form { grid-column: 1 / -1; padding: 24px; margin-top: 0; background: #f8f5ef; border: 1px solid #d8cbb8; }
+.review-list .review-detail form button { min-width: 180px; margin-inline-end: 16px; }
+.review-list .review-detail form button:first-of-type { background: #f8f5ef; }
+.review-list .review-detail form button:first-of-type:hover { background: #e8d9bb; }
+@media (max-width: 1000px) {
+  .review-list .review-card { grid-template-columns: 140px minmax(0,1fr); }
+  .review-list .review-card > button { grid-column: 2; grid-row: auto; }
+}
+@media (max-width: 800px) {
+  .review-list .review-detail { grid-template-columns: 1fr; gap: 24px; }
+  .review-list .review-detail > .listing-info, .review-list .review-detail > .review-images { grid-column: 1; grid-row: auto; }
+}
+@media (max-width: 520px) {
+  .review-list > h2 { font-size: 30px; }
+  .review-list .review-card { grid-template-columns: 1fr; }
+  .review-list .listing-info, .review-list .review-card > .review-images, .review-list .review-card > button { grid-column: 1; grid-row: auto; }
+  .review-list .review-detail form button { width: 100%; min-width: 0; margin: 8px 0; }
+}

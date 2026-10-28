@@ -69,21 +69,27 @@ export default function AdminReview({ api, token }) {
 
   return (
     <section className="panel review-list">
+      <p className="breadcrumb">حساب المشرف / {selectedId ? 'مراجعة الإعلان' : 'الإعلانات قيد المراجعة'}</p>
       <h2>{selectedId ? 'مراجعة الإعلان' : 'الإعلانات قيد المراجعة'}</h2>
+      <p className="page-intro">{selectedId ? 'افحص المعلومات والصور المرفقة، ثم اتخذ قرارًا واضحًا بشأن الإعلان.' : 'افتح كل إعلان للتحقق من معلوماته وصوره قبل اتخاذ القرار.'}</p>
       {selectedId && <button disabled={busy} onClick={() => setSelectedId(null)}>العودة إلى الإعلانات</button>}
       <button disabled={loading || busy} onClick={() => setRefresh(refresh + 1)}>تحديث الإعلانات</button>
       {loading ? <p role="status">جاري تحميل الإعلانات المعلقة…</p> :
         error ? <p role="alert">{error}</p> :
         !items.length ? <p>لا توجد إعلانات بانتظار المراجعة.</p> :
         items.filter(item => !selectedId || item.id === selectedId).map(item => (
-          <article key={item.id}>
+          <article key={item.id} className={selectedId ? 'review-detail' : 'review-card'}>
+            <div className="listing-info">
             <h3>{item.title}</h3>
+            <p className="listing-status">بانتظار المراجعة</p>
             <p>{item.description}</p>
-            {item.images?.length ? item.images.map(image => {
+            </div>
+            <div className="review-images">{item.images?.length ? item.images.slice(0, selectedId ? undefined : 1).map(image => {
               const url = typeof image === 'string' ? image : image.image_url;
               return <img className="listing-photo" key={url} src={new URL(url, api).href} alt={item.title} />;
-            }) : <p>لا توجد صور</p>}
+            }) : <p>لا توجد صور</p>}</div>
             {!selectedId ? <button onClick={() => setSelectedId(item.id)}>مراجعة الإعلان</button> : <form onSubmit={event => { event.preventDefault(); review(item, 'REJECTED', event.currentTarget.elements.reason.value); }}>
+              <h3>قرار المراجعة</h3>
               <fieldset disabled={busy}>
                 <label>سبب الرفض<textarea name="reason" maxLength={2000} rows={2} /></label>
                 <button type="button" onClick={() => review(item, 'APPROVED')}>موافقة</button>
