@@ -143,3 +143,23 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
 }
 
 @media (max-width: 520px) { .listing-editor form { padding: 24px 16px; } }
+
+.account-screen.register { direction: rtl; color: #241f1b; font-family: 'Listing Noto Sans Arabic', 'Segoe UI', sans-serif; padding-bottom: 66px; }
+.register .account-form { min-height: 925px; padding-top: 25px; background: rgba(254,253,250,.78); }
+.register .account-form .eyebrow { min-height: 27px; line-height: 27px; font-size: 13px; color: #a7834b; margin: 0 0 23px; }
+.register .account-form h1 { font-family: 'Listing El Messiri', 'Listing Noto Sans Arabic', sans-serif; font-size: 40px; font-weight: 700; line-height: 63px; margin: 0 0 9px; }
+.register .account-intro { min-height: 32px; font-size: 15px; margin: 0 0 42px; }
+.register fieldset { display: grid; gap: 16px; }
+.register .account-form label { margin: 0; font-size: 13px; font-weight: 500; line-height: 27px; }
+.register .account-form input { height: 58px; min-width: 0; margin: 5px 0 0; font-size: 14px; font-weight: 400; background: rgba(255,255,255,.78); }
+.register .account-form input::placeholder { color: #6d655d; opacity: 1; }
+.register .account-form button { height: 54px; min-height: 54px; margin: 2px 0 0; font-size: 14px; }
+.register .account-form button.primary { margin-top: 20px; background: #e7d8bc; border-color: #241f1b; }
+@media (max-width: 800px) {
+  .account-screen.register { min-height: 0; padding-bottom: 40px; }
+  .register .account-form { min-height: 0; padding: 28px; }
+}
+@media (max-width: 520px) {
+  .register .account-form h1 { font-size: 32px; line-height: 1.6; }
+  .register .account-form { padding: 24px 20px; }
+}
