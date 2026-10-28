@@ -20,7 +20,11 @@ export default function AdminReview({ api, token }) {
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error?.message || 'تعذّر تحميل الإعلانات');
-        if (active) setItems(result.data);
+        if (!Array.isArray(result.data)) throw new Error('تعذّر تحميل الإعلانات');
+        if (active) {
+          setItems(result.data);
+          setSelectedId(id => id && !result.data.some(item => item.id === id) ? null : id);
+        }
       } catch (error) {
         if (active) setError(error instanceof TypeError ? 'تعذّر الاتصال بالخادم' : error.message);
       } finally {
