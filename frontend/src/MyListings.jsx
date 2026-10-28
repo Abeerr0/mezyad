@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ListingForm from './ListingForm';
 import AuctionForm from './AuctionForm';
 
@@ -39,7 +39,7 @@ export default function MyListings({ api, token }) {
   }
 
   return (
-    <section className="panel">
+    <section className="panel own-listings">
       <h2>إعلاناتي</h2>
       <button disabled={loading || Boolean(editing)} onClick={() => setRefresh(refresh + 1)}>تحديث إعلاناتي</button>
       {loading ? <p role="status">جاري تحميل إعلاناتك…</p> :
@@ -47,6 +47,7 @@ export default function MyListings({ api, token }) {
         !items.length ? <p>ما عندك إعلانات حاليًا.</p> :
         items.map(item => (
           <article key={item.id}>
+            {item.images?.[0] && <img className="listing-photo" src={new URL(typeof item.images[0] === 'string' ? item.images[0] : item.images[0].image_url, api).href} alt={item.title} />}
             <h3>{item.title}</h3>
             <p>{item.description}</p>
             <p>الحالة: {{ PENDING_REVIEW: 'بانتظار المراجعة', APPROVED: 'معتمد', REJECTED: 'مرفوض' }[item.status] || item.status}</p>
