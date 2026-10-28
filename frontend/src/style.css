@@ -72,3 +72,74 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
 [role='alert'] { color: #953e32; }
 @media (max-width: 800px) { main { padding: 0 24px 48px; } .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 20px; } .cards article > img { height: 220px; } nav { gap: 18px; } }
 @media (max-width: 520px) { .cards { grid-template-columns: 1fr; } .hero h2 { font-size: 32px; } .panel { padding: 20px; } .brand { width: 130px; } }
+
+.listing-editor { max-width: none; }
+@font-face { font-family: 'Listing Noto Sans Arabic'; src: url('/design/NotoSansArabic.ttf') format('truetype'); font-weight: 100 900; font-display: swap; }
+.listing-editor { padding: 0; background: transparent; font-family: 'Listing Noto Sans Arabic', 'Segoe UI', sans-serif; }
+.listing-editor form { max-width: none; background: #fff; padding: 32px 48px 48px; }
+.listing-editor > h2 { font-weight: 700; }
+.listing-editor .listing-file-input { border-style: dashed; background: #fcfbf8; }
+.listing-editor [hidden] { display: none !important; }
+.listing-editor label { margin: 24px 0; font-size: 14px; }
+.listing-editor input, .listing-editor textarea { min-height: 58px; }
+.listing-editor button:focus-visible, .listing-editor input:focus-visible, .listing-editor textarea:focus-visible { outline: 2px solid #b69a70; outline-offset: 3px; }
+.listing-editor .actions { gap: 16px; }
+.listing-editor .breadcrumb { color: #b69a70; font-size: 12px; margin: 0 0 26px; }
+.listing-editor .page-intro { color: #6d655d; font-size: 14px; margin: 0 0 48px; }
+.listing-editor [role='status'], .listing-editor [role='alert'] { overflow-wrap: anywhere; }
+.listing-editor [role='status']:empty { display: none; }
+@font-face { font-family: 'Listing El Messiri'; src: url('https://fonts.gstatic.com/s/elmessiri/v25/K2FhfZBRmr9vQ1pHEey6GIGo8_pv3myYjuUXfK5g.ttf') format('truetype'); font-style: normal; font-weight: 700; font-display: swap; }
+.listing-editor .listing-review-form { padding: 0; background: transparent; }
+.listing-editor.listing-visual-step { color: #241f1b; margin-top: 59px; }
+.listing-editor.listing-visual-step > .breadcrumb { color: #a7834b; line-height: 26px; margin: 0 22px 15px 0; }
+.listing-editor.listing-visual-step > h2 { font-family: 'Listing El Messiri', 'Listing Noto Sans Arabic', sans-serif; font-size: 42px; line-height: 66px; margin: 0 22px 13px 0; }
+.listing-editor.listing-visual-step > .page-intro { font-size: 15px; min-height: 32px; margin: 0 22px 69px 0; }
+.listing-editor .listing-photos-form { background: transparent; padding: 0; }
+.listing-editor .listing-photo-layout { background: #fff; padding: 30px; }
+.listing-editor .listing-photo-picker { position: relative; }
+.listing-editor .listing-file-input { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; margin: 0; opacity: 0; }
+.listing-editor .listing-photo-picker:focus-within + .listing-photo-gallery { outline: 2px solid #b69a70; outline-offset: 3px; }
+.listing-editor .listing-photo-gallery { display: grid; grid-template-columns: minmax(0, 653fr) minmax(0, 541fr); gap: 32px 33px; align-content: start; direction: ltr; }
+.listing-editor .listing-photo-gallery figure { min-width: 0; margin: 0; }
+.listing-editor .listing-photo-gallery figure:first-child { grid-column: 1; grid-row: 1 / 3; }
+.listing-editor .listing-image-slot { display: grid; place-items: center; height: 204px; margin: 0; background: #eee8de; color: #6d655d; font-size: 15px; cursor: pointer; direction: rtl; }
+.listing-editor .listing-photo-gallery figure:first-child .listing-image-slot { height: 440px; }
+.listing-editor .listing-photo-gallery img { display: block; width: 100%; height: 100%; min-height: 0; object-fit: contain; background: #eee8de; }
+.listing-editor .listing-photo-gallery figure { position: relative; }
+.listing-editor .listing-photo-gallery .listing-remove-image { position: absolute; right: 8px; bottom: 8px; width: auto; padding: 4px 8px; font-size: 12px; background: #fcfbf8; direction: rtl; }
+.listing-editor .listing-photo-note { color: #6d655d; font-size: 14px; margin: 9px 31px 19px; }
+.listing-editor .listing-add-more { width: fit-content; margin: 8px 0; color: #6d655d; font-size: 14px; text-decoration: underline; cursor: pointer; }
+.listing-editor .listing-photos-form .actions { flex-direction: row-reverse; margin: 19px 31px 0 30px; }
+.listing-editor .listing-photos-form .actions button { width: 403px; max-width: 45%; min-width: 0; height: 54px; padding: 10px 16px; font-size: 14px; }
+.listing-editor.listing-visual-step .primary { background: #e7d8bc; border-color: #241f1b; }
+.listing-editor .listing-preview { display: grid; grid-template-columns: minmax(0, 612fr) minmax(0, 566fr); gap: 79px; padding: 11px 31px 0 0; }
+.listing-editor .listing-preview > div { min-width: 0; }
+.listing-editor .listing-preview-details h3 { font-family: 'Listing El Messiri', 'Listing Noto Sans Arabic', sans-serif; font-size: 32px; font-weight: 700; line-height: 50px; min-height: 71px; margin: 24px 0 40px; padding-bottom: 20px; border-bottom: 1px solid #d8cbb8; }
+.listing-editor .listing-preview-details > p { color: #241f1b; font-size: 16px; margin: 0 0 24px; white-space: pre-line; overflow-wrap: anywhere; }
+.listing-editor .listing-preview-details > .breadcrumb { color: #a7834b; font-size: 13px; padding-top: 10px; }
+.listing-editor .listing-preview-details > button { display: block; width: 424px; max-width: 100%; min-height: 54px; margin-top: 64px; padding: 10px 16px; font-size: 14px; }
+.listing-editor .listing-preview-photos .listing-photo-gallery { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.listing-editor .listing-preview-photos figure:first-child { grid-column: 1 / -1; grid-row: auto; }
+.listing-editor .listing-preview-photos img { aspect-ratio: 1.4; height: auto; }
+.listing-editor .listing-preview-photos figure:first-child img { aspect-ratio: 566 / 495; }
+.listing-editor .listing-review-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin-top: 29px; }
+.listing-editor .listing-review-actions > button { width: 425px; max-width: 100%; min-height: 54px; padding: 10px 16px; font-size: 14px; }
+.listing-editor .listing-review-actions .listing-back-photos { width: auto; min-height: 0; padding: 0; background: transparent; border: 0; text-decoration: underline; color: #6d655d; }
+@media (max-width: 800px) {
+  .listing-editor.listing-visual-step > h2 { margin-inline-start: 0; font-size: 30px; line-height: 1.6; }
+  .listing-editor.listing-visual-step > .page-intro { margin: 0 0 32px; }
+  .listing-editor .listing-photos-form { padding: 0; }
+  .listing-editor .listing-photo-layout { padding: 16px; margin: 0; }
+  .listing-editor .listing-photo-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .listing-editor .listing-photo-gallery figure:first-child { grid-column: 1 / -1; grid-row: auto; }
+  .listing-editor .listing-image-slot { height: 140px; font-size: 12px; }
+  .listing-editor .listing-photo-gallery figure:first-child .listing-image-slot { height: auto; min-height: 220px; aspect-ratio: 653 / 440; }
+  .listing-editor .listing-photos-form .actions button { width: 100%; max-width: 100%; }
+  .listing-editor .listing-photos-form .actions { margin-inline: 0; }
+  .listing-editor .listing-photo-note { margin-inline: 0; }
+  .listing-editor .listing-preview { grid-template-columns: minmax(0, 1fr); gap: 32px; padding: 0; }
+  .listing-editor .listing-preview-details h3 { font-size: 26px; }
+  .listing-editor .listing-preview-details > button { margin-top: 32px; }
+}
+
+@media (max-width: 520px) { .listing-editor form { padding: 24px 16px; } }
