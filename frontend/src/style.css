@@ -163,3 +163,26 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
   .register .account-form h1 { font-size: 32px; line-height: 1.6; }
   .register .account-form { padding: 24px 20px; }
 }
+
+.account-screen.login { direction: rtl; color: #241f1b; font-family: 'Listing Noto Sans Arabic', 'Segoe UI', sans-serif; padding-bottom: 66px; }
+.login .account-form { min-height: 775px; padding-top: 53px; background: rgba(254,253,250,.78); }
+.login .account-form .eyebrow { min-height: 27px; line-height: 27px; margin: 0 0 28px; font-size: 13px; color: #a7834b; }
+.login .account-form h1 { font-family: 'Listing El Messiri', 'Listing Noto Sans Arabic', sans-serif; font-size: 40px; font-weight: 700; line-height: 63px; margin: 0 0 9px; }
+.login .account-intro { min-height: 32px; font-size: 15px; margin: 0 0 60px; }
+.login fieldset { display: grid; }
+.login .account-form label { margin: 0 0 24px; font-size: 13px; font-weight: 500; line-height: 27px; }
+.login .account-form label:last-of-type { margin-bottom: 58px; }
+.login .account-form input { height: 58px; min-width: 0; margin: 5px 0 0; font-size: 14px; font-weight: 400; background: rgba(255,255,255,.78); }
+.login .account-form input::placeholder { color: #6d655d; opacity: 1; }
+.login .account-form button { height: 54px; min-height: 54px; margin: 0; font-size: 14px; }
+.login .account-form button.primary { background: #e7d8bc; border-color: #241f1b; }
+.login .account-signup-prompt { line-height: 30px; margin: 34px 0 13px; color: #6d655d; font-size: 14px; }
+.login [role='status']:empty { display: none; }
+@media (max-width: 800px) {
+  .account-screen.login { min-height: 0; padding-bottom: 40px; }
+  .login .account-form { min-height: 0; padding: 28px; }
+}
+@media (max-width: 520px) {
+  .login .account-form h1 { font-size: 32px; line-height: 1.6; }
+  .login .account-form { padding: 24px 20px; }
+}
