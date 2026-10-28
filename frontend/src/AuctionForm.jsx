@@ -60,8 +60,10 @@ export default function AuctionForm({ api, token, item }) {
   if (!open) return <button onClick={() => setOpen(true)}>إنشاء مزاد</button>;
 
   return (
-    <section className="listing-form">
+    <section className="listing-form auction-form">
+      <p className="breadcrumb">إعلاناتي / إعلان معتمد / إعداد المزاد</p>
       <h2>إعداد المزاد</h2>
+      <p className="page-intro">حدّد سعر البداية والحد الأدنى لزيادة المزايدة ومواعيد المزاد.</p>
       {!auction && !duplicate && <form onSubmit={createAuction}>
         <fieldset disabled={busy}>
           <label>الإعلان المعتمد<input value={item.title} readOnly /></label>

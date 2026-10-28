@@ -245,3 +245,16 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
 .own-listings [role='status']:empty { display: none; }
 @media (max-width: 800px) { .own-listings article { grid-template-columns: minmax(0,1fr); grid-template-rows: auto; gap: 16px; } .own-listings article > .listing-photo, .own-listings .listing-info, .own-listings article > button { grid-column: 1; grid-row: auto; } .own-listings article > .listing-photo { height: 220px; } .own-listings article > button { width: 100%; } }
 @media (max-width: 520px) { .own-listings > h2 { font-size: 30px; } }
+
+
+.own-listings .auction-form { direction: rtl; grid-column: 1 / -1; padding-top: 32px; width: 100%; max-width: 1000px; }
+.auction-form > h2 { font-size: 40px; font-weight: 700; margin: 0 0 28px; }
+.auction-form .breadcrumb { color: #b69a70; font-size: 12px; margin: 0 0 26px; }
+.auction-form .page-intro { color: #6d655d; font-size: 14px; margin: 0 0 48px; }
+.auction-form form { max-width: none; background: #fff; padding: 32px 48px 48px; }
+.auction-form label { display: block; margin: 24px 0; font-size: 14px; }
+.auction-form input, .auction-form select { min-height: 58px; }
+.auction-form input[type='number'], .auction-form input[type='datetime-local'] { direction: ltr; text-align: right; }
+.auction-form [role='status'] { overflow-wrap: anywhere; }
+.auction-form [role='status']:empty { display: none; }
+@media (max-width: 520px) { .auction-form > h2 { font-size: 30px; } .auction-form form { padding: 24px 16px; } }
