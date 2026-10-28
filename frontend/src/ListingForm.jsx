@@ -227,7 +227,9 @@ export default function ListingForm({ api, token, item, onSaved, onCancel }) {
           )}
           {step > 0 && step < 3 && (
             <div className="actions">
-              <button type="button" onClick={() => setStep(step - 1)}>{step === 2 ? 'العودة إلى التفاصيل' : 'العودة'}</button>
+              {(!item || step > 1) && (
+                <button type="button" onClick={() => setStep(step - 1)}>{step === 2 ? 'العودة إلى التفاصيل' : 'العودة'}</button>
+              )}
               <button className="primary" type="button" onClick={next}>
                 {step === 1 ? 'متابعة إلى الصور' : 'مراجعة إعلانك'}
               </button>
