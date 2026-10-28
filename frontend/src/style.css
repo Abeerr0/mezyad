@@ -186,3 +186,38 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
   .login .account-form h1 { font-size: 32px; line-height: 1.6; }
   .login .account-form { padding: 24px 20px; }
 }
+
+@font-face { font-family: 'Browse El Messiri'; src: url('https://fonts.gstatic.com/s/elmessiri/v25/K2FhfZBRmr9vQ1pHEey6GIGo8_pv3myYjuXwe65g.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
+.auction-browser { direction: rtl; color: #241f1b; font-family: 'Listing Noto Sans Arabic', 'Segoe UI', sans-serif; }
+.auction-browser .hero { padding: 60px 19px 0; }
+.auction-browser .hero .breadcrumb { line-height: 25px; margin: 0; color: #a7834b; }
+.auction-browser .hero h2 { font-family: 'Browse El Messiri', 'Listing Noto Sans Arabic', sans-serif; font-size: 52px; font-weight: 400; line-height: 81px; margin: 20px 0 -3px; }
+.auction-browser .hero > p:last-child { line-height: 30px; margin: 0; }
+.auction-browser .auction-filters { display: flex; flex-wrap: wrap; gap: 32px; margin: 59px 0 77px; }
+.auction-browser .auction-filters button { flex: 1; min-width: 120px; min-height: 52px; padding: 10px 16px; font-size: 14px; }
+.auction-browser .auction-filters button[aria-pressed='true'] { background: #e7d8bc; border-color: #241f1b; }
+.auction-browser .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 72px 32px; }
+.auction-browser .cards > p { grid-column: 1 / -1; }
+.auction-browser [role='status'], .auction-browser [role='alert'] { overflow-wrap: anywhere; }
+.auction-browser .cards article > img, .auction-browser .no-image { display: grid; place-items: center; width: 100%; height: 310px; object-fit: cover; margin: 0; background: #f1eee7; color: #6d655d; }
+.auction-browser .no-image { font-size: 16px; }
+.auction-browser .cards article { min-width: 0; overflow-wrap: anywhere; }
+.auction-browser .card-title { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; border-bottom: 1px solid #d8cbb8; margin: 14px 0 17px; padding-bottom: 17px; }
+.auction-browser .card-title h3 { font-family: 'Browse El Messiri', 'Listing Noto Sans Arabic', sans-serif; font-size: 22px; font-weight: 400; line-height: 34px; margin: 0; }
+.auction-browser .card-title > span { color: #a7834b; font-size: 12px; flex-shrink: 0; }
+.auction-browser .card-price { margin: 0; color: #241f1b; font-size: 16px; }
+.auction-browser .card-price span { display: block; color: #6d655d; font-size: 12px; line-height: 25px; }
+.auction-browser .card-price strong { display: block; font-size: 18px; font-weight: 500; line-height: 38px; }
+.auction-browser .auction-status { color: #6d655d; font-size: 13px; line-height: 25px; margin: 0 0 12px; }
+.auction-browser .cards button { min-height: 52px; padding: 10px 16px; font-size: 14px; }
+@media (max-width: 800px) {
+  .auction-browser .hero { padding: 40px 0 0; }
+  .auction-browser .hero h2 { font-size: 36px; line-height: 1.6; }
+  .auction-browser .auction-filters { gap: 12px; margin: 32px 0; }
+  .auction-browser .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 20px; }
+  .auction-browser .cards article > img, .auction-browser .no-image { height: 220px; }
+}
+@media (max-width: 520px) {
+  .auction-browser .cards { grid-template-columns: minmax(0, 1fr); }
+  .auction-browser .hero h2 { font-size: 32px; }
+}

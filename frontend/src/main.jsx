@@ -8,6 +8,7 @@ import PrivateAccess from './PrivateAccess';
 const API=import.meta.env.VITE_API_URL||'http://localhost:3000';
 function App(){
  const [page, setPage] = useState('auctions');
+ const [category, setCategory] = useState('الكل');
  const [auctions,setAuctions]=useState([]),[selected,setSelected]=useState(null),[form,setForm]=useState({name:'',email:'',password:''}),[token,setToken]=useState(''),[message,setMessage]=useState('');
  const [user, setUser] = useState(null);
  const [accountBusy, setAccountBusy] = useState(false);
@@ -23,6 +24,7 @@ const [detailsError, setDetailsError] = useState('');
  async function load() {
   try {
     const data = await request('/auctions');
+    if (!Array.isArray(data)) throw new Error('Invalid auctions response');
     setAuctions(data);
     setAuctionsError('');
   } catch (error) {
@@ -149,28 +151,37 @@ useEffect(() => {
     clearTimeout(timer);
   };
 }, [auctionId, token]);
- return <main><header><img className="brand" src="/design/mezyad-logo.png" alt="مزياد" /><nav aria-label="القائمة الرئيسية"><button onClick={() => { setPage('auctions'); setAuctionId(null); setSelected(null); }}>المزادات</button>{token ? <><button onClick={() => setPage('new-listing')}>إعلان جديد</button><button onClick={() => setPage('my-listings')}>إعلاناتي</button><button onClick={() => setPage('private')}>مزاد خاص</button>{user?.role === 'ADMIN' && <button onClick={() => setPage('admin')}>مراجعة الإعلانات</button>}<button disabled={accountBusy} onClick={logout}>خروج</button></> : <button onClick={() => { setPage('login'); setMessage(''); }}>تسجيل الدخول</button>}</nav></header>{page === 'auctions' && <>{!auctionId && <><section className="hero" id="auctions"><p className="breadcrumb">المزادات / جميع الأقسام</p><h2>المزادات</h2><p>تصفح المزادات</p></section><section className="cards">
+ const categories = ['الكل', ...new Set(auctions.map(a => a.category_name).filter(Boolean))];
+ const activeCategory = categories.includes(category) ? category : 'الكل';
+ const shownAuctions = auctions.filter(a => activeCategory === 'الكل' || a.category_name === activeCategory);
+
+ return <main><header><img className="brand" src="/design/mezyad-logo.png" alt="مزياد" /><nav aria-label="القائمة الرئيسية"><button onClick={() => { setPage('auctions'); setAuctionId(null); setSelected(null); }}>المزادات</button>{token ? <><button onClick={() => setPage('new-listing')}>إعلان جديد</button><button onClick={() => setPage('my-listings')}>إعلاناتي</button><button onClick={() => setPage('private')}>مزاد خاص</button>{user?.role === 'ADMIN' && <button onClick={() => setPage('admin')}>مراجعة الإعلانات</button>}<button disabled={accountBusy} onClick={logout}>خروج</button></> : <button onClick={() => { setPage('login'); setMessage(''); }}>تسجيل الدخول</button>}</nav></header>{page === 'auctions' && <>{!auctionId && <div className="auction-browser"><section className="hero" id="auctions"><p className="breadcrumb">المزادات / جميع الأقسام</p><h2>المزادات</h2><p>تصفح المزادات</p></section>
+ <div className="auction-filters" aria-label="أقسام المزادات">
+   {categories.map(name => <button key={name} aria-pressed={activeCategory === name} onClick={() => setCategory(name)}>{name}</button>)}
+ </div><section className="cards">
   {auctionsLoading ? (
     <p role="status">جاري تحميل المزادات…</p>
   ) : auctionsError ? (
     <p role="alert">{auctionsError}</p>
-  ) : auctions.length === 0 ? (
+  ) : shownAuctions.length === 0 ? (
     <p>لا توجد مزادات عامة متاحة حاليًا.</p>
   ) : (
-    auctions.map(a => (
+    shownAuctions.map((a, index) => {
+      const image = a.image_url || (typeof a.images?.[0] === 'string' ? a.images[0] : a.images?.[0]?.image_url);
+      return (
       <article key={a.id}>
-        {(a.image_url || a.images?.[0]?.image_url) ? (
+        {image ? (
           <img
-            src={new URL(a.image_url || a.images[0].image_url, API).href}
+            src={new URL(image, API).href}
             alt={a.title}
 
           />
         ) : (
-          <p>لا توجد صورة</p>
+          <p className="no-image">لا توجد صورة</p>
         )}
-        <h3>{a.title}</h3>
-        <p>السعر الحالي: {a.current_price} ريال</p>
-        <p>
+        <div className="card-title"><h3>{a.title}</h3><span>{String(index + 1).padStart(2, '0')}</span></div>
+        <p className="card-price"><span>السعر الحالي</span><strong>{Number(a.current_price).toLocaleString('en-US')} ر.س</strong></p>
+        <p className="auction-status">
           الحالة: {{
             SCHEDULED: 'قادم',
             ACTIVE: 'نشط',
@@ -178,12 +189,13 @@ useEffect(() => {
           }[a.status] || a.status}
         </p>
         <button onClick={() => openAuction(a.id)}>
-          تفاصيل المزاد
+          عرض المزاد
         </button>
       </article>
-    ))
+      );
+    })
   )}
-</section></>}{auctionId && (
+</section></div>}{auctionId && (
   <section className="details-page">
     <button onClick={() => {
       setAuctionId(null);
