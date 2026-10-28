@@ -258,3 +258,28 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
 .auction-form [role='status'] { overflow-wrap: anywhere; }
 .auction-form [role='status']:empty { display: none; }
 @media (max-width: 520px) { .auction-form > h2 { font-size: 30px; } .auction-form form { padding: 24px 16px; } }
+
+
+.private-access .account-form label { margin: 24px 0; }
+.private-access .account-form input { min-height: 58px; }
+.private-access .account-form button { margin-top: 32px; }
+.private-access .account-form button { height: auto; }
+.private-access [role='status'] { overflow-wrap: anywhere; }
+.private-access [role='status']:empty { display: none; }
+.account-screen.private-access { direction: rtl; color: #241f1b; font-family: 'Listing Noto Sans Arabic', 'Segoe UI', sans-serif; padding-bottom: 66px; }
+.private-access .account-form { min-height: 775px; padding-top: 53px; background: rgba(254,253,250,.78); }
+.private-access .account-form .eyebrow { line-height: 27px; margin: 0 0 28px; font-size: 13px; color: #a7834b; }
+.private-access .account-form h1 { font-family: 'Listing El Messiri', 'Listing Noto Sans Arabic', sans-serif; font-size: 40px; font-weight: 700; line-height: 1.6; margin: 0 0 9px; }
+.private-access .account-intro { font-size: 15px; margin: 0 0 42px; }
+.private-access .account-form label { font-size: 13px; font-weight: 500; }
+.private-access .account-form input { height: 58px; font-size: 14px; font-weight: 400; background: rgba(255,255,255,.78); }
+.private-access .account-form button { min-height: 54px; font-size: 14px; }
+.private-access .account-form button.primary { background: #e7d8bc; border-color: #241f1b; }
+@media (max-width: 800px) {
+  .account-screen.private-access { min-height: 0; padding-bottom: 40px; }
+  .private-access .account-form { min-height: 0; padding: 28px; }
+}
+@media (max-width: 520px) {
+  .private-access .account-form { padding: 24px 20px; }
+  .private-access .account-form h1 { font-size: 32px; }
+}
