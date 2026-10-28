@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 export default function ListingForm({ api, token, item, onSaved, onCancel }) {
   const [categories, setCategories] = useState([]);
@@ -6,6 +6,18 @@ export default function ListingForm({ api, token, item, onSaved, onCancel }) {
   const [categoryError, setCategoryError] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [step, setStep] = useState(item ? 1 : 0);
+  const [categoryId, setCategoryId] = useState(item?.category_id ?? '');
+  const [preview, setPreview] = useState({});
+
+  function next(event) {
+    event.preventDefault();
+    const form = event.currentTarget.form;
+    const fields = form.querySelectorAll('[data-step="' + step + '"] input, [data-step="' + step + '"] textarea');
+    if ([...fields].some(field => !field.reportValidity())) return;
+    setPreview(Object.fromEntries(new FormData(form)));
+    setStep(step + 1);
+  }
 
   useEffect(() => {
     let active = true;
@@ -81,6 +93,7 @@ export default function ListingForm({ api, token, item, onSaved, onCancel }) {
         throw new Error('تعذّر تأكيد حفظ الإعلان والصور؛ تحققي من إعلاناتك قبل إعادة الإرسال');
       }
       form.reset();
+      if (!item) { setStep(0); setCategoryId(''); }
       setMessage('تم إرسال الإعلان، بانتظار مراجعة المشرف');
       onSaved?.(result.data);
     } catch (error) {
@@ -99,18 +112,20 @@ export default function ListingForm({ api, token, item, onSaved, onCancel }) {
 
   return (
     <section className="panel listing-form">
-      <h2>{item ? 'تعديل الإعلان المرفوض' : 'إعلان جديد'}</h2>
+      <h2>{['اختر القسم', item ? 'تعديل الإعلان المرفوض' : 'تفاصيل الإعلان', 'صور السلعة', 'مراجعة الإعلان'][step]}</h2>
       <form onSubmit={submitListing}>
         <fieldset disabled={busy}>
-          <label>القسم<select name="categoryId" required defaultValue={item?.category_id ?? ''}>
-            <option value="" disabled>اختاري القسم</option>
-            {categories.filter(category => !item || category.id === item.category_id).map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
-          </select></label>
-          <label>عنوان الإعلان<input name="title" required maxLength={240} defaultValue={item?.title ?? ''} /></label>
-          <label>الوصف<textarea name="description" required maxLength={20000} rows={4} defaultValue={item?.description ?? ''} /></label>
+          <input type="hidden" name="categoryId" value={categoryId} />
+          {step === 0 && <div className="category-options">{categories.map(category => <button type="button" key={category.id} onClick={() => { setCategoryId(category.id); setStep(1); }}>{category.name}</button>)}</div>}
+          <div data-step="1" hidden={step !== 1}>
+          <label>عنوان الإعلان<input name="title" required={step === 1} maxLength={240} defaultValue={item?.title ?? ''} /></label>
+          <label>القسم<input value={categories.find(category => category.id === categoryId)?.name || ''} readOnly /></label>
+          <label>وصف المعروض<textarea name="description" required={step === 1} maxLength={20000} rows={4} defaultValue={item?.description ?? ''} /></label>
           <label>مواصفات القسم — اختيارية<textarea name="specifications" rows={3} defaultValue={specifications} placeholder={'كل مواصفة بسطر، مثل:\nاللون: بني'} /></label>
-          <label>{item ? 'صور بديلة — اتركيها فارغة للاحتفاظ بالصور الحالية' : 'الصور — من صورة إلى 6'}<input name="images" type="file" accept="image/jpeg,image/png,image/webp" multiple required={!item} /></label>
-          <button type="submit">{busy ? 'جاري الإرسال…' : item ? 'إعادة الإرسال للمراجعة' : 'إرسال الإعلان'}</button>
+          </div>
+          <div data-step="2" hidden={step !== 2}><label>{item ? 'صور بديلة — اتركيها فارغة للاحتفاظ بالصور الحالية' : 'الصور — من صورة إلى 6'}<input name="images" type="file" accept="image/jpeg,image/png,image/webp" multiple required={!item && step === 2} /></label></div>
+          {step === 3 && <div className="listing-preview"><h3>{preview.title}</h3><p>{categories.find(category => category.id === categoryId)?.name}</p><p>{preview.description}</p><p>{preview.specifications}</p></div>}
+          {step > 0 && <div className="actions"><button type="button" onClick={() => setStep(step - 1)}>العودة</button>{step < 3 ? <button className="primary" type="button" onClick={next}>{step === 1 ? 'متابعة إلى الصور' : 'مراجعة الإعلان'}</button> : <button className="primary" type="submit">{busy ? 'جاري الإرسال…' : item ? 'إعادة الإرسال للمراجعة' : 'إرسال الإعلان'}</button>}</div>}
           {item && <button type="button" onClick={onCancel}>إلغاء التعديل</button>}
         </fieldset>
       </form>

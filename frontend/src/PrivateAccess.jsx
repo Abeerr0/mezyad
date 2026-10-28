@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 
-export default function PrivateAccess({ api, token, onOpen }) {
+export default function PrivateAccess({ api, token, onOpen, onBack }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -43,16 +43,21 @@ export default function PrivateAccess({ api, token, onOpen }) {
   }
 
   return (
-    <section className="panel listing-form">
-      <h2>الدخول لمزاد خاص</h2>
+    <section className="account-screen private-access">
+      <div className="account-form">
+      <p className="eyebrow">مزاد خاص</p>
+      <h1>الدخول إلى المزاد الخاص</h1>
+      <p className="account-intro">أدخل رمز الوصول الذي شاركه معك البائع.</p>
       <form onSubmit={enter}>
         <fieldset disabled={busy}>
           <label>معرّف المزاد<input name="auctionId" required /></label>
-          <label>رمز الدخول<input name="accessCode" required /></label>
-          <button type="submit">دخول المزاد</button>
+          <label>رمز الوصول<input name="accessCode" placeholder="أدخل رمز المزاد" required /></label>
+          <button className="primary" type="submit">التحقق من الرمز</button>
+          <button type="button" onClick={onBack}>العودة إلى المزادات</button>
         </fieldset>
       </form>
       <p role="status">{message}</p>
+      </div>
     </section>
   );
 }

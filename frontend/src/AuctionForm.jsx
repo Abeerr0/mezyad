@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 export default function AuctionForm({ api, token, item }) {
   const [open, setOpen] = useState(false);
@@ -61,9 +61,10 @@ export default function AuctionForm({ api, token, item }) {
 
   return (
     <section className="listing-form">
-      <h4>إنشاء مزاد للإعلان: {item.title}</h4>
+      <h2>إعداد المزاد</h2>
       {!auction && !duplicate && <form onSubmit={createAuction}>
         <fieldset disabled={busy}>
+          <label>الإعلان المعتمد<input value={item.title} readOnly /></label>
           <label>نوع المزاد<select name="visibility" defaultValue="PUBLIC">
             <option value="PUBLIC">عام</option>
             <option value="PRIVATE">خاص</option>
@@ -72,7 +73,7 @@ export default function AuctionForm({ api, token, item }) {
           <label>أقل زيادة بالريال<input name="minimumIncrement" type="number" min="0.01" max="999999999999.99" step="0.01" required /></label>
           <label>بداية المزاد — بتوقيت جهازك<input name="startTime" type="datetime-local" required /></label>
           <label>نهاية المزاد — بتوقيت جهازك<input name="endTime" type="datetime-local" required /></label>
-          <button type="submit">{busy ? 'جاري الإنشاء…' : 'إنشاء المزاد'}</button>
+          <button className="primary" type="submit">{busy ? 'جاري الإنشاء…' : 'إنشاء المزاد'}</button>
           <button type="button" onClick={() => setOpen(false)}>إلغاء</button>
         </fieldset>
       </form>}
