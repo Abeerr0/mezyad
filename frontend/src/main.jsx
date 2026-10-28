@@ -121,7 +121,7 @@ async function logout() {
 }
 
 useEffect(() => {
-  if (!auctionId) return;
+  if (page !== 'auctions' || !auctionId) return;
 
   let active = true;
   let timer;
@@ -150,7 +150,7 @@ useEffect(() => {
     active = false;
     clearTimeout(timer);
   };
-}, [auctionId, token]);
+}, [page, auctionId, token]);
  const categories = ['الكل', ...new Set(auctions.map(a => a.category_name).filter(Boolean))];
  const activeCategory = categories.includes(category) ? category : 'الكل';
  const shownAuctions = auctions.filter(a => activeCategory === 'الكل' || a.category_name === activeCategory);
@@ -201,7 +201,7 @@ useEffect(() => {
       setAuctionId(null);
       setSelected(null);
     }}>
-      إغلاق
+      العودة إلى المزادات
     </button>
 
     {detailsLoading ? (
@@ -210,7 +210,7 @@ useEffect(() => {
       <p role="alert">{detailsError}</p>
     ) : selected && selected.id === auctionId ? (
       <>
-        <div className="details-summary"><h2>{selected.title}</h2><p>السعر الحالي: {selected.current_price} ريال</p><p>بداية المزاد: {new Date(selected.start_time).toLocaleString('ar-SA')}</p><p>نهاية المزاد: {new Date(selected.end_time).toLocaleString('ar-SA')}</p></div><div className="details-images">
+        <div className="details-summary"><h2>{selected.title}</h2><p className="details-price"><span>السعر الحالي</span><strong>{Number(selected.current_price).toLocaleString('en-US')} ر.س</strong></p><p>بداية المزاد: {new Date(selected.start_time).toLocaleString('ar-SA')}</p><p>نهاية المزاد: {new Date(selected.end_time).toLocaleString('ar-SA')}</p></div><div className="details-images">
 
         {selected.images?.length ? (
           selected.images.map(image => (
