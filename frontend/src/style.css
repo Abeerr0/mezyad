@@ -1,1 +1,326 @@
-:root{font-family:system-ui,'Segoe UI',sans-serif;color:#322a22;background:#f8f5ef}*{box-sizing:border-box}body{margin:0}main{max-width:1080px;margin:auto;padding:24px}header{border-bottom:1px solid #d7c8ae;padding:16px 0}h1{font-size:2.5rem;color:#795b3c;margin:0}header p{color:#776956}.hero{padding:40px 0}.hero h2{font-size:2rem}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}article,.panel{background:#fff;border:1px solid #e6ddce;border-radius:12px;padding:24px;box-shadow:0 4px 16px #00000008}.panel{margin-top:28px}button{background:#795b3c;color:white;border:0;border-radius:8px;padding:12px 20px;cursor:pointer;margin:4px}button:hover{background:#60462c}input{display:block;width:100%;padding:12px;margin:12px 0;border:1px solid #cbbda9;border-radius:8px}.actions{display:flex;flex-wrap:wrap}footer{text-align:center;color:#7a6f63;padding:45px}.listing-form fieldset{border:0;padding:0;margin:0;min-width:0}.listing-form label{display:block;margin:12px 0}.listing-form select,.listing-form textarea{display:block;width:100%;font:inherit;padding:12px;margin:8px 0;border:1px solid #cbbda9;border-radius:8px}.listing-form button:disabled{opacity:.6;cursor:wait}
+:root { font-family: 'Noto Sans Arabic', 'Segoe UI', sans-serif; color: #292520; background: #fcfbf8; font-synthesis: none; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { max-width: 1440px; margin: auto; padding: 0 76px 80px; }
+header { display: flex; align-items: center; justify-content: space-between; min-height: 82px; border-bottom: 1px solid #d8cbb8; background: #fff; }
+.brand { width: 178px; height: 62px; object-fit: contain; }
+nav { display: flex; gap: 36px; flex-wrap: wrap; align-items: center; }
+nav button { border: 0; padding: 8px 0; background: transparent; font-size: 14px; }
+.account-screen { margin: 0 -76px; padding: 61px 70px 36px; background-size: cover; background-position: center top; min-height: 902px; }
+.account-screen.login { background-image: url('/design/login-background.jpg'); }
+.account-screen.private-access { background-image: url('/design/private-background.png'); }
+.account-screen.register { background-image: url('/design/signup-background.jpg'); min-height: 1022px; }
+.account-form { width: 680px; max-width: 100%; min-height: 776px; padding: 60px 34px 56px 66px; background: rgba(252,251,248,.78); }
+.account-form .eyebrow { font-size: 12px; color: #b69a70; margin: 0 0 28px; }
+.account-form h1 { font-size: 42px; font-weight: 500; margin: 0 0 20px; }
+.account-intro { font-size: 14px; color: #6d655d; margin-bottom: 48px; }
+.account-form label { font-size: 14px; margin-top: 24px; }
+.account-form input { height: 58px; background: rgba(255,255,255,.85); }
+.account-form button { display: block; width: 100%; height: 54px; margin-top: 18px; padding: 10px; }
+.account-screen + footer { margin-top: 0; }
+.primary { background: #e8d9bb; border-color: #292520; }
+footer { margin: 70px -76px -80px; padding: 34px 76px; background: #ebe6dd; font-size: 14px; }
+footer > div { display: flex; justify-content: space-between; gap: 20px; margin-top: 100px; padding-top: 20px; border-top: 1px solid #b7ab99; font-size: 12px; }
+@media (max-width: 800px) { .account-screen { margin: 0 -24px; padding: 40px 24px; } .account-form { margin: auto; padding: 28px; } .account-form h1 { font-size: 34px; } footer { margin: 48px -24px -48px; padding: 28px 24px; } }
+.hero { padding: 64px 0 54px; }
+.hero h2, h2 { font-weight: 500; }
+.hero h2 { font-size: 42px; margin: 24px 0 16px; }
+.hero p { color: #6d655d; font-size: 14px; }
+.hero .breadcrumb { color: #b69a70; font-size: 12px; }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 72px 32px; }
+article { min-width: 0; }
+.cards article > img { display: block; width: 100%; height: 310px; object-fit: cover; }
+.cards h3 { font-size: 20px; font-weight: 500; margin: 20px 0 28px; }
+.cards article > p { color: #6d655d; font-size: 14px; }
+.cards button { width: 100%; }
+.panel { margin-top: 64px; padding: 32px; border: 0; background: #fff; }
+.panel > h2 { font-size: 36px; margin: 0 0 40px; }
+.listing-form { max-width: 1000px; }
+.listing-form form { max-width: 880px; }
+.category-options { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+.category-options button { min-height: 120px; background: #fcfbf8; font-size: 20px; }
+.listing-form .actions { justify-content: space-between; margin-top: 40px; }
+.listing-form .actions button { min-width: 220px; }
+.listing-preview p { white-space: pre-line; }
+.details-page { display: grid; grid-template-columns: 1fr 1.8fr; gap: 32px 54px; padding-top: 64px; }
+.details-page > button { grid-column: 1 / -1; justify-self: start; }
+.details-summary { grid-column: 1; grid-row: 2; }
+.details-summary h2 { font-size: 32px; margin: 0 0 48px; }
+.details-summary p { border-top: 1px solid #d8cbb8; padding: 22px 0; }
+.details-images { grid-column: 2; grid-row: 2; display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; align-content: start; }
+.details-images img { width: 100%; height: 140px; object-fit: cover; }
+.details-images img:first-child { grid-column: 1 / -1; height: 520px; }
+.details-description { grid-column: 1 / -1; min-height: 220px; }
+.details-description h3 { border-bottom: 1px solid #d8cbb8; padding-bottom: 20px; font-weight: 500; }
+@media (max-width: 800px) { .details-page { display: block; } .details-images img:first-child { height: 320px; } }
+.panel article { border-bottom: 1px solid #d8cbb8; padding: 24px 0; }
+.own-listings, .review-list { background: transparent; padding: 0; }
+.own-listings article, .review-list article { min-height: 350px; padding: 48px 0; display: flow-root; }
+.listing-photo { float: left; width: 350px; max-width: 45%; height: 320px; object-fit: cover; margin: 0 40px 24px 0; }
+.own-listings article > button, .review-list article > button { margin-top: 48px; min-width: 240px; }
+.review-list form { margin-top: 32px; }
+.review-list form button:first-of-type { background: #e8d9bb; }
+@media (max-width: 520px) { .listing-photo { float: none; width: 100%; max-width: 100%; margin: 0 0 24px; } }
+button, input, select, textarea { font: inherit; border-radius: 0; }
+button { border: 1px solid #d8cbb8; background: #f8f5ef; color: #292520; padding: 16px 24px; cursor: pointer; }
+button:hover { background: #e8d9bb; }
+button:disabled { opacity: .6; cursor: wait; }
+input, select, textarea { width: 100%; display: block; border: 1px solid #d8cbb8; background: #fff; color: inherit; padding: 14px; margin: 10px 0 20px; }
+label { display: block; margin: 16px 0; }
+fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
+.actions { display: flex; gap: 12px; flex-wrap: wrap; }
+[role='alert'] { color: #953e32; }
+@media (max-width: 800px) { main { padding: 0 24px 48px; } .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 20px; } .cards article > img { height: 220px; } nav { gap: 18px; } }
+@media (max-width: 520px) { .cards { grid-template-columns: 1fr; } .hero h2 { font-size: 32px; } .panel { padding: 20px; } .brand { width: 130px; } }
+
+.listing-editor { max-width: none; }
+@font-face { font-family: 'Listing Noto Sans Arabic'; src: url('/design/NotoSansArabic.ttf') format('truetype'); font-weight: 100 900; font-display: swap; }
+.listing-editor { padding: 0; background: transparent; font-family: 'Listing Noto Sans Arabic', 'Segoe UI', sans-serif; }
+.listing-editor form { max-width: none; background: #fff; padding: 32px 48px 48px; }
+.listing-editor > h2 { font-weight: 700; }
+.listing-editor .listing-file-input { border-style: dashed; background: #fcfbf8; }
+.listing-editor [hidden] { display: none !important; }
+.listing-editor label { margin: 24px 0; font-size: 14px; }
+.listing-editor input, .listing-editor textarea { min-height: 58px; }
+.listing-editor button:focus-visible, .listing-editor input:focus-visible, .listing-editor textarea:focus-visible { outline: 2px solid #b69a70; outline-offset: 3px; }
+.listing-editor .actions { gap: 16px; }
+.listing-editor .breadcrumb { color: #b69a70; font-size: 12px; margin: 0 0 26px; }
+.listing-editor .page-intro { color: #6d655d; font-size: 14px; margin: 0 0 48px; }
+.listing-editor [role='status'], .listing-editor [role='alert'] { overflow-wrap: anywhere; }
+.listing-editor [role='status']:empty { display: none; }
+@font-face { font-family: 'Listing El Messiri'; src: url('https://fonts.gstatic.com/s/elmessiri/v25/K2FhfZBRmr9vQ1pHEey6GIGo8_pv3myYjuUXfK5g.ttf') format('truetype'); font-style: normal; font-weight: 700; font-display: swap; }
+.listing-editor .listing-review-form { padding: 0; background: transparent; }
+.listing-editor.listing-visual-step { color: #241f1b; margin-top: 59px; }
+.listing-editor.listing-visual-step > .breadcrumb { color: #a7834b; line-height: 26px; margin: 0 22px 15px 0; }
+.listing-editor.listing-visual-step > h2 { font-family: 'Listing El Messiri', 'Listing Noto Sans Arabic', sans-serif; font-size: 42px; line-height: 66px; margin: 0 22px 13px 0; }
+.listing-editor.listing-visual-step > .page-intro { font-size: 15px; min-height: 32px; margin: 0 22px 69px 0; }
+.listing-editor .listing-photos-form { background: transparent; padding: 0; }
+.listing-editor .listing-photo-layout { background: #fff; padding: 30px; }
+.listing-editor .listing-photo-picker { position: relative; }
+.listing-editor .listing-file-input { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; margin: 0; opacity: 0; }
+.listing-editor .listing-photo-picker:focus-within + .listing-photo-gallery { outline: 2px solid #b69a70; outline-offset: 3px; }
+.listing-editor .listing-photo-gallery { display: grid; grid-template-columns: minmax(0, 653fr) minmax(0, 541fr); gap: 32px 33px; align-content: start; direction: ltr; }
+.listing-editor .listing-photo-gallery figure { min-width: 0; margin: 0; }
+.listing-editor .listing-photo-gallery figure:first-child { grid-column: 1; grid-row: 1 / 3; }
+.listing-editor .listing-image-slot { display: grid; place-items: center; height: 204px; margin: 0; background: #eee8de; color: #6d655d; font-size: 15px; cursor: pointer; direction: rtl; }
+.listing-editor .listing-photo-gallery figure:first-child .listing-image-slot { height: 440px; }
+.listing-editor .listing-photo-gallery img { display: block; width: 100%; height: 100%; min-height: 0; object-fit: contain; background: #eee8de; }
+.listing-editor .listing-photo-gallery figure { position: relative; }
+.listing-editor .listing-photo-gallery .listing-remove-image { position: absolute; right: 8px; bottom: 8px; width: auto; padding: 4px 8px; font-size: 12px; background: #fcfbf8; direction: rtl; }
+.listing-editor .listing-photo-note { color: #6d655d; font-size: 14px; margin: 9px 31px 19px; }
+.listing-editor .listing-add-more { width: fit-content; margin: 8px 0; color: #6d655d; font-size: 14px; text-decoration: underline; cursor: pointer; }
+.listing-editor .listing-photos-form .actions { flex-direction: row-reverse; margin: 19px 31px 0 30px; }
+.listing-editor .listing-photos-form .actions button { width: 403px; max-width: 45%; min-width: 0; height: 54px; padding: 10px 16px; font-size: 14px; }
+.listing-editor.listing-visual-step .primary { background: #e7d8bc; border-color: #241f1b; }
+.listing-editor .listing-preview { display: grid; grid-template-columns: minmax(0, 612fr) minmax(0, 566fr); gap: 79px; padding: 11px 31px 0 0; }
+.listing-editor .listing-preview > div { min-width: 0; }
+.listing-editor .listing-preview-details h3 { font-family: 'Listing El Messiri', 'Listing Noto Sans Arabic', sans-serif; font-size: 32px; font-weight: 700; line-height: 50px; min-height: 71px; margin: 24px 0 40px; padding-bottom: 20px; border-bottom: 1px solid #d8cbb8; }
+.listing-editor .listing-preview-details > p { color: #241f1b; font-size: 16px; margin: 0 0 24px; white-space: pre-line; overflow-wrap: anywhere; }
+.listing-editor .listing-preview-details > .breadcrumb { color: #a7834b; font-size: 13px; padding-top: 10px; }
+.listing-editor .listing-preview-details > button { display: block; width: 424px; max-width: 100%; min-height: 54px; margin-top: 64px; padding: 10px 16px; font-size: 14px; }
+.listing-editor .listing-preview-photos .listing-photo-gallery { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.listing-editor .listing-preview-photos figure:first-child { grid-column: 1 / -1; grid-row: auto; }
+.listing-editor .listing-preview-photos img { aspect-ratio: 1.4; height: auto; }
+.listing-editor .listing-preview-photos figure:first-child img { aspect-ratio: 566 / 495; }
+.listing-editor .listing-review-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin-top: 29px; }
+.listing-editor .listing-review-actions > button { width: 425px; max-width: 100%; min-height: 54px; padding: 10px 16px; font-size: 14px; }
+.listing-editor .listing-review-actions .listing-back-photos { width: auto; min-height: 0; padding: 0; background: transparent; border: 0; text-decoration: underline; color: #6d655d; }
+@media (max-width: 800px) {
+  .listing-editor.listing-visual-step > h2 { margin-inline-start: 0; font-size: 30px; line-height: 1.6; }
+  .listing-editor.listing-visual-step > .page-intro { margin: 0 0 32px; }
+  .listing-editor .listing-photos-form { padding: 0; }
+  .listing-editor .listing-photo-layout { padding: 16px; margin: 0; }
+  .listing-editor .listing-photo-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .listing-editor .listing-photo-gallery figure:first-child { grid-column: 1 / -1; grid-row: auto; }
+  .listing-editor .listing-image-slot { height: 140px; font-size: 12px; }
+  .listing-editor .listing-photo-gallery figure:first-child .listing-image-slot { height: auto; min-height: 220px; aspect-ratio: 653 / 440; }
+  .listing-editor .listing-photos-form .actions button { width: 100%; max-width: 100%; }
+  .listing-editor .listing-photos-form .actions { margin-inline: 0; }
+  .listing-editor .listing-photo-note { margin-inline: 0; }
+  .listing-editor .listing-preview { grid-template-columns: minmax(0, 1fr); gap: 32px; padding: 0; }
+  .listing-editor .listing-preview-details h3 { font-size: 26px; }
+  .listing-editor .listing-preview-details > button { margin-top: 32px; }
+}
+
+@media (max-width: 520px) { .listing-editor form { padding: 24px 16px; } }
+
+.account-screen.register { direction: rtl; color: #241f1b; font-family: 'Listing Noto Sans Arabic', 'Segoe UI', sans-serif; padding-bottom: 66px; }
+.register .account-form { min-height: 925px; padding-top: 25px; background: rgba(254,253,250,.78); }
+.register .account-form .eyebrow { min-height: 27px; line-height: 27px; font-size: 13px; color: #a7834b; margin: 0 0 23px; }
+.register .account-form h1 { font-family: 'Listing El Messiri', 'Listing Noto Sans Arabic', sans-serif; font-size: 40px; font-weight: 700; line-height: 63px; margin: 0 0 9px; }
+.register .account-intro { min-height: 32px; font-size: 15px; margin: 0 0 42px; }
+.register fieldset { display: grid; gap: 16px; }
+.register .account-form label { margin: 0; font-size: 13px; font-weight: 500; line-height: 27px; }
+.register .account-form input { height: 58px; min-width: 0; margin: 5px 0 0; font-size: 14px; font-weight: 400; background: rgba(255,255,255,.78); }
+.register .account-form input::placeholder { color: #6d655d; opacity: 1; }
+.register .account-form button { height: 54px; min-height: 54px; margin: 2px 0 0; font-size: 14px; }
+.register .account-form button.primary { margin-top: 20px; background: #e7d8bc; border-color: #241f1b; }
+@media (max-width: 800px) {
+  .account-screen.register { min-height: 0; padding-bottom: 40px; }
+  .register .account-form { min-height: 0; padding: 28px; }
+}
+@media (max-width: 520px) {
+  .register .account-form h1 { font-size: 32px; line-height: 1.6; }
+  .register .account-form { padding: 24px 20px; }
+}
+
+.account-screen.login { direction: rtl; color: #241f1b; font-family: 'Listing Noto Sans Arabic', 'Segoe UI', sans-serif; padding-bottom: 66px; }
+.login .account-form { min-height: 775px; padding-top: 53px; background: rgba(254,253,250,.78); }
+.login .account-form .eyebrow { min-height: 27px; line-height: 27px; margin: 0 0 28px; font-size: 13px; color: #a7834b; }
+.login .account-form h1 { font-family: 'Listing El Messiri', 'Listing Noto Sans Arabic', sans-serif; font-size: 40px; font-weight: 700; line-height: 63px; margin: 0 0 9px; }
+.login .account-intro { min-height: 32px; font-size: 15px; margin: 0 0 60px; }
+.login fieldset { display: grid; }
+.login .account-form label { margin: 0 0 24px; font-size: 13px; font-weight: 500; line-height: 27px; }
+.login .account-form label:last-of-type { margin-bottom: 58px; }
+.login .account-form input { height: 58px; min-width: 0; margin: 5px 0 0; font-size: 14px; font-weight: 400; background: rgba(255,255,255,.78); }
+.login .account-form input::placeholder { color: #6d655d; opacity: 1; }
+.login .account-form button { height: 54px; min-height: 54px; margin: 0; font-size: 14px; }
+.login .account-form button.primary { background: #e7d8bc; border-color: #241f1b; }
+.login .account-signup-prompt { line-height: 30px; margin: 34px 0 13px; color: #6d655d; font-size: 14px; }
+.login [role='status']:empty { display: none; }
+@media (max-width: 800px) {
+  .account-screen.login { min-height: 0; padding-bottom: 40px; }
+  .login .account-form { min-height: 0; padding: 28px; }
+}
+@media (max-width: 520px) {
+  .login .account-form h1 { font-size: 32px; line-height: 1.6; }
+  .login .account-form { padding: 24px 20px; }
+}
+
+@font-face { font-family: 'Browse El Messiri'; src: url('https://fonts.gstatic.com/s/elmessiri/v25/K2FhfZBRmr9vQ1pHEey6GIGo8_pv3myYjuXwe65g.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
+.auction-browser { direction: rtl; color: #241f1b; font-family: 'Listing Noto Sans Arabic', 'Segoe UI', sans-serif; }
+.auction-browser .hero { padding: 60px 19px 0; }
+.auction-browser .hero .breadcrumb { line-height: 25px; margin: 0; color: #a7834b; }
+.auction-browser .hero h2 { font-family: 'Browse El Messiri', 'Listing Noto Sans Arabic', sans-serif; font-size: 52px; font-weight: 400; line-height: 81px; margin: 20px 0 -3px; }
+.auction-browser .hero > p:last-child { line-height: 30px; margin: 0; }
+.auction-browser .auction-filters { display: flex; flex-wrap: wrap; gap: 32px; margin: 59px 0 77px; }
+.auction-browser .auction-filters button { flex: 1; min-width: 120px; min-height: 52px; padding: 10px 16px; font-size: 14px; }
+.auction-browser .auction-filters button[aria-pressed='true'] { background: #e7d8bc; border-color: #241f1b; }
+.auction-browser .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 72px 32px; }
+.auction-browser .cards > p { grid-column: 1 / -1; }
+.auction-browser [role='status'], .auction-browser [role='alert'] { overflow-wrap: anywhere; }
+.auction-browser .cards article > img, .auction-browser .no-image { display: grid; place-items: center; width: 100%; height: 310px; object-fit: cover; margin: 0; background: #f1eee7; color: #6d655d; }
+.auction-browser .no-image { font-size: 16px; }
+.auction-browser .cards article { min-width: 0; overflow-wrap: anywhere; }
+.auction-browser .card-title { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; border-bottom: 1px solid #d8cbb8; margin: 14px 0 17px; padding-bottom: 17px; }
+.auction-browser .card-title h3 { font-family: 'Browse El Messiri', 'Listing Noto Sans Arabic', sans-serif; font-size: 22px; font-weight: 400; line-height: 34px; margin: 0; }
+.auction-browser .card-title > span { color: #a7834b; font-size: 12px; flex-shrink: 0; }
+.auction-browser .card-price { margin: 0; color: #241f1b; font-size: 16px; }
+.auction-browser .card-price span { display: block; color: #6d655d; font-size: 12px; line-height: 25px; }
+.auction-browser .card-price strong { display: block; font-size: 18px; font-weight: 500; line-height: 38px; }
+.auction-browser .auction-status { color: #6d655d; font-size: 13px; line-height: 25px; margin: 0 0 12px; }
+.auction-browser .cards button { min-height: 52px; padding: 10px 16px; font-size: 14px; }
+@media (max-width: 800px) {
+  .auction-browser .hero { padding: 40px 0 0; }
+  .auction-browser .hero h2 { font-size: 36px; line-height: 1.6; }
+  .auction-browser .auction-filters { gap: 12px; margin: 32px 0; }
+  .auction-browser .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 20px; }
+  .auction-browser .cards article > img, .auction-browser .no-image { height: 220px; }
+}
+@media (max-width: 520px) {
+  .auction-browser .cards { grid-template-columns: minmax(0, 1fr); }
+  .auction-browser .hero h2 { font-size: 32px; }
+}
+
+
+.details-page .details-summary h2 { font-family: 'Browse El Messiri', 'Listing Noto Sans Arabic', sans-serif; font-size: 38px; font-weight: 400; line-height: 59px; color: #241f1b; margin: 0 0 24px; }
+.details-page .details-price span { display: block; color: #6d655d; font-size: 12px; }
+.details-page .details-price strong { display: block; font-size: 26px; font-weight: 500; margin-top: 16px; }
+.details-page .details-images { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.details-page .details-images img:first-child { height: auto; aspect-ratio: 1.16; }
+@media (max-width: 800px) { .details-page .details-summary { margin-top: 32px; } .details-page .details-images img:first-child { height: 320px; } }
+
+
+.own-listings { margin-top: 64px; padding: 0; border: 0; background: transparent; }
+.own-listings > h2 { font-size: 40px; font-weight: 700; margin: 0 0 28px; }
+.own-listings > .breadcrumb { color: #b69a70; font-size: 12px; margin: 0 0 26px; }
+.own-listings article { display: grid; align-items: center; min-height: 0; margin-top: 16px; direction: ltr; grid-template-columns: 350px minmax(0,1fr); grid-template-rows: 1fr auto; gap: 24px 40px; padding: 24px 0; background: transparent; border: 0; border-bottom: 1px solid #d8cbb8; }
+.own-listings article > .listing-photo { display: block; float: none; width: 100%; max-width: none; object-fit: cover; margin: 0; grid-column: 1; grid-row: 1 / span 2; height: 320px; }
+.own-listings .listing-info { direction: rtl; grid-column: 2; grid-row: 1; min-width: 0; overflow-wrap: anywhere; }
+.own-listings .listing-info h3 { font-size: 26px; font-weight: 600; margin: 0 0 12px; }
+.own-listings .listing-info p { font-size: 14px; color: #6d655d; }
+.own-listings .listing-info .listing-status { color: #b69a70; }
+.own-listings article > button { direction: rtl; grid-column: 2; grid-row: 2; justify-self: end; width: min(100%,320px); margin-top: 0; min-width: 0; background: #e8d9bb; border-color: #292520; }
+.own-listings [role='status'], .own-listings [role='alert'] { overflow-wrap: anywhere; }
+.own-listings [role='status']:empty { display: none; }
+@media (max-width: 800px) { .own-listings article { grid-template-columns: minmax(0,1fr); grid-template-rows: auto; gap: 16px; } .own-listings article > .listing-photo, .own-listings .listing-info, .own-listings article > button { grid-column: 1; grid-row: auto; } .own-listings article > .listing-photo { height: 220px; } .own-listings article > button { width: 100%; } }
+@media (max-width: 520px) { .own-listings > h2 { font-size: 30px; } }
+
+
+.own-listings .auction-form { direction: rtl; grid-column: 1 / -1; padding-top: 32px; width: 100%; max-width: 1000px; }
+.auction-form > h2 { font-size: 40px; font-weight: 700; margin: 0 0 28px; }
+.auction-form .breadcrumb { color: #b69a70; font-size: 12px; margin: 0 0 26px; }
+.auction-form .page-intro { color: #6d655d; font-size: 14px; margin: 0 0 48px; }
+.auction-form form { max-width: none; background: #fff; padding: 32px 48px 48px; }
+.auction-form label { display: block; margin: 24px 0; font-size: 14px; }
+.auction-form input, .auction-form select { min-height: 58px; }
+.auction-form input[type='number'], .auction-form input[type='datetime-local'] { direction: ltr; text-align: right; }
+.auction-form [role='status'] { overflow-wrap: anywhere; }
+.auction-form [role='status']:empty { display: none; }
+@media (max-width: 520px) { .auction-form > h2 { font-size: 30px; } .auction-form form { padding: 24px 16px; } }
+
+
+.private-access .account-form label { margin: 24px 0; }
+.private-access .account-form input { min-height: 58px; }
+.private-access .account-form button { margin-top: 32px; }
+.private-access .account-form button { height: auto; }
+.private-access [role='status'] { overflow-wrap: anywhere; }
+.private-access [role='status']:empty { display: none; }
+.account-screen.private-access { direction: rtl; color: #241f1b; font-family: 'Listing Noto Sans Arabic', 'Segoe UI', sans-serif; padding-bottom: 66px; }
+.private-access .account-form { min-height: 775px; padding-top: 53px; background: rgba(254,253,250,.78); }
+.private-access .account-form .eyebrow { line-height: 27px; margin: 0 0 28px; font-size: 13px; color: #a7834b; }
+.private-access .account-form h1 { font-family: 'Listing El Messiri', 'Listing Noto Sans Arabic', sans-serif; font-size: 40px; font-weight: 700; line-height: 1.6; margin: 0 0 9px; }
+.private-access .account-intro { font-size: 15px; margin: 0 0 42px; }
+.private-access .account-form label { font-size: 13px; font-weight: 500; }
+.private-access .account-form input { height: 58px; font-size: 14px; font-weight: 400; background: rgba(255,255,255,.78); }
+.private-access .account-form button { min-height: 54px; font-size: 14px; }
+.private-access .account-form button.primary { background: #e7d8bc; border-color: #241f1b; }
+@media (max-width: 800px) {
+  .account-screen.private-access { min-height: 0; padding-bottom: 40px; }
+  .private-access .account-form { min-height: 0; padding: 28px; }
+}
+@media (max-width: 520px) {
+  .private-access .account-form { padding: 24px 20px; }
+  .private-access .account-form h1 { font-size: 32px; }
+}
+
+
+.review-list { padding: 0; background: transparent; font-family: 'Listing Noto Sans Arabic', 'Segoe UI', sans-serif; }
+.review-list > h2 { font-size: 40px; font-weight: 700; margin: 0 0 28px; }
+.review-list > .breadcrumb { color: #b69a70; font-size: 12px; margin: 0 0 26px; }
+.review-list > .page-intro { color: #6d655d; font-size: 14px; margin: 0 0 48px; }
+.review-list [role='status'], .review-list [role='alert'] { overflow-wrap: anywhere; }
+.review-list [role='status']:empty { display: none; }
+.review-list button:focus-visible, .review-list textarea:focus-visible { outline: 2px solid #b69a70; outline-offset: 3px; }
+.review-list label { margin: 24px 0; font-size: 14px; }
+.review-list textarea { min-height: 58px; }
+.review-list .review-card { min-height: 0; display: grid; grid-template-columns: 168px minmax(0,1fr) 220px; gap: 24px; align-items: center; background: #f8f5ef; border: 1px solid #d8cbb8; padding: 24px; margin-top: 16px; }
+.review-list .listing-photo { float: none; width: 100%; max-width: none; height: 168px; object-fit: cover; margin: 0; }
+.review-list .listing-info { grid-column: 2; min-width: 0; overflow-wrap: anywhere; }
+.review-list .listing-info h3 { font-size: 26px; font-weight: 600; margin: 0 0 12px; }
+.review-list .listing-info p { font-size: 14px; color: #6d655d; }
+.review-list .listing-info .listing-status { color: #b69a70; }
+.review-list .review-card > .review-images { grid-column: 1; grid-row: 1; }
+.review-list .review-card > button { grid-column: 3; grid-row: 1; background: #e8d9bb; border-color: #292520; margin-top: 0; min-width: 0; }
+.review-list .review-detail { min-height: 0; padding: 0; border: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-top: 48px; }
+.review-list .review-detail > .listing-info { grid-column: 1; }
+.review-list .review-detail > .review-images { grid-column: 2; grid-row: 1; }
+.review-list .review-detail .listing-photo { height: auto; max-height: 520px; margin-bottom: 16px; }
+.review-list .review-detail form { grid-column: 1 / -1; padding: 24px; margin-top: 0; background: #f8f5ef; border: 1px solid #d8cbb8; }
+.review-list .review-detail form button { min-width: 180px; margin-inline-end: 16px; }
+.review-list .review-detail form button:first-of-type { background: #f8f5ef; }
+.review-list .review-detail form button:first-of-type:hover { background: #e8d9bb; }
+@media (max-width: 1000px) {
+  .review-list .review-card { grid-template-columns: 140px minmax(0,1fr); }
+  .review-list .review-card > button { grid-column: 2; grid-row: auto; }
+}
+@media (max-width: 800px) {
+  .review-list .review-detail { grid-template-columns: 1fr; gap: 24px; }
+  .review-list .review-detail > .listing-info, .review-list .review-detail > .review-images { grid-column: 1; grid-row: auto; }
+}
+@media (max-width: 520px) {
+  .review-list > h2 { font-size: 30px; }
+  .review-list .review-card { grid-template-columns: 1fr; }
+  .review-list .listing-info, .review-list .review-card > .review-images, .review-list .review-card > button { grid-column: 1; grid-row: auto; }
+  .review-list .review-detail form button { width: 100%; min-width: 0; margin: 8px 0; }
+}

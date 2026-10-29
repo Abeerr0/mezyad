@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 export default function AuctionForm({ api, token, item }) {
   const [open, setOpen] = useState(false);
@@ -60,10 +60,13 @@ export default function AuctionForm({ api, token, item }) {
   if (!open) return <button onClick={() => setOpen(true)}>إنشاء مزاد</button>;
 
   return (
-    <section className="listing-form">
-      <h4>إنشاء مزاد للإعلان: {item.title}</h4>
+    <section className="listing-form auction-form">
+      <p className="breadcrumb">إعلاناتي / إعلان معتمد / إعداد المزاد</p>
+      <h2>إعداد المزاد</h2>
+      <p className="page-intro">حدّد سعر البداية والحد الأدنى لزيادة المزايدة ومواعيد المزاد.</p>
       {!auction && !duplicate && <form onSubmit={createAuction}>
         <fieldset disabled={busy}>
+          <label>الإعلان المعتمد<input value={item.title} readOnly /></label>
           <label>نوع المزاد<select name="visibility" defaultValue="PUBLIC">
             <option value="PUBLIC">عام</option>
             <option value="PRIVATE">خاص</option>
@@ -72,7 +75,7 @@ export default function AuctionForm({ api, token, item }) {
           <label>أقل زيادة بالريال<input name="minimumIncrement" type="number" min="0.01" max="999999999999.99" step="0.01" required /></label>
           <label>بداية المزاد — بتوقيت جهازك<input name="startTime" type="datetime-local" required /></label>
           <label>نهاية المزاد — بتوقيت جهازك<input name="endTime" type="datetime-local" required /></label>
-          <button type="submit">{busy ? 'جاري الإنشاء…' : 'إنشاء المزاد'}</button>
+          <button className="primary" type="submit">{busy ? 'جاري الإنشاء…' : 'إنشاء المزاد'}</button>
           <button type="button" onClick={() => setOpen(false)}>إلغاء</button>
         </fieldset>
       </form>}
