@@ -25,8 +25,14 @@ const numeric = (x) =>
   Number.isSafeInteger(Math.round(x * 100)) &&
   Math.abs(x * 100 - Math.round(x * 100)) < 1e-7;
 const accessible = async (a, user) => {
- // BE-12 | Test 6: السماح لصاحب المزاد الخاص بالوصول إلى تفاصيله.
-  if (a.visibility === "PUBLIC" || a.seller_id === user?.id) return true;
+  // BE-12 | Test 6: السماح لصاحب المزاد الخاص بالوصول إلى تفاصيله.
+  //يعني هذا الجزء يسمح للادمن يشوف المزاد الخاص
+  if (
+    a.visibility === "PUBLIC" ||
+    a.seller_id === user?.id ||
+    user?.role === "ADMIN"
+  )
+    return true;
   if (!user) return false;
   const r = await query(
     "SELECT 1 FROM private_auction_access WHERE auction_id=$1 AND user_id=$2",
@@ -105,6 +111,11 @@ async function closeIfEnded(id) {
         [id, w.rows[0]?.id || null],
       );
     }
+    // نحفظ حالة المزاد كنشط إذا بدأ وقته ولم ينتهِ.
+    await client.query(
+      "UPDATE auctions SET status='ACTIVE' WHERE id=$1 AND status='SCHEDULED' AND start_time<=clock_timestamp() AND end_time>clock_timestamp()",
+      [id],
+    );
     await client.query("COMMIT");
   } catch (e) {
     await client.query("ROLLBACK");
@@ -359,8 +370,8 @@ app.get("/items", auth, async (req, res, next) => {
         // نهايه الاستدعاء
       );
       // نضيف الصور التي رجعت من الاستعلام إلى بيانات الإعلان الحالي.
-     // BE-09 | Test 4: إرجاع images فارغة للإعلان الذي لا يملك صورًا.
-            // نجهز رابط عرض كل صورة.
+      // BE-09 | Test 4: إرجاع images فارغة للإعلان الذي لا يملك صورًا.
+      // نجهز رابط عرض كل صورة.
       for (const image of imagesResult.rows) {
         image.image_url = imageLink(image.image_url);
       }
@@ -424,6 +435,10 @@ app.patch("/items/:id", auth, async (req, res, next) => {
 app.post("/admin/items/:id/review", auth, admin, async (req, res, next) => {
   //ننفذ هذي الخطوات واذا حدث خطا تروح لكاتش
   try {
+    // نتحقق من صيغة معرف الإعلان قبل الاستعلام.
+    if (!validUuid(req.params.id)) {
+      return err(res, 400, "INVALID_ID", "Invalid ID");
+    }
     //نأخذ بيانات الطلب وإذا لم توجد نستخدم كائن فارغ.
     const data = req.body || {};
     //ناخذ قرار الادمن من بيانات الطلب
@@ -619,7 +634,7 @@ WHERE id = $1
     // إذا كان المزاد خاصًا، نضيف رمز الدخول إلى بيانات الرد.
     // هذه إضافة لبيانات الرد فقط قاعدة البيانات تحفظ البصمة.
     if (visibility === "PRIVATE") {
-     // BE-11 | Test 10: إرجاع رمز الدخول لصاحب المزاد الخاص عند إنشائه.
+      // BE-11 | Test 10: إرجاع رمز الدخول لصاحب المزاد الخاص عند إنشائه.
       createdAuction.accessCode = accessCode;
     }
     // BE-11 | Test 3: نجاح إنشاء مزاد عام لإعلان معتمد يملكه المستخدم.
@@ -628,9 +643,9 @@ WHERE id = $1
     // التعامل مع الخطا اثناء انشاء المزاد
     // إذا حصل خطأ أثناء محاولة إنشاء المزاد، نستقبل الخطأ هنا
   } catch (e) {
-        if (e.code === "22007" || e.code === "22008") {
+    if (e.code === "22007" || e.code === "22008") {
       return err(res, 400, "INVALID_INPUT", "Invalid auction dates");
-    }//اذا رجعت قاعده البيانات خطأمتعلق بالتاريخ نرسل للمستخدم رساله واضحه التاريخ غير مقبول 
+    } //اذا رجعت قاعده البيانات خطأمتعلق بالتاريخ نرسل للمستخدم رساله واضحه التاريخ غير مقبول
     //نفحص هل رمز الخطأ من قاعدة البيانات هو منع التكرار
     // BE-11 | Test 4: منع إنشاء مزاد آخر لنفس الإعلان وإرجاع 409.
     if (e.code === "23505")
@@ -675,7 +690,12 @@ app.get("/auctions", async (_req, res, next) => {
 
       // نضيف الصور إلى بيانات المزاد.
       //خذ الصور التي وجدناها، وضعها داخل بيانات هذا المزاد في الرد.
-     // BE-12 | Test 1: إضافة روابط صور الإعلان إلى المزاد في القائمة العامة.
+      // BE-12 | Test 1: إضافة روابط صور الإعلان إلى المزاد في القائمة العامة.
+      // نجهز رابط عرض كل صورة.
+      for (const image of imagesResult.rows) {
+        image.image_url = imageLink(image.image_url);
+      }
+
       auctionData.images = imagesResult.rows;
     }
     // نرسل قائمة المزادات في الرد، وإذا لم توجد نتائج نرسل قائمة فارغة.
@@ -692,7 +712,7 @@ app.get("/auctions/:id", async (req, res, next) => {
   // ننفذ التعليمات التالية، وإذا حدث خطأ ننتقل إلى catch.
   try {
     //
-   // BE-12 | Test 3: رفض معرف المزاد إذا كانت صيغته غير صحيحة وإرجاع 400.
+    // BE-12 | Test 3: رفض معرف المزاد إذا كانت صيغته غير صحيحة وإرجاع 400.
     if (!validUuid(req.params.id))
       return err(res, 400, "INVALID_ID", "Invalid ID");
     const a = await auction(req.params.id);
@@ -702,7 +722,7 @@ app.get("/auctions/:id", async (req, res, next) => {
     let user = null;
     if (token) {
       const r = await query(
-        "SELECT u.id FROM user_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now()",
+        "SELECT u.id,u.role FROM user_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now()",
         [hashToken(token)],
       );
       user = r.rows[0];
@@ -733,6 +753,11 @@ app.get("/auctions/:id", async (req, res, next) => {
     );
     // نضيف قائمة الصور إلى بيانات المزاد التي سترجع للواجهة.
     // BE-12 | Test 6: إرجاع images فارغة للمزاد الخاص الذي لا يملك إعلانه صورًا.
+    // نجهز رابط عرض كل صورة.
+    for (const image of imagesResult.rows) {
+      image.image_url = imageLink(image.image_url);
+    }
+
     current.images = imagesResult.rows;
     const result = await query(
       "SELECT winner_bid_id,closed_at FROM auction_results WHERE auction_id=$1",
@@ -751,26 +776,31 @@ app.post(
     key: (req) => req.user.id + ":" + req.params.id.toLowerCase(),
   }),
   async (req, res, next) => {
-  try {
-    const a = await auction(req.params.id);
-    if (!a || a.visibility !== "PRIVATE")
-      return err(res, 404, "NOT_FOUND", "Private auction not found");
-    if (a.seller_id === req.user.id)
-      return err(res, 403, "OWNER", "Owner cannot join as bidder");
-    if (
-      typeof req.body?.accessCode !== "string" ||
-      !(await bcrypt.compare(req.body.accessCode, a.access_code_hash))
-    )
-      return err(res, 403, "INVALID_CODE", "Invalid access code");
-    await query(
-      "INSERT INTO private_auction_access(auction_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING",
-      [a.id, req.user.id],
-    );
-    res.json({ data: { accessGranted: true } });
-  } catch (e) {
-    next(e);
-  }
-});
+    try {
+      // نتحقق من صيغة معرف المزاد قبل الاستعلام.
+      if (!validUuid(req.params.id)) {
+        return err(res, 400, "INVALID_ID", "Invalid ID");
+      }
+      const a = await auction(req.params.id);
+      if (!a || a.visibility !== "PRIVATE")
+        return err(res, 404, "NOT_FOUND", "Private auction not found");
+      if (a.seller_id === req.user.id)
+        return err(res, 403, "OWNER", "Owner cannot join as bidder");
+      if (
+        typeof req.body?.accessCode !== "string" ||
+        !(await bcrypt.compare(req.body.accessCode, a.access_code_hash))
+      )
+        return err(res, 403, "INVALID_CODE", "Invalid access code");
+      await query(
+        "INSERT INTO private_auction_access(auction_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING",
+        [a.id, req.user.id],
+      );
+      res.json({ data: { accessGranted: true } });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
 app.post("/auctions/:id/commitment", auth, async (req, res, next) => {
   try {
     const a = await auction(req.params.id);
@@ -809,8 +839,9 @@ app.post("/auctions/:id/bids", auth, async (req, res, next) => {
       "INVALID_INPUT",
       "Valid amount and UUID requestId required",
     );
-  const c = await pool.connect();
+  let c;
   try {
+    c = await pool.connect();
     await c.query("BEGIN");
     const ar = await c.query(
       "SELECT a.*,i.seller_id FROM auctions a JOIN items i ON i.id=a.item_id WHERE a.id=$1 FOR UPDATE OF a",
@@ -895,7 +926,7 @@ app.post("/auctions/:id/bids", auth, async (req, res, next) => {
       .status(201)
       .json({ data: { bidId: bid.rows[0].id, amount, currentPrice: amount } });
   } catch (e) {
-    await c.query("ROLLBACK").catch(() => {});
+    if (c) await c.query("ROLLBACK").catch(() => {});
     if (e.code === "23505")
       return err(
         res,
@@ -905,7 +936,7 @@ app.post("/auctions/:id/bids", auth, async (req, res, next) => {
       );
     next(e);
   } finally {
-    c.release();
+    c?.release();
   }
 });
 app.get("/auctions/:id/bids", auth, async (req, res, next) => {
@@ -952,6 +983,15 @@ app.get("/me/auctions", auth, async (req, res, next) => {
 app.use((error, req, res, next) => {
   console.error("API error", error.code || error.message);
   if (res.headersSent) return next(error);
+  // نوضح أن صيغة JSON غير صحيحة.
+  if (error.type === "entity.parse.failed") {
+    return err(res, 400, "INVALID_JSON", "Invalid JSON body");
+  }
+
+  // نوضح أن حجم الطلب أكبر من المسموح.
+  if (error.type === "entity.too.large") {
+    return err(res, 413, "PAYLOAD_TOO_LARGE", "Request body too large");
+  }
   // نرجع 400 إذا احتوى الطلب على أحرف ترفضها قاعدة البيانات.
   if (error.code === "22021" || error.code === "22P05") {
     return err(res, 400, "INVALID_INPUT", "Invalid characters in request");
