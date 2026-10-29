@@ -189,13 +189,16 @@ accounts.post("/register", async (req, res, next) => {
     // نتحقق من بيانات الحساب قبل ما نحفظه.
     const { name, email, password } = req.body || {};
     if (
-      typeof name !== "string" ||
-      !name.trim() ||
-      typeof email !== "string" ||
-      !/^\S+@\S+\.\S+$/.test(email) ||
-      typeof password !== "string" ||
-      password.length < 8
-    )
+  typeof name !== "string" ||
+  !name.trim() ||
+  name.trim().length > 160 ||
+  typeof email !== "string" ||
+  email.trim().toLowerCase().length > 254 ||
+  !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+  typeof password !== "string" ||
+  password.length < 8 ||
+  Buffer.byteLength(password, "utf8") > 72
+)
       return err(
         res,
         400,
@@ -284,8 +287,21 @@ app.get("/auth/me", auth, (req, res) => {
 accounts.post("/login", async (req, res, next) => {
   try {
     const { email, password } = req.body || {};
-    if (typeof email !== "string" || typeof password !== "string")
-      return err(res, 400, "INVALID_INPUT", "Email and password required");
+    if (
+  typeof email !== "string" ||
+  !email.trim() ||
+  email.trim().toLowerCase().length > 254 ||
+  typeof password !== "string" ||
+  password.length === 0 ||
+  Buffer.byteLength(password, "utf8") > 72
+) {
+  return err(
+    res,
+    400,
+    "INVALID_INPUT",
+    "Valid email and password required"
+  );
+}
     // هنا نطابق كلمة المرور مع البصمة المحفوظة.
     const r = await query("SELECT * FROM users WHERE email=$1", [
       email.trim().toLowerCase(),
