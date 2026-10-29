@@ -23,6 +23,7 @@ const numeric = (x) =>
   Number.isSafeInteger(Math.round(x * 100)) &&
   Math.abs(x * 100 - Math.round(x * 100)) < 1e-7;
 const accessible = async (a, user) => {
+ // BE-12 | Test 6: السماح لصاحب المزاد الخاص بالوصول إلى تفاصيله.
   if (a.visibility === "PUBLIC" || a.seller_id === user?.id) return true;
   if (!user) return false;
   const r = await query(
@@ -58,6 +59,7 @@ function getAuctionDisplayStatus(auctionData, currentTime) {
   const startTime = new Date(auctionData.start_time).getTime();
 
   // إذا وصلنا لموعد النهاية أو تجاوزناه، نرجع مغلقًا.
+  // BE-12 | Test 9: عرض CLOSED في القائمة عندما يكون موعد نهاية المزاد قد مضى.
   if (endTime <= currentTime) {
     return "CLOSED";
   }
@@ -95,6 +97,7 @@ async function closeIfEnded(id) {
       await client.query("UPDATE auctions SET status='CLOSED' WHERE id=$1", [
         id,
       ]);
+      // BE-12 | Test 10: حفظ نتيجة الإغلاق؛ winner_bid_id يكون null إذا لم توجد مزايدات.
       await client.query(
         "INSERT INTO auction_results(auction_id,winner_bid_id) VALUES($1,$2) ON CONFLICT(auction_id) DO NOTHING",
         [id, w.rows[0]?.id || null],
@@ -113,6 +116,7 @@ app.get("/health", (_req, res) => res.json({ data: { status: "ok" } }));
 // نستخدم async عشان نقدر نستخدم await لانتظار نتيجة عملية، مثل حفظ الحساب في قاعدة البيانات.
 //عندما يصل طلب POST لمسار تسجيل الحساب، نفّذ التعليمات الموجودة داخل هذه الدالة
 // هذا الرمز يعني او || إذا كان الاسم ليس نصًا، أو كان فارغًا بعد إزالة المسافات من الأطراف، نرفض الطلب.
+// BE-06 : تسجيل الحساب والتحقق من البيانات ومنع تكرار البريد.
 app.post("/auth/register", async (req, res, next) => {
   try {
     const data = req.body || {};
@@ -124,18 +128,22 @@ app.post("/auth/register", async (req, res, next) => {
       typeof name !== "string" ||
       //يتحقق هل الاسم فارغ ولا مكنوب فيه مسافات فقط
       !name.trim() ||
+      // BE-06 | Test 5 | Test 7
       // نرفض الاسم إذا تجاوز طوله 160 بعد إزالة المسافات من بدايته ونهايته، لأن هذا هو الحد المحدد له في قاعدة البيانات.
       name.trim().length > 160 ||
       //نوع الايميل المدخل يكون سترينق حروف فقط
       typeof email !== "string" ||
+      // BE-06 | Test 6 | Test 7
       // نرفض الإيميل إذا تجاوز طوله 254، وهو الحد الموجود في قاعدة البيانات
       email.trim().toLowerCase().length > 254 ||
       // نتحقق من شكل الإيميل: علامة @ واحدة، وجزء قبلها وبعدها ونقطة، وبدون مسافات
+      // BE-06 | Test 1
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
       //. نوع الباس لازم يكون نص ويحتوي ارقام وحروف ورموز وعلامه التعجب تعني انو يتحقق ان القيمه مو نص
       typeof password !== "string" ||
       //طول الباسوورد يكون ٨ او اكثر
       password.length < 8 ||
+      // BE-06 | Test 2 | Test 3
       // نرفض كلمة المرور إذا تجاوز حجمها 72 بايت، وهو حد bcrypt
       Buffer.byteLength(password, "utf8") > 72
     )
@@ -154,7 +162,7 @@ app.post("/auth/register", async (req, res, next) => {
     const r = await query(
       "INSERT INTO users(name,email,password_hash) VALUES($1,$2,$3) RETURNING id,name,email,role",
       [name.trim(), email.trim().toLowerCase(), hash],
-    );
+    ); // BE-06 | Test 7 | Test 3 إنشاء الحساب بنجاح بعد اجتياز التحقق
     res.status(201).json({ data: r.rows[0] });
     // إذا كان رمز الخطأ 23505، نرسل رد 409 ورسالة أن الإيميل مسجل مسبقًا.
     // الدالة err تجهز رد الخطأ وترسله.
@@ -162,11 +170,13 @@ app.post("/auth/register", async (req, res, next) => {
     // إذا صار خطأ غير تكرار الإيميل، مثل فشل الاتصال بقاعدة البيانات،
     // نستخدم next(e) لتمريره إلى الجزء المسؤول عن إرسال رد يوضح الخطأ.
   } catch (e) {
+    // BE-06 | Test 4
     if (e.code === "23505")
       return err(res, 409, "DUPLICATE_EMAIL", "Email already registered");
     next(e);
   }
 });
+// BE-07: تسجيل الدخول والجلسة والخروج.
 app.post("/auth/login", async (req, res, next) => {
   try {
     // ياخذ بيانات الطلب وإذا ما وصلت بيانات يستخدم كائن فارغ.
@@ -182,12 +192,14 @@ app.post("/auth/login", async (req, res, next) => {
       // الإيميل لازم يكون نصًا.
       typeof email !== "string" ||
       // نرفض الإيميل الفارغ أو الذي يحتوي مسافات فقط.
+      // BE-07 | Test 1
       !email.trim() ||
       // طول الإيميل بعد تنظيفه لا يتجاوز حد قاعدة البيانات.
       email.trim().toLowerCase().length > 254 ||
       // كلمة المرور لازم تكون نصًا.
       typeof password !== "string" ||
       // نرفض كلمة المرور الفارغة.
+      // BE-07 | Test 2
       password.length === 0 ||
       // حجم كلمة المرور لا يتجاوز الحد الذي تستخدمه bcrypt.
       Buffer.byteLength(password, "utf8") > 72
@@ -208,10 +220,12 @@ app.post("/auth/login", async (req, res, next) => {
     ]);
     // التحقق من وجود سبب لرفض تسجيل الدخول
     if (
+      // BE-07 | Test 3: رفض الدخول عند إرسال كلمة مرور غير صحيحة.
       !r.rowCount ||
-      !(await bcrypt.compare(password, r.rows[0].password_hash))
+      !(await bcrypt.compare(password, r.rows[0].password_hash)) // يقارن كلمة المرور المرسلة بالبصمة المحفوظة إذا ماتطابق يرجع رد الرفض الموجود تحته
     )
-      return err(res, 401, "INVALID_CREDENTIALS", "Invalid credentials");
+      return err(res, 401, "INVALID_CREDENTIALS", "Invalid credentials"); // رد الرفض
+    // BE-07 | Test 4 إنشاء توكن وحفظ الجلسة عند صحة بيانات الدخول
     const token = newToken(),
       u = r.rows[0];
     await query(
@@ -231,10 +245,13 @@ app.post("/auth/login", async (req, res, next) => {
 // نتحقق من الجلسة قبل إرجاع بيانات المستخدم.
 app.get("/auth/me", auth, (req, res) => {
   // نرسل بيانات المستخدم التي جهزتها دالة auth.
+  // BE-07 | Test 6
   res.json({ data: { user: req.user } });
 });
 app.post("/auth/logout", auth, async (req, res, next) => {
   try {
+    // BE-08 | Test 6: إنهاء جلسة الأدمن عند تسجيل الخروج.
+    // BE-07 | Test 7: حذف جلسة المستخدم عند تسجيل الخروج.
     await query("DELETE FROM user_sessions WHERE token_hash=$1", [
       hashToken(req.token),
     ]);
@@ -291,6 +308,7 @@ app.post("/items", auth, async (req, res, next) => {
 //الاعلانات المعلقه للادمن وارجاع الاعلانات للمستخدم
 //قائمه الاعلانات اللي تتظر مراجعه من الادمن فقط الادمن مسموح له يشوفها المستخدم لا ترجع له ٤٠٣
 // مسار لطلب قائمة الإعلانات في الباك إن
+// BE-09: قائمة الإعلانات المعلقة للأدمن وإعلانات المستخدم مع الصور.
 app.get("/items", auth, async (req, res, next) => {
   // نفذ التعليمات داخل تراي واذا حدث خطا تنروح لكاتش
   try {
@@ -298,6 +316,7 @@ app.get("/items", auth, async (req, res, next) => {
     // نرفض الطلب إذا طلب مستخدم غير أدمن قائمة الإعلانات المعلقة.
     if (
       // نتحقق أن الطلب يطلب الإعلانات المعلقة.
+      // BE-09 | Test 2: منع المستخدم العادي من قائمة الإعلانات المعلقة.
       req.query.status === "PENDING_REVIEW" &&
       // نتحقق أن المستخدم ليس أدمن.
       req.user.role !== "ADMIN"
@@ -313,13 +332,13 @@ app.get("/items", auth, async (req, res, next) => {
       r = await query(
         // استعلام بلغه sql يقرا الاعلانات المعلقه فقط ويرتبها حسب الا دي تبعها
         "SELECT * FROM items WHERE status='PENDING_REVIEW' ORDER BY id",
-      );
+      ); // BE-09 | Test 6: إرجاع الإعلانات المعلقة واستبعاد المعتمدة والمرفوضة.
       // الفرع يعمل لما الطلب يكون غير مخصص لقائمه الاعلانات المعلقه اذا ماتحقق الشرط السابق نستخدم هذا
     } else {
       // نرسل الاستعلام وننتظر النتيجه ونحفظها في rلكن هذي المره يجيب لنا اعلانات المستخدم نفسه .
       r = await query(
         // بلغه sql يقرا جميع الاعمده المطابقه من جدول الايتمز مرتبه حسب الا دي
-        "SELECT * FROM items WHERE seller_id=$1 ORDER BY id",
+        "SELECT * FROM items WHERE seller_id=$1 ORDER BY id", // BE-09 | Test 7: إرجاع إعلانات المستخدم الحالي فقط.
         //القائمه فيها قيمه وحده معرف المستخدم الحالي هي اللي مقصوده ب ١ دولا بالاستعلام اللي قبل وكذا نطلب الاعلانات اللي صاحبها المستخدم
         [req.user.id],
         //نقفل الاستدعا
@@ -329,6 +348,7 @@ app.get("/items", auth, async (req, res, next) => {
     // نكرر الخطوات التالية لكل إعلان موجود في قائمة نتائج الإعلانات.
     for (const item of r.rows) {
       // ننفذ استعلام صور الإعلان الحالي ونحفظ نتيجته بعد اكتماله.
+      // BE-09 | Test 5 | Test 6: قراءة صور كل إعلان وربطها بمعرفه الصحيح.
       const imagesResult = await query(
         // نجلب معرف الصورة ورابطها للصور المرتبطة بالإعلان المحدد، ونرتبها حسب معرف الصورة.
         "SELECT id, image_url FROM item_images WHERE item_id=$1 ORDER BY id",
@@ -337,10 +357,12 @@ app.get("/items", auth, async (req, res, next) => {
         // نهايه الاستدعاء
       );
       // نضيف الصور التي رجعت من الاستعلام إلى بيانات الإعلان الحالي.
+     // BE-09 | Test 4: إرجاع images فارغة للإعلان الذي لا يملك صورًا.
       item.images = imagesResult.rows;
     }
     // نرسل قائمة الإعلانات مع صور كل إعلان، وإذا لم توجد إعلانات نرسل قائمة فارغة.
     //يرسل قائمة الإعلانات إلى الجهة التي طلبتها اذا ما وجد الاستعلام اعلانات مطابقه تكون القائمه فارغه
+    // BE-09 | Test 3: إرجاع قائمة فارغة عندما لا توجد إعلانات معلقة.
     res.json({ data: r.rows });
     // ننهي try، وإذا حدث خطأ داخلها نستقبله في المتغير e.
   } catch (e) {
@@ -391,6 +413,7 @@ app.patch("/items/:id", auth, async (req, res, next) => {
 // مسار الادمن لقبول الاعلان المعلق او رفضه
 //نحدث حاله الاعلان ونحفظ سبب الرفض اذا كان القرار رفض
 //نستقبل طلب مراجعه الاعلان بعد التحقق من الجلسه وصلاحيه الادمن
+// BE-10: مراجعة الإعلانات؛ الاعتماد والرفض وحفظ تفاصيل المراجعة ومنع تكرارها.
 app.post("/admin/items/:id/review", auth, admin, async (req, res, next) => {
   //ننفذ هذي الخطوات واذا حدث خطا تروح لكاتش
   try {
@@ -403,9 +426,12 @@ app.post("/admin/items/:id/review", auth, admin, async (req, res, next) => {
     // اذا انطبق عليه
     if (
       //اذا كان القرار اللي الادمن القادم من الطلب غير مقبول وغير مرفوض يعني حاله pending او قيمه غير موجوده
-      (decision !== "APPROVED" && decision !== "REJECTED") ||
+      // BE-10 | Test 3: رفض القرار غير المدعوم مثل ACCEPT وإرجاع 400.
+      (decision !== "APPROVED" && decision !== "REJECTED") || // BE-08 | Test 5: رفض الجسم الفارغ بعد اجتياز التحقق من صلاحية الأدمن.
       // هنا عند رفض الاعلان لازم يكون السبب نص مكتوب مو فارغ او مسافات فقط
       (decision === "REJECTED" &&
+        // BE-10 | Test 4: رفض قرار REJECTED إذا لم يُرسل سبب الرفض.
+        // BE-10 | Test 5: رفض السبب إذا كان مسافات فقط.
         (typeof reason !== "string" || !reason.trim()))
     )
       //نرسل رد الخطا وننهي معالجه الطلب
@@ -425,6 +451,8 @@ app.post("/admin/items/:id/review", auth, admin, async (req, res, next) => {
     //rنرسل استعلام تحديث الاعلان وننتظر نتيجته ونحفظها في
     const r = await query(
       // نحدّث حالة الإعلان وبيانات مراجعته، بشرط أن يكون بانتظار المراجعة.
+      // BE-10 | Test 6: اعتماد الإعلان وحفظ معرف الأدمن ووقت المراجعة، وترك سبب الرفض null.
+      // BE-10 | Test 8: رفض الإعلان وحفظ السبب ومعرف الأدمن ووقت المراجعة.
       "UPDATE items SET status=$1,review_reason=$2,reviewed_by=$3,reviewed_at=now() WHERE id=$4 AND status='PENDING_REVIEW' RETURNING *",
       [
         //القيمه الاولى قرار الادمن قبول الاعلان او رفضه
@@ -440,6 +468,7 @@ app.post("/admin/items/:id/review", auth, admin, async (req, res, next) => {
     );
     //اذا ماتحدث اي اعلان نرسل خطا وتوقف الطلب
     // rowCount عدد الصفوف اللي تحدثت
+    // BE-10 | Test 7: منع مراجعة الإعلان مرة ثانية بعد اعتماده، وإرجاع 409.
     if (!r.rowCount)
       return err(res, 409, "INVALID_STATE", "Listing not pending review");
     //نرسل بيانات الاعلان بعد تحديثه
@@ -451,6 +480,7 @@ app.post("/admin/items/:id/review", auth, admin, async (req, res, next) => {
   }
 });
 // انشاء مزاد. من اعلان معتمد يملكه المستخدم ويحدد نوعه والسعر والموعد للمزاد
+// BE-11: إنشاء المزاد العام والخاص والتحقق من البيانات والملكية.
 app.post("/auctions", auth, async (req, res, next) => {
   //
   try {
@@ -468,6 +498,7 @@ app.post("/auctions", auth, async (req, res, next) => {
     const startTime = data.startTime;
     //  نسجله في متغير نهايه الوقت للمزاد نأخذ موعد نهاية المزاد.
     const endTime = data.endTime;
+    // BE-11 | Test 2: رفض الطلب الفارغ بسبب نقص بيانات المزاد وإرجاع 400.
     if (
       // نرفض الطلب إذا كان معرف الإعلان بصيغة غير صحيحة.
       !validUuid(itemId) ||
@@ -475,8 +506,10 @@ app.post("/auctions", auth, async (req, res, next) => {
       (visibility !== "PUBLIC" && visibility !== "PRIVATE") ||
       // الدالة تتحقق أن القيمة رقم موجب وصالح كمبلغ مالي، ضمن حدود قاعدة البيانات
       // نرفض الطلب إذا كان سعر بداية المزاد غير صالح.
+      // BE-11 | Test 5: رفض سعر البداية إذا كان صفرًا.
       !validMoney(startingPrice) ||
       // نرفض الطلب إذا كانت قيمة أقل زيادة غير صالحة.
+      // BE-11 | Test 6: رفض أقل زيادة إذا كانت صفرًا.
       !validMoney(minimumIncrement) ||
       //وقت المزاد
       // نرفض موعد البداية إذا لم يكن نصًا.
@@ -493,6 +526,7 @@ app.post("/auctions", auth, async (req, res, next) => {
       !Number.isFinite(Date.parse(endTime)) ||
       //هنا ترفض اذا كانت انهايه قبل البدايه او مساويه لها
       // <= تعني هل النهايه قبل البدايه او مساويه لها اذا اي ترفض الطلب
+      // BE-11 | Test 7: رفض موعد النهاية إذا كان قبل البداية.
       new Date(endTime) <= new Date(startTime)
     )
       // اذا تحقق شرط الرفض نرسل رمز الخطا و ننهي معالجه الطلب
@@ -515,6 +549,7 @@ app.post("/auctions", auth, async (req, res, next) => {
       accessCode = randomValue.toString("hex");
       // نحسب بصمة الرمز باستخدام bcrypt لحفظها في قاعدة البيانات.
       //بنفس الوقت ١٢ هنا لا يعني طول الرمز أو عدد البايتات
+      // BE-11 | Test 11: حساب بصمة رمز الدخول باستخدام bcrypt.
       codeHash = await bcrypt.hash(accessCode, 12);
     }
     // نرسل استعلام إنشاء المزاد، وننتظر نتيجته ونحفظها في r.
@@ -541,6 +576,7 @@ WHERE id = $1
         // $2: نوع المزاد، عام أو خاص.
         visibility,
         // $3: بصمة رمز الدخول، أو null إذا كان المزاد عامًا.
+        // BE-11 | Test 11: تمرير البصمة إلى الاستعلام لحفظها في قاعدة البيانات.
         codeHash,
         // $4: سعر البداية، ونستخدمه أيضًا كسعر حالي عند الإنشاء.
         startingPrice,
@@ -557,6 +593,8 @@ WHERE id = $1
     // اذا ما اضاف الاستعلام اي مزاد نرفض الطلب
     // r.rowCount: عدد المزادات التي أضافها الاستعلام.
     // كان 0، يعني ما وجد إعلانًا يطابق الشروط، فلم يُنشأ مزاد إذا
+    // BE-11 | Test 8: رفض إنشاء مزاد لإعلان يملكه حساب آخر.
+    // BE-11 | Test 9: رفض الإعلان غير المعتمد حتى لو أرسل الطلب مالكه.
     if (!r.rowCount)
       // يرفض الطلب لعدم وجود اعلان معتمد يخص المستخدم الحالي
       return err(
@@ -574,14 +612,17 @@ WHERE id = $1
     // إذا كان المزاد خاصًا، نضيف رمز الدخول إلى بيانات الرد.
     // هذه إضافة لبيانات الرد فقط قاعدة البيانات تحفظ البصمة.
     if (visibility === "PRIVATE") {
+     // BE-11 | Test 10: إرجاع رمز الدخول لصاحب المزاد الخاص عند إنشائه.
       createdAuction.accessCode = accessCode;
     }
+    // BE-11 | Test 3: نجاح إنشاء مزاد عام لإعلان معتمد يملكه المستخدم.
     // نرسل بيانات المزاد، والرمز 201 يعني نجاح إنشاء سجل جديد.
     res.status(201).json({ data: createdAuction });
     // التعامل مع الخطا اثناء انشاء المزاد
     // إذا حصل خطأ أثناء محاولة إنشاء المزاد، نستقبل الخطأ هنا
   } catch (e) {
     //نفحص هل رمز الخطأ من قاعدة البيانات هو منع التكرار
+    // BE-11 | Test 4: منع إنشاء مزاد آخر لنفس الإعلان وإرجاع 409.
     if (e.code === "23505")
       // نرسل 409 لأن الإعلان لديه مزاد بالفعل، وننهي الطلب
       // ٤٠٩ هنا يوجد تعارض وتجي اذا كان الخطا بسبب التكرار
@@ -590,11 +631,13 @@ WHERE id = $1
     next(e);
   }
 });
+// BE-12: عرض المزادات العامة وتفاصيل المزاد والصور والحالة والتحقق من الوصول.
 //عرض قائمة المزادات العامة مع بياناتها وصورها وحالتها.
 app.get("/auctions", async (_req, res, next) => {
   // ننفذ التعليمات التالية، وإذا حدث خطأ ننتقل إلى catch.
   try {
     // نرسل استعلام قراءة المزادات إلى قاعدة البيانات ونحفظ نتيجته في r.
+    // BE-12 | Test 1: جلب المزادات العامة فقط بدون اشتراط تسجيل الدخول.
     const r = await query(
       // نجلب بيانات المزادات العامة وعنوان إعلان كل مزاد، ونرتبها حسب موعد البداية تنازليًا.
       "SELECT a.id,a.item_id,a.starting_price,a.current_price,a.start_time,a.end_time,a.status,i.title FROM auctions a JOIN items i ON i.id=a.item_id WHERE a.visibility='PUBLIC' ORDER BY a.start_time DESC",
@@ -607,6 +650,7 @@ app.get("/auctions", async (_req, res, next) => {
     // نمر على كل مزاد رجع من استعلام القائمة.
     for (const auctionData of r.rows) {
       // نحدد حالة المزاد التي سترجع في القائمة باستخدام وقت قاعدة البيانات.
+      // BE-12 | Test 7: عرض ACTIVE في القائمة للمزاد الذي بدأ ولم ينتهِ.
       auctionData.status = getAuctionDisplayStatus(auctionData, currentTime);
       // نجلب صور الإعلان المرتبط بالمزاد الحالي.
       //نرسل استعلامًا لقاعدة البيانات، وننتظر نتيجته، ثم نحفظها في imagesResult.
@@ -621,6 +665,7 @@ app.get("/auctions", async (_req, res, next) => {
 
       // نضيف الصور إلى بيانات المزاد.
       //خذ الصور التي وجدناها، وضعها داخل بيانات هذا المزاد في الرد.
+     // BE-12 | Test 1: إضافة روابط صور الإعلان إلى المزاد في القائمة العامة.
       auctionData.images = imagesResult.rows;
     }
     // نرسل قائمة المزادات في الرد، وإذا لم توجد نتائج نرسل قائمة فارغة.
@@ -637,9 +682,11 @@ app.get("/auctions/:id", async (req, res, next) => {
   // ننفذ التعليمات التالية، وإذا حدث خطأ ننتقل إلى catch.
   try {
     //
+   // BE-12 | Test 3: رفض معرف المزاد إذا كانت صيغته غير صحيحة وإرجاع 400.
     if (!validUuid(req.params.id))
       return err(res, 400, "INVALID_ID", "Invalid ID");
     const a = await auction(req.params.id);
+    // BE-12 | Test 4: إرجاع 404 إذا كان المعرف بصيغة صحيحة لكن المزاد غير موجود.
     if (!a) return err(res, 404, "NOT_FOUND", "Auction not found");
     const token = req.headers.authorization?.match(/^Bearer (\S+)$/)?.[1];
     let user = null;
@@ -650,6 +697,7 @@ app.get("/auctions/:id", async (req, res, next) => {
       );
       user = r.rows[0];
     }
+    // BE-12 | Test 5: إخفاء تفاصيل المزاد الخاص عن الزائر بدون تسجيل دخول وإرجاع 404.
     if (!(await accessible(a, user)))
       return err(res, 404, "NOT_FOUND", "Auction not found");
     // نقرأ وقت قاعدة البيانات قبل فحص إغلاق المزاد.
@@ -657,10 +705,13 @@ app.get("/auctions/:id", async (req, res, next) => {
 
     // نحول الوقت إلى رقم لاستخدامه في تحديد الحالة.
     const currentTime = new Date(timeResult.rows[0].current_time).getTime();
+    // BE-12 | Test 10: إغلاق المزاد المنتهي وحفظ نتيجته قبل إرجاع التفاصيل.
     await closeIfEnded(a.id);
     const current = await auction(a.id);
     // نحدد حالة المزاد التي سترجع في تفاصيله.
+    // BE-12 | Test 8: عرض ACTIVE في تفاصيل المزاد الذي بدأ ولم ينتهِ.
     current.status = getAuctionDisplayStatus(current, currentTime);
+    // BE-12 | Test 2 | Test 6: حذف بصمة رمز الدخول من بيانات الرد.
     delete current.access_code_hash;
     // إضافة صور الإعلان إلى تفاصيل مزاد واحد
     // نقرأ روابط صور الإعلان من قاعدة البيانات ونضيفها إلى بيانات تفاصيل المزاد المرسلة للواجهة
@@ -671,11 +722,13 @@ app.get("/auctions/:id", async (req, res, next) => {
       [current.item_id],
     );
     // نضيف قائمة الصور إلى بيانات المزاد التي سترجع للواجهة.
+    // BE-12 | Test 6: إرجاع images فارغة للمزاد الخاص الذي لا يملك إعلانه صورًا.
     current.images = imagesResult.rows;
     const result = await query(
       "SELECT winner_bid_id,closed_at FROM auction_results WHERE auction_id=$1",
       [a.id],
     );
+    // BE-12 | Test 2: إرجاع تفاصيل المزاد وبيانات الإعلان والصور والأسعار والحالة والنتيجة.
     res.json({ data: { ...current, result: result.rows[0] || null } });
   } catch (e) {
     next(e);
