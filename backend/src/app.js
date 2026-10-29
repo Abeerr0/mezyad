@@ -189,16 +189,16 @@ accounts.post("/register", async (req, res, next) => {
     // نتحقق من بيانات الحساب قبل ما نحفظه.
     const { name, email, password } = req.body || {};
     if (
-  typeof name !== "string" ||
-  !name.trim() ||
-  name.trim().length > 160 ||
-  typeof email !== "string" ||
-  email.trim().toLowerCase().length > 254 ||
-  !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
-  typeof password !== "string" ||
-  password.length < 8 ||
-  Buffer.byteLength(password, "utf8") > 72
-)
+      typeof name !== "string" ||
+      !name.trim() ||
+      name.trim().length > 160 ||
+      typeof email !== "string" ||
+      email.trim().toLowerCase().length > 254 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+      typeof password !== "string" ||
+      password.length < 8 ||
+      Buffer.byteLength(password, "utf8") > 72
+    )
       return err(
         res,
         400,
@@ -288,20 +288,20 @@ accounts.post("/login", async (req, res, next) => {
   try {
     const { email, password } = req.body || {};
     if (
-  typeof email !== "string" ||
-  !email.trim() ||
-  email.trim().toLowerCase().length > 254 ||
-  typeof password !== "string" ||
-  password.length === 0 ||
-  Buffer.byteLength(password, "utf8") > 72
-) {
-  return err(
-    res,
-    400,
-    "INVALID_INPUT",
-    "Valid email and password required"
-  );
-}
+      typeof email !== "string" ||
+      !email.trim() ||
+      email.trim().toLowerCase().length > 254 ||
+      typeof password !== "string" ||
+      password.length === 0 ||
+      Buffer.byteLength(password, "utf8") > 72
+    ) {
+      return err(
+        res,
+        400,
+        "INVALID_INPUT",
+        "Valid email and password required",
+      );
+    }
     // هنا نطابق كلمة المرور مع البصمة المحفوظة.
     const r = await query("SELECT * FROM users WHERE email=$1", [
       email.trim().toLowerCase(),
@@ -810,8 +810,13 @@ api.post("/auctions", auth, async (req, res, next) => {
       .status(201)
       .json({ data: { ...r.rows[0], ...(accessCode ? { accessCode } : {}) } });
   } catch (e) {
+    if (e.code === "22007" || e.code === "22008") {
+      return err(res, 400, "INVALID_INPUT", "Invalid auction dates");
+    }
+
     if (e.code === "23505")
       return err(res, 409, "DUPLICATE_AUCTION", "Item already has auction");
+
     next(e);
   }
 });
@@ -1025,7 +1030,9 @@ app.post("/auctions/:id/commitment", auth, async (req, res, next) => {
 api.post(
   "/auctions/:id/access",
   auth,
-  attemptLimit({ key: (req) => req.user.id + ":" + req.params.id }),
+  attemptLimit({
+    key: (req) => req.user.id + ":" + req.params.id.toLowerCase(),
+  }),
   async (req, res, next) => {
     try {
       const a = await auction(req.params.id);
@@ -1426,6 +1433,9 @@ app.use((error, req, res, next) => {
   if (error.type === "entity.too.large")
     return err(res, 413, "PAYLOAD_TOO_LARGE", "Request body too large");
   // تفاصيل الخطأ تبقى بالسيرفر، ونرجع رسالة عامة للمستخدم.
+  if (error.code === "22021" || error.code === "22P05") {
+    return err(res, 400, "INVALID_INPUT", "Invalid characters in request");
+  }
   console.error("API error", error.code || "INTERNAL_ERROR");
   err(res, 500, "INTERNAL_ERROR", "Unexpected server error");
 });
