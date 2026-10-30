@@ -159,7 +159,9 @@ if (type === 'login') {
 }
     setMessage(type === 'login' ? '' : 'تم إنشاء الحساب');
   } catch (error) {
-    setMessage(error instanceof TypeError ? 'تعذّر الاتصال بالخادم، حاول مرة أخرى' : error.message);
+    setMessage(type === 'login' && error.code === 'INVALID_CREDENTIALS'
+      ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
+      : error instanceof TypeError ? 'تعذّر الاتصال بالخادم، حاول مرة أخرى' : error.message);
     } finally {
     setAccountBusy(false);
   }
