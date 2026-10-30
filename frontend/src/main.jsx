@@ -1,4 +1,4 @@
-import React,{useEffect,useState} from 'react';
+import React,{useEffect,useRef,useState} from 'react';
 import{createRoot}from'react-dom/client';
 import './style.css';
 import ListingForm from './ListingForm';
@@ -17,9 +17,34 @@ const [auctionsError, setAuctionsError] = useState('');
 const [auctionId, setAuctionId] = useState(null);
 const [detailsLoading, setDetailsLoading] = useState(false);
 const [detailsError, setDetailsError] = useState('');
+const [bidOpen, setBidOpen] = useState(false);
+const [bidAmount, setBidAmount] = useState('');
+const [bidCount, setBidCount] = useState(null);
+const [bidPriceAtCount, setBidPriceAtCount] = useState(null);
+const [bidRefreshing, setBidRefreshing] = useState(false);
+const [bidBusy, setBidBusy] = useState(false);
+const [bidConfirm, setBidConfirm] = useState(false);
+const [bidMessage, setBidMessage] = useState('');
+const [bidSucceeded, setBidSucceeded] = useState(false);
+const bidSending = useRef(false);
+const bidRequestId = useRef(null);
  async function request(path,options={}){
   const r=await fetch(API+path,{...options,headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{}),...(options.headers||{})}});
-  const json=await r.json();if(!r.ok)throw Error(json.error?.message||'Request failed');return json.data;
+  const json=await r.json();if(!r.ok){const error=Error(json.error?.message||'Request failed');error.code=json.error?.code;error.status=r.status;throw error;}return json.data;
+ }
+ function bidError(error) {
+  if (error instanceof TypeError) return 'تعذّر الاتصال بالخادم، حاولي مرة ثانية';
+  const messages = {
+    BID_TOO_LOW: 'المبلغ أقل من الحد الأدنى للمزايدة. حدّثي التفاصيل وحاولي مجددًا.',
+    DUPLICATE_REQUEST: 'سبق معالجة هذه المزايدة. حدّثي التفاصيل قبل المحاولة مرة ثانية.',
+    AUCTION_NOT_ACTIVE: 'المزاد غير نشط حاليًا.',
+    COMMITMENT_REQUIRED: 'يلزم تأكيد المشاركة قبل تقديم المزايدة.',
+    BANK_SANDBOX_UNAVAILABLE: 'خدمة البنك التجريبية غير متاحة حاليًا.',
+    NO_ACCESS: 'يلزم رمز وصول صحيح للمزاد الخاص.',
+    OWNER: 'لا يمكنك المزايدة على مزادك.'
+  };
+  if (error.code || error.status) console.error('Bid API error:', error.code, error.status);
+  return messages[error.code] || 'تعذّر إكمال طلب المزايدة، حاولي مرة ثانية';
  }
  async function load() {
   try {
@@ -114,6 +139,95 @@ async function logout() {
   setDetailsError('');
   setDetailsLoading(true);
   setAuctionId(id);
+  setBidOpen(false);
+  setBidAmount('');
+  setBidCount(null);
+  setBidPriceAtCount(null);
+  setBidRefreshing(false);
+  setBidMessage('');
+  setBidSucceeded(false);
+  bidRequestId.current = null;
+}
+
+async function openBid() {
+  if (!token) {
+    setPage('login');
+    setMessage('سجّلي الدخول لإضافة مزايدة');
+    return;
+  }
+  setBidOpen(true);
+  setBidMessage('');
+  setBidSucceeded(false);
+  setBidCount(null);
+  setBidRefreshing(false);
+  const price = Number(selected.current_price);
+  try {
+    const bids = await request('/auctions/' + auctionId + '/bids');
+    if (!Array.isArray(bids)) throw new Error('تعذّر التحقق من الحد الأدنى للمزايدة');
+    setBidCount(bids.length);
+    setBidPriceAtCount(price);
+  } catch (error) {
+    setBidMessage(bidError(error));
+  }
+}
+
+useEffect(() => {
+  if (!bidOpen || bidCount !== 0 || bidPriceAtCount === null || !selected || Number(selected.current_price) === bidPriceAtCount) return;
+  let active = true;
+  const price = Number(selected.current_price);
+  setBidRefreshing(true);
+  request('/auctions/' + auctionId + '/bids').then(bids => {
+    if (!Array.isArray(bids)) throw new Error('Invalid bids response');
+    if (active) { setBidCount(bids.length); setBidPriceAtCount(price); setBidRefreshing(false); setBidMessage(''); }
+  }).catch(error => { if (active) { setBidCount(null); setBidRefreshing(false); setBidMessage(bidError(error)); } });
+  return () => { active = false; };
+}, [bidOpen, bidCount, bidPriceAtCount, selected?.current_price, auctionId, token]);
+
+const minimumBid = selected && bidCount !== null && !bidRefreshing
+  ? (bidCount > 0 ? Math.round((Number(selected.current_price) + Number(selected.minimum_increment)) * 100) / 100 : Number(selected.starting_price))
+  : null;
+
+function checkBid(event) {
+  event.preventDefault();
+  if (bidBusy || minimumBid === null || selected?.status !== 'ACTIVE') return;
+  const amount = Number(bidAmount);
+  if (!bidAmount.trim() || !Number.isFinite(amount) || amount <= 0 || !/^\d+(\.\d{1,2})?$/.test(bidAmount) || amount < minimumBid) {
+    setBidMessage('أدخلي مبلغًا صحيحًا لا يقل عن ' + minimumBid.toLocaleString('en-US') + ' ر.س');
+    return;
+  }
+  setBidMessage('');
+  setBidConfirm(true);
+}
+
+async function sendBid() {
+  if (bidSending.current || bidBusy || !bidConfirm || minimumBid === null || selected?.status !== 'ACTIVE') return;
+  if (Number(bidAmount) < minimumBid) {
+    setBidConfirm(false);
+    setBidMessage('المبلغ أقل من الحد الأدنى للمزايدة. حدّثي التفاصيل وحاولي مجددًا.');
+    return;
+  }
+  bidSending.current = true;
+  setBidBusy(true);
+  setBidConfirm(false);
+  setBidMessage('جاري إرسال المزايدة…');
+  try {
+    if (!bidRequestId.current) bidRequestId.current = crypto.randomUUID();
+    const result = await request('/auctions/' + auctionId + '/bids', {
+      method: 'POST',
+      body: JSON.stringify({ amount: Number(bidAmount), requestId: bidRequestId.current })
+    });
+    if (!result?.bidId) throw new Error('لم يؤكد الخادم حفظ المزايدة');
+    setBidSucceeded(true);
+    bidRequestId.current = null;
+    setBidMessage('تم تقديم مزايدتك بنجاح');
+    setBidCount(count => count + 1);
+    setSelected(current => current && current.id === auctionId ? { ...current, current_price: result.currentPrice } : current);
+  } catch (error) {
+    setBidMessage(bidError(error));
+  } finally {
+    bidSending.current = false;
+    setBidBusy(false);
+  }
 }
 
 useEffect(() => {
@@ -193,13 +307,13 @@ useEffect(() => {
     })
   )}
 </section></div>}{auctionId && (
-  <section className="details-page">
-    <button onClick={() => {
+  <section className={bidOpen ? 'details-page bid-page' : 'details-page'}>
+    {!bidOpen && <button onClick={() => {
       setAuctionId(null);
       setSelected(null);
     }}>
       العودة إلى المزادات
-    </button>
+    </button>}
 
     {detailsLoading ? (
       <p role="status">جاري تحميل التفاصيل…</p>
@@ -207,6 +321,27 @@ useEffect(() => {
       <p role="alert">{detailsError}</p>
     ) : selected && selected.id === auctionId ? (
       <>
+        {bidOpen ? <>
+          <div className="bid-summary">
+            <p className="breadcrumb">المزادات / تفاصيل المزاد / إضافة مزايدة</p>
+            <h2>أضف مزايدتك</h2>
+            <p className="bid-intro">راجع قيمة مزايدتك قبل التأكيد.</p>
+            <h3>{selected.title}</h3>
+            <p className="bid-current"><span>أعلى مزايدة حاليًا</span><strong>{Number(selected.current_price).toLocaleString('en-US')} ر.س</strong></p>
+            <form onSubmit={checkBid}>
+              <label htmlFor="bid-amount">قيمة مزايدتك (ر.س)</label>
+              <input id="bid-amount" type="number" inputMode="decimal" min={minimumBid ?? undefined} step="0.01" placeholder="أدخل مبلغًا أعلى من أعلى مزايدة" value={bidAmount} onChange={event => { setBidAmount(event.target.value); setBidMessage(''); setBidSucceeded(false); }} disabled={bidBusy || minimumBid === null || selected.status !== 'ACTIVE'} />
+              <p className="bid-help">إضافة المزايدة تعني إرسال عرضك على هذا المعروض. البيع لا يكتمل بمجرد انتهاء المزاد.</p>
+              {minimumBid === null && <p role="status">جاري التحقق من الحد الأدنى للمزايدة…</p>}
+              {selected.status !== 'ACTIVE' && <p role="status">المزاد غير نشط حاليًا.</p>}
+              {bidMessage && <p role={bidSucceeded ? 'status' : 'alert'}>{bidMessage}</p>}
+              <button className="primary" type="submit" disabled={bidBusy || minimumBid === null || selected.status !== 'ACTIVE'}>{bidBusy ? 'جاري إرسال المزايدة…' : 'تأكيد المزايدة'}</button>
+            </form>
+            <button className="bid-back" type="button" onClick={() => { setBidOpen(false); setBidConfirm(false); }}>العودة إلى تفاصيل المزاد</button>
+          </div>
+          <div className="bid-image">{selected.images?.[0] ? <img src={new URL(typeof selected.images[0] === 'string' ? selected.images[0] : selected.images[0].image_url, API).href} alt={selected.title} /> : <p>لا توجد صورة</p>}</div>
+          {bidConfirm && <div className="bid-overlay" role="presentation"><div className="bid-dialog" role="dialog" aria-modal="true" aria-labelledby="bid-confirm-title"><h3 id="bid-confirm-title">تأكيد المزايدة</h3><p>قيمة المزايدة: {Number(bidAmount).toLocaleString('en-US')} ر.س</p><div><button type="button" onClick={() => setBidConfirm(false)}>إلغاء</button><button className="primary" type="button" onClick={sendBid} disabled={bidBusy || minimumBid === null}>تأكيد المزايدة</button></div></div></div>}
+        </> : <>
         <div className="details-summary"><h2>{selected.title}</h2><p className="details-price"><span>السعر الحالي</span><strong>{Number(selected.current_price).toLocaleString('en-US')} ر.س</strong></p><p>بداية المزاد: {new Date(selected.start_time).toLocaleString('ar-SA')}</p><p>نهاية المزاد: {new Date(selected.end_time).toLocaleString('ar-SA')}</p></div><div className="details-images">
 
         {selected.images?.length ? (
@@ -223,6 +358,8 @@ useEffect(() => {
         )}
 
         </div><section className="details-description"><h3>عن هذا المعروض</h3><p>{selected.description || 'الوصف غير متاح'}</p></section>
+        {selected.status === 'ACTIVE' && <button className="open-bid" type="button" onClick={openBid}>أضف مزايدتك</button>}
+        </>}
       </>
     ) : null}
   </section>

@@ -100,11 +100,12 @@ export default function AdminReview({ api, token }) {
         ))}
       <p role="status">{message}</p>
       {decision && selectedId && <div className="review-modal-backdrop"><div className={'review-modal ' + (decision === 'REJECTED' ? 'review-reject-modal' : '')} role="dialog" aria-modal="true" aria-labelledby="review-modal-title">
-        <h3 id="review-modal-title">{decision === 'REJECTED' ? 'رفض الإعلان' : 'تأكيد الموافقة'}</h3>
+        <h3 id="review-modal-title">{decision === 'REJECTED' ? 'رفض الإعلان' : 'تأكيد الموافقة على الإعلان'}</h3>
         <p>{items.find(item => item.id === selectedId)?.title}</p>
-        {decision === 'REJECTED' && <label>سبب الرفض<textarea value={reason} onChange={event => setReason(event.target.value)} maxLength={2000} rows={3} /></label>}
+        {decision === 'APPROVED' && <><p>هل أنت متأكد من الموافقة على هذا الإعلان؟</p><p>سيصبح الإعلان معتمدًا، ويمكن للبائع إعداد المزاد. لن يُنشر المزاد تلقائيًا.</p></>}
+        {decision === 'REJECTED' && <><label>سبب الرفض *<textarea value={reason} onChange={event => setReason(event.target.value)} maxLength={2000} rows={3} /></label><p>سيظهر السبب للبائع لمساعدته على تعديل الإعلان وإعادة تقديمه للمراجعة.</p></>}
         <p role="status">{message}</p>
-        <div className="review-modal-actions"><button disabled={busy} onClick={() => { setDecision(''); setReason(''); setMessage(''); }}>إلغاء</button><button className="primary" disabled={busy} onClick={() => review(items.find(item => item.id === selectedId), decision, reason)}>{busy ? 'جاري الحفظ…' : 'تأكيد'}</button></div>
+        <div className="review-modal-actions"><button disabled={busy} onClick={() => { setDecision(''); setReason(''); setMessage(''); }}>إلغاء</button><button className="primary" disabled={busy} onClick={() => review(items.find(item => item.id === selectedId), decision, reason)}>{busy ? 'جاري الحفظ…' : decision === 'REJECTED' ? 'تأكيد الرفض' : 'تأكيد الموافقة'}</button></div>
       </div></div>}
       {reviewFailure && <div className="review-modal-backdrop"><div className="review-modal review-error-modal" role="alertdialog" aria-modal="true" aria-labelledby="review-error-title">
         <h3 id="review-error-title">تعذر حفظ قرار المراجعة</h3>
