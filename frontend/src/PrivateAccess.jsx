@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 export default function PrivateAccess({ api, token, onOpen, onBack }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [grantedId, setGrantedId] = useState('');
 
   async function enter(event) {
     event.preventDefault();
@@ -34,13 +35,21 @@ export default function PrivateAccess({ api, token, onOpen, onBack }) {
       }
       if (result.data?.accessGranted !== true) throw new Error('لم يتم تأكيد السماح بالدخول');
       setMessage('تم السماح بالدخول للمزاد');
-      onOpen(id);
+      setGrantedId(id);
     } catch (error) {
       setMessage(error instanceof TypeError ? 'تعذّر الاتصال، حاولي مرة ثانية' : error.message);
     } finally {
       setBusy(false);
     }
   }
+
+  if (grantedId) return <section className="private-access-success">
+    <p className="breadcrumb">مزاد خاص / تم قبول رمز الوصول</p>
+    <h1>تم قبول الرمز</h1>
+    <p>يمكنك الآن متابعة تفاصيل المزاد.</p>
+    <button className="primary" onClick={() => onOpen(grantedId)}>عرض تفاصيل المزاد</button>
+    <button onClick={onBack}>العودة إلى المزادات</button>
+  </section>;
 
   return (
     <section className="account-screen private-access">

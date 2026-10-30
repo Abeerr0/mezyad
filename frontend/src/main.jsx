@@ -83,11 +83,7 @@ if (type === 'login') {
   setPage('auctions');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-    setMessage(
-      type === 'login'
-        ? 'تم تسجيل الدخول'
-        : 'تم إنشاء الحساب'
-    );
+    setMessage(type === 'login' ? '' : 'تم إنشاء الحساب');
   } catch (error) {
     setMessage(error instanceof TypeError ? 'تعذّر الاتصال بالخادم، حاولي مرة ثانية' : error.message);
     } finally {

@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from 'react';
 
+const categoryText = {
+  'Real Estate': ['العقارات', 'العقارات السكنية والأراضي'],
+  Camels: ['الإبل', 'صور ومعلومات عن الإبل المعروضة'],
+  'Vehicle Plates': ['اللوحات المميزة', 'لوحات السيارات المميزة'],
+  'Rare Vehicles': ['السيارات النادرة', 'الموديلات المحدودة والنادرة'],
+  'Luxury Handbags': ['الحقائب الفاخرة', '']
+};
+
 export default function ListingForm({ api, token, item, onSaved, onCancel }) {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -149,23 +157,33 @@ export default function ListingForm({ api, token, item, onSaved, onCancel }) {
     name: 'صورة الإعلان ' + (index + 1),
     url: new URL(typeof image === 'string' ? image : image.image_url, api).href
   }));
+  const selectedCategory = categories.find(category => category.id === categoryId);
+  const selectedCategoryName = categoryText[selectedCategory?.name]?.[0] || selectedCategory?.name || '';
 
   if (loading) return <p role="status">جاري تحميل أقسام الإعلان…</p>;
   if (categoryError) return <p role="alert">{categoryError}</p>;
   if (!categories.length) return <p>لا توجد أقسام للإعلان حاليًا.</p>;
 
   return (
-    <section className={'panel listing-form listing-editor' + (step >= 2 ? ' listing-visual-step' : '')}>
+    <section className={'panel listing-form listing-editor' + (step === 0 ? ' listing-category-step' : step >= 2 ? ' listing-visual-step' : '')}>
+      {step === 0 && <p className="breadcrumb">حسابي / أنشئ مزادك</p>}
       {step >= 2 && <p className="breadcrumb">{step === 3 ? 'أنشئ مزادك / مراجعة' : 'أنشئ مزادك / الصور'}</p>}
-      <h2>{['اختر القسم', item ? 'تعديل الإعلان المرفوض' : 'تفاصيل الإعلان', 'صور الإعلان', 'راجع إعلانك'][step]}</h2>
+      <h2>{['اختر فئة السلعة', item ? 'تعديل الإعلان المرفوض' : 'تفاصيل الإعلان', 'صور الإعلان', 'راجع إعلانك'][step]}</h2>
+      {step === 0 && <p className="page-intro">ابدأ باختيار القسم المناسب قبل إضافة تفاصيل الإعلان.</p>}
       {step >= 2 && <p className="page-intro">{step === 2 ? 'أضف صورًا واضحة للمعروض نفسه ومن زوايا مختلفة.' : 'تأكد من العنوان والصورة والمعلومات قبل إرسال الإعلان للمراجعة.'}</p>}
       <form className={step === 3 ? 'listing-review-form' : step === 2 ? 'listing-photos-form' : ''} onSubmit={submitListing}>
         <fieldset disabled={busy}>
           <input type="hidden" name="categoryId" value={categoryId} />
-          {step === 0 && <div className="category-options">{categories.map(category => <button type="button" key={category.id} onClick={() => { setCategoryId(category.id); setStep(1); }}>{category.name}</button>)}</div>}
+          {step === 0 && <>
+            <div className="category-options">{categories.map(category => {
+              const [name, description] = categoryText[category.name] || [category.name, ''];
+              return <button type="button" key={category.id} aria-pressed={categoryId === category.id} onClick={() => setCategoryId(category.id)}><strong>{name}</strong>{description && <span>{description}</span>}</button>;
+            })}</div>
+            <div className="actions"><button className="primary" type="button" disabled={!categoryId} onClick={() => setStep(1)}>المتابعة إلى تفاصيل المعروض</button></div>
+          </>}
           <div data-step="1" hidden={step !== 1}>
           <label>عنوان الإعلان<input name="title" required={step === 1} maxLength={240} defaultValue={item?.title ?? ''} /></label>
-          <label>القسم<input value={categories.find(category => category.id === categoryId)?.name || ''} readOnly /></label>
+          <label>القسم<input value={selectedCategoryName} readOnly /></label>
           <label>وصف المعروض<textarea name="description" required={step === 1} maxLength={20000} rows={4} defaultValue={item?.description ?? ''} /></label>
           <label>مواصفات القسم — اختيارية<textarea name="specifications" rows={3} defaultValue={specifications} placeholder={'كل مواصفة بسطر، مثل:\nاللون: بني'} /></label>
           </div>
@@ -202,7 +220,7 @@ export default function ListingForm({ api, token, item, onSaved, onCancel }) {
             <div className="listing-preview">
               <div className="listing-preview-details">
                 <p className="breadcrumb">
-                  {categories.find(category => category.id === categoryId)?.name}
+                  {selectedCategoryName}
                 </p>
                 <h3>{preview.title}</h3>
                 <p>{preview.description}</p>

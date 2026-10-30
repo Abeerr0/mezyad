@@ -1,4 +1,4 @@
-:root { font-family: 'Noto Sans Arabic', 'Segoe UI', sans-serif; color: #292520; background: #fcfbf8; font-synthesis: none; }
+:root { font-family: 'Listing Noto Sans Arabic', 'Segoe UI', sans-serif; color: #292520; background: #fcfbf8; font-synthesis: none; }
 * { box-sizing: border-box; }
 body { margin: 0; }
 main { max-width: 1440px; margin: auto; padding: 0 76px 80px; }
@@ -310,6 +310,48 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
 .review-list .review-detail form button { min-width: 180px; margin-inline-end: 16px; }
 .review-list .review-detail form button:first-of-type { background: #f8f5ef; }
 .review-list .review-detail form button:first-of-type:hover { background: #e8d9bb; }
+.listing-editor.listing-category-step { direction: rtl; padding-top: 64px; }
+.listing-editor.listing-category-step > h2 { font-family: 'Listing El Messiri', 'Listing Noto Sans Arabic', sans-serif; font-size: 42px; font-weight: 700; line-height: 66px; color: #241f1b; margin: 0 0 8px; }
+.listing-editor.listing-category-step > .page-intro { font-size: 15px; color: #6d655d; margin: 0 0 64px; }
+.listing-editor.listing-category-step form { background: transparent; padding: 0; }
+.listing-editor.listing-category-step .category-options { gap: 38px; }
+.listing-editor .category-options button { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 16px; min-height: 174px; padding: 24px 36px; background: #fff; border: 0; border-left: 4px solid #a7834b; text-align: right; }
+.listing-editor .category-options button strong { font-size: 22px; }
+.listing-editor .category-options button span { font-size: 14px; color: #6d655d; }
+.listing-editor .category-options button[aria-pressed='true'] { background: #e7d8bc; border-color: #241f1b; }
+.listing-editor.listing-category-step .actions { margin-top: 56px; }
+.listing-editor.listing-category-step .actions .primary { width: 429px; max-width: 100%; min-height: 54px; background: #e7d8bc; border: 1px solid #241f1b; }
+.auction-type-screen { direction: rtl; padding: 64px 0; }
+.auction-type-screen h2 { font-family: 'Listing El Messiri', 'Listing Noto Sans Arabic', sans-serif; font-size: 40px; font-weight: 700; line-height: 66px; margin: 20px 0; }
+.auction-type-screen .page-intro { color: #6d655d; }
+.auction-type-item { padding: 20px 24px; margin: 48px 0 24px; background: #f8f5ef; border: 1px solid #d8cbb8; }
+.auction-type-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-bottom: 24px; }
+.auction-type-options article { display: grid; justify-items: center; text-align: center; min-height: 480px; padding: 40px; gap: 24px; background: #f8f5ef; border: 1px solid #d8cbb8; }
+.auction-type-options article img { width: 56px; height: 56px; }
+.auction-type-options article h3 { font-family: 'Listing El Messiri', 'Listing Noto Sans Arabic', sans-serif; font-size: 30px; font-weight: 700; line-height: 50px; margin: 18px 0 0; }
+.auction-type-options article p { color: #6d655d; }
+.auction-type-options article button { width: 360px; max-width: 100%; height: 64px; align-self: end; background: #e7d8bc; border-color: #241f1b; }
+.private-access-success { direction: rtl; min-height: 900px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 200px 24px 80px; text-align: center; }
+.private-access-success::before { content: ''; display: block; width: 350px; max-width: 100%; border-top: 2px solid #b69a70; margin-bottom: 45px; }
+.private-access-success .breadcrumb { color: #b69a70; font-size: 13px; }
+.private-access-success h1 { font-size: 40px; margin: 20px 0; }
+.private-access-success p:not(.breadcrumb) { color: #6d655d; margin-bottom: 80px; }
+.private-access-success button { width: 425px; max-width: 100%; min-height: 54px; margin-bottom: 16px; }
+.review-list .review-detail > .review-decisions { grid-column: 1 / -1; display: flex; gap: 16px; }
+.review-list .review-detail > .review-decisions button { min-width: 180px; }
+.review-modal-backdrop { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 24px; background: rgba(0,0,0,.45); }
+.review-modal { width: 700px; max-width: 100%; padding: 40px; background: #fcfbf8; direction: rtl; }
+.review-modal h3 { font-size: 28px; margin-top: 0; }
+.review-reject-modal { min-height: 571px; display: flex; flex-direction: column; }
+.review-reject-modal .review-modal-actions { margin-top: auto; }
+.review-error-modal { min-height: 350px; display: flex; flex-direction: column; }
+.review-error-modal p { color: #6d655d; overflow-wrap: anywhere; }
+.review-error-modal .review-modal-actions { margin-top: auto; }
+.review-modal label, .review-modal textarea { display: block; width: 100%; }
+.review-modal-actions { display: flex; gap: 16px; justify-content: flex-end; }
+@media (max-width: 520px) { .review-modal { padding: 24px; } }
+@media (max-width: 800px) { .auction-type-options { grid-template-columns: 1fr; } .auction-type-options article { min-height: 280px; padding: 36px 20px; } }
+@media (max-width: 800px) { .listing-editor.listing-category-step .category-options { grid-template-columns: 1fr; gap: 16px; } }
 @media (max-width: 1000px) {
   .review-list .review-card { grid-template-columns: 140px minmax(0,1fr); }
   .review-list .review-card > button { grid-column: 2; grid-row: auto; }

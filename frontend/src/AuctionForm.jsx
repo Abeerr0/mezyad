@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 
-export default function AuctionForm({ api, token, item }) {
-  const [open, setOpen] = useState(false);
+export default function AuctionForm({ api, token, item, startOpen = false, onBack }) {
+  const [open, setOpen] = useState(startOpen);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [auction, setAuction] = useState(null);
   const [duplicate, setDuplicate] = useState(false);
+  const [visibility, setVisibility] = useState('');
 
   async function createAuction(event) {
     event.preventDefault();
@@ -59,6 +60,20 @@ export default function AuctionForm({ api, token, item }) {
   if (item.status !== 'APPROVED') return null;
   if (!open) return <button onClick={() => setOpen(true)}>إنشاء مزاد</button>;
 
+  if (!visibility) return (
+    <section className="auction-type-screen">
+      <p className="breadcrumb">حسابي / إعلاناتي / اختر نوع المزاد</p>
+      <h2>اختر نوع المزاد</h2>
+      <p className="page-intro">تم اعتماد إعلانك. اختر نوع المزاد المناسب لسلعتك للمتابعة إلى الإعدادات.</p>
+      <p className="auction-type-item">{item.title}</p>
+      <div className="auction-type-options">
+        <article><img src="/design/auction-public.svg" alt="" /><h3>مزاد عام</h3><p>يظهر في قائمة المزادات العامة، ويمكن للمستخدمين الاطلاع عليه والمشاركة وفق شروط المزاد.</p><button className="primary" onClick={() => setVisibility('PUBLIC')}>إنشاء مزاد عام</button></article>
+        <article><img src="/design/auction-private.svg" alt="" /><h3>مزاد خاص</h3><p>لا يظهر في المزادات العامة، ويتطلب الدخول إليه رمز وصول تشاركه مع المدعوين.</p><button className="primary" onClick={() => setVisibility('PRIVATE')}>إنشاء مزاد خاص</button></article>
+      </div>
+      <button onClick={() => onBack ? onBack() : setOpen(false)}>العودة إلى إعلاناتي</button>
+    </section>
+  );
+
   return (
     <section className="listing-form auction-form">
       <p className="breadcrumb">إعلاناتي / إعلان معتمد / إعداد المزاد</p>
@@ -67,16 +82,14 @@ export default function AuctionForm({ api, token, item }) {
       {!auction && !duplicate && <form onSubmit={createAuction}>
         <fieldset disabled={busy}>
           <label>الإعلان المعتمد<input value={item.title} readOnly /></label>
-          <label>نوع المزاد<select name="visibility" defaultValue="PUBLIC">
-            <option value="PUBLIC">عام</option>
-            <option value="PRIVATE">خاص</option>
-          </select></label>
+          <input type="hidden" name="visibility" value={visibility} />
           <label>سعر البداية بالريال<input name="startingPrice" type="number" min="0.01" max="999999999999.99" step="0.01" required /></label>
           <label>أقل زيادة بالريال<input name="minimumIncrement" type="number" min="0.01" max="999999999999.99" step="0.01" required /></label>
           <label>بداية المزاد — بتوقيت جهازك<input name="startTime" type="datetime-local" required /></label>
           <label>نهاية المزاد — بتوقيت جهازك<input name="endTime" type="datetime-local" required /></label>
           <button className="primary" type="submit">{busy ? 'جاري الإنشاء…' : 'إنشاء المزاد'}</button>
-          <button type="button" onClick={() => setOpen(false)}>إلغاء</button>
+          <button type="button" onClick={() => onBack ? onBack() : setOpen(false)}>إلغاء</button>
+          <button type="button" onClick={() => setVisibility('')}>تغيير نوع المزاد</button>
         </fieldset>
       </form>}
       <p role="status">{message}</p>
