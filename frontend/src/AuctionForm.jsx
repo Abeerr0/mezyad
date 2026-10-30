@@ -17,11 +17,11 @@ export default function AuctionForm({ api, token, item, startOpen = false, onBac
     const start = new Date(data.get('startTime'));
     const end = new Date(data.get('endTime'));
     if (![startingPrice, minimumIncrement].every(value => Number.isFinite(value) && value > 0 && value <= 999999999999.99)) {
-      setMessage('اكتبي سعر بداية وأقل زيادة أكبر من صفر');
+      setMessage('اكتب سعر بداية وأقل زيادة أكبر من صفر');
       return;
     }
     if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) {
-      setMessage('اختاري وقت البداية والنهاية، والنهاية تكون بعد البداية');
+      setMessage('اختر وقت البداية والنهاية، والنهاية تكون بعد البداية');
       return;
     }
     setBusy(true);
@@ -45,13 +45,13 @@ export default function AuctionForm({ api, token, item, startOpen = false, onBac
         throw new Error('الإعلان له مزاد بالفعل، ما نقدر ننشئ مزادًا مكررًا');
       }
       if (!response.ok) throw new Error(result.error?.message || 'تعذّر إنشاء المزاد');
-      if (!result.data?.id || result.data.item_id !== item.id) throw new Error('تعذّر تأكيد إنشاء المزاد؛ تحققي قبل إعادة الإرسال');
+      if (!result.data?.id || result.data.item_id !== item.id) throw new Error('تعذّر تأكيد إنشاء المزاد؛ تحقق قبل إعادة الإرسال');
       setAuction(result.data);
       setMessage(result.data.visibility === 'PRIVATE' && !result.data.accessCode
-        ? 'تم إنشاء المزاد، لكن رمز الخاص ما وصل؛ راجعي الفريق قبل المحاولة مرة ثانية'
+        ? 'تم إنشاء المزاد، لكن رمز الخاص ما وصل؛ راجع الفريق قبل المحاولة مرة أخرى'
         : 'تم إنشاء المزاد');
     } catch (error) {
-      setMessage(error instanceof TypeError ? 'تعذّر الاتصال بالخادم، حاولي لاحقًا' : error.message);
+      setMessage(error instanceof TypeError ? 'تعذّر الاتصال بالخادم، حاول لاحقًا' : error.message);
     } finally {
       setBusy(false);
     }

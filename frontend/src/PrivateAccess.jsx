@@ -12,7 +12,7 @@ export default function PrivateAccess({ api, token, onOpen, onBack }) {
     const id = fields.auctionId.value.trim();
     const accessCode = fields.accessCode.value.trim();
     if (!id || !accessCode) {
-      setMessage('اكتبي معرّف المزاد ورمز الدخول');
+      setMessage('اكتب معرّف المزاد ورمز الدخول');
       return;
     }
     setBusy(true);
@@ -37,7 +37,7 @@ export default function PrivateAccess({ api, token, onOpen, onBack }) {
       setMessage('تم السماح بالدخول للمزاد');
       setGrantedId(id);
     } catch (error) {
-      setMessage(error instanceof TypeError ? 'تعذّر الاتصال، حاولي مرة ثانية' : error.message);
+      setMessage(error instanceof TypeError ? 'تعذّر الاتصال، حاول مرة أخرى' : error.message);
     } finally {
       setBusy(false);
     }

@@ -27,7 +27,7 @@ export default function MyListings({ api, token }) {
         if (!Array.isArray(result.data)) throw new Error('Invalid items response');
         if (active) setItems(result.data);
       } catch {
-        if (active) setError('تعذّر تحميل إعلاناتك، حاولي التحديث');
+        if (active) setError('تعذّر تحميل إعلاناتك، حاول التحديث');
       } finally {
         if (active) setLoading(false);
       }

@@ -41,7 +41,7 @@ export default function AdminReview({ api, token }) {
   async function review(item, decision, reason = '') {
     if (busy) return;
     if (decision === 'REJECTED' && !reason.trim()) {
-      setMessage('اكتبي سبب الرفض');
+      setMessage('اكتب سبب الرفض');
       return;
     }
     setBusy(true);
@@ -66,7 +66,7 @@ export default function AdminReview({ api, token }) {
       setReason('');
       setMessage(decision === 'APPROVED' ? 'تمت الموافقة على الإعلان' : 'تم رفض الإعلان');
     } catch (error) {
-      setMessage(error instanceof TypeError ? 'تعذّر الاتصال، لم نتأكد من حفظ القرار؛ حدّثي القائمة قبل المحاولة' : error.message);
+      setMessage(error instanceof TypeError ? 'تعذّر الاتصال، لم نتأكد من حفظ القرار؛ حدّث القائمة قبل المحاولة' : error.message);
       setDecision('');
       setReviewFailure(true);
     } finally {

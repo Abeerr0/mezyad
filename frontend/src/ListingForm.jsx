@@ -31,11 +31,11 @@ export default function ListingForm({ api, token, item, onSaved, onCancel }) {
 
   function imageError(files) {
     if ((!item && files.length < 1) || files.length > 6) {
-      return 'اختاري حتى 6 صور، وصورة واحدة على الأقل للإعلان الجديد';
+      return 'اختر حتى 6 صور، وصورة واحدة على الأقل للإعلان الجديد';
     }
     const types = ['image/jpeg', 'image/png', 'image/webp'];
     if (files.some(image => !types.includes(image.type) || image.size > 5 * 1024 * 1024)) {
-      return 'اختاري صور JPG أو PNG أو WebP، بحجم أقصى 5 ميجابايت للصورة';
+      return 'اختر صور JPG أو PNG أو WebP، بحجم أقصى 5 ميجابايت للصورة';
     }
     return '';
   }
@@ -79,7 +79,7 @@ export default function ListingForm({ api, token, item, onSaved, onCancel }) {
         if (!Array.isArray(result.data)) throw new Error();
         if (active) setCategories(result.data);
       } catch {
-        if (active) setCategoryError('تعذّر تحميل الأقسام، حاولي لاحقًا');
+        if (active) setCategoryError('تعذّر تحميل الأقسام، حاول لاحقًا');
       } finally {
         if (active) setLoading(false);
       }
@@ -102,7 +102,7 @@ export default function ListingForm({ api, token, item, onSaved, onCancel }) {
       const name = line.slice(0, separator).trim();
       const value = line.slice(separator + 1).trim();
       if (separator < 1 || !name || !value || Object.hasOwn(categoryFields, name)) {
-        setMessage('اكتبي كل مواصفة بسطر مثل اللون: بني، بدون تكرار اسم المواصفة');
+        setMessage('اكتب كل مواصفة بسطر مثل اللون: بني، بدون تكرار اسم المواصفة');
         return;
       }
       Object.defineProperty(categoryFields, name, { value, enumerable: true });
@@ -111,7 +111,7 @@ export default function ListingForm({ api, token, item, onSaved, onCancel }) {
       categoryFields = item.categoryFields ?? item.category_fields ?? {};
     }
     if (!data.get('categoryId') || !title || !description) {
-      setMessage('اختاري القسم واكتبي العنوان والوصف');
+      setMessage('اختر القسم واكتب العنوان والوصف');
       return;
     }
     if (imageError(images)) {
@@ -137,7 +137,7 @@ export default function ListingForm({ api, token, item, onSaved, onCancel }) {
       if (!result.data?.id || result.data.status !== 'PENDING_REVIEW' ||
           (item && result.data.id !== item.id) ||
           (images.length > 0 && (!Array.isArray(result.data.images) || result.data.images.length !== images.length))) {
-        throw new Error('تعذّر تأكيد حفظ الإعلان والصور؛ تحققي من إعلاناتك قبل إعادة الإرسال');
+        throw new Error('تعذّر تأكيد حفظ الإعلان والصور؛ تحقق من إعلاناتك قبل إعادة الإرسال');
       }
       form.reset();
       setImages([]);
@@ -145,7 +145,7 @@ export default function ListingForm({ api, token, item, onSaved, onCancel }) {
       setMessage('تم إرسال الإعلان، بانتظار مراجعة المشرف');
       onSaved?.(result.data);
     } catch (error) {
-      setMessage(error instanceof TypeError ? 'تعذّر الاتصال بالخادم، حاولي لاحقًا' : error.message);
+      setMessage(error instanceof TypeError ? 'تعذّر الاتصال بالخادم، حاول لاحقًا' : error.message);
     } finally {
       setBusy(false);
     }
@@ -213,7 +213,7 @@ export default function ListingForm({ api, token, item, onSaved, onCancel }) {
               </div>
             </div>
             <p className="listing-photo-note">من صورة إلى 6، بصيغة JPG أو PNG أو WebP، حتى 5 ميجابايت للصورة.</p>
-            {item && <p className="listing-photo-note">اتركي الصور البديلة فارغة للاحتفاظ بالصور الحالية.</p>}
+            {item && <p className="listing-photo-note">اترك الصور البديلة فارغة للاحتفاظ بالصور الحالية.</p>}
             {shownImages.length >= 3 && shownImages.length < 6 && <label className="listing-add-more" htmlFor="listing-images">إضافة صورة أخرى</label>}
           </div>
           {step === 3 && (
