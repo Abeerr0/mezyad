@@ -46,6 +46,9 @@ export async function saveImages(files = []) {
   try {
     await mkdir(uploadDirectory, { recursive: true });
     for (const file of files) {
+      if (!file.buffer || file.buffer.length === 0) {
+  throw invalidImage();
+}
       const image = sharp(file.buffer, {
         limitInputPixels: 20000000,
         animated: false,

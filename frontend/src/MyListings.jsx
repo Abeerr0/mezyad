@@ -21,6 +21,7 @@ export default function MyListings({ api, token }) {
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error?.message || 'تعذّر تحميل إعلاناتك');
+        if (!Array.isArray(result.data)) throw new Error('Invalid items response');
         if (active) setItems(result.data);
       } catch {
         if (active) setError('تعذّر تحميل إعلاناتك، حاولي التحديث');
@@ -40,6 +41,7 @@ export default function MyListings({ api, token }) {
 
   return (
     <section className="panel own-listings">
+      <p className="breadcrumb">حسابي / إعلاناتي</p>
       <h2>إعلاناتي</h2>
       <button disabled={loading || Boolean(editing)} onClick={() => setRefresh(refresh + 1)}>تحديث إعلاناتي</button>
       {loading ? <p role="status">جاري تحميل إعلاناتك…</p> :
@@ -48,11 +50,13 @@ export default function MyListings({ api, token }) {
         items.map(item => (
           <article key={item.id}>
             {item.images?.[0] && <img className="listing-photo" src={new URL(typeof item.images[0] === 'string' ? item.images[0] : item.images[0].image_url, api).href} alt={item.title} />}
+            <div className="listing-info">
             <h3>{item.title}</h3>
             <p>{item.description}</p>
-            <p>الحالة: {{ PENDING_REVIEW: 'بانتظار المراجعة', APPROVED: 'معتمد', REJECTED: 'مرفوض' }[item.status] || item.status}</p>
+            <p className="listing-status">الحالة: {{ PENDING_REVIEW: 'بانتظار المراجعة', APPROVED: 'معتمد', REJECTED: 'مرفوض' }[item.status] || item.status}</p>
+            {item.status === 'REJECTED' && <p>سبب الرفض: {item.review_reason || 'لم يذكر سبب'}</p>}
+            </div>
             {item.status === 'REJECTED' && <>
-              <p>سبب الرفض: {item.review_reason || 'لم يذكر سبب'}</p>
               <button disabled={Boolean(editing)} onClick={() => { setEditing(item); setMessage(''); }}>تعديل وإعادة إرسال</button>
             </>}
             {item.status === 'APPROVED' && <AuctionForm api={api} token={token} item={item} />}

@@ -8,6 +8,7 @@ import PrivateAccess from './PrivateAccess';
 const API=import.meta.env.VITE_API_URL||'http://localhost:3000';
 function App(){
  const [page, setPage] = useState('auctions');
+ const [category, setCategory] = useState('الكل');
  const [auctions,setAuctions]=useState([]),[selected,setSelected]=useState(null),[form,setForm]=useState({name:'',email:'',password:''}),[token,setToken]=useState(''),[message,setMessage]=useState('');
  const [user, setUser] = useState(null);
  const [accountBusy, setAccountBusy] = useState(false);
@@ -23,6 +24,7 @@ const [detailsError, setDetailsError] = useState('');
  async function load() {
   try {
     const data = await request('/auctions');
+    if (!Array.isArray(data)) throw new Error('Invalid auctions response');
     setAuctions(data);
     setAuctionsError('');
   } catch (error) {
@@ -34,6 +36,16 @@ const [detailsError, setDetailsError] = useState('');
  useEffect(()=>{load();const id=setInterval(load,5000);return()=>clearInterval(id)},[]);
 async function account(type) {
   if (accountBusy) return;
+  if (type === 'login') {
+    if (!/^\S+@\S+\.\S+$/.test(form.email)) {
+      setMessage('اكتبي بريدًا إلكترونيًا صحيحًا');
+      return;
+    }
+    if (!form.password) {
+      setMessage('اكتبي كلمة المرور');
+      return;
+    }
+  }
   if (type === 'register') {
     if (!form.name.trim()) {
       setMessage('اكتبي الاسم');
@@ -109,7 +121,7 @@ async function logout() {
 }
 
 useEffect(() => {
-  if (!auctionId) return;
+  if (page !== 'auctions' || !auctionId) return;
 
   let active = true;
   let timer;
@@ -117,6 +129,7 @@ useEffect(() => {
   async function loadDetails() {
     try {
       const data = await request('/auctions/' + auctionId);
+      if (!data || data.id !== auctionId) throw new Error('تعذّر تحميل التفاصيل، حاولي لاحقًا');
 
       if (active) {
         setSelected(data);
@@ -138,29 +151,38 @@ useEffect(() => {
     active = false;
     clearTimeout(timer);
   };
-}, [auctionId, token]);
- return <main><header><img className="brand" src="/design/mezyad-logo.png" alt="مزياد" /><nav aria-label="القائمة الرئيسية"><button onClick={() => { setPage('auctions'); setAuctionId(null); setSelected(null); }}>المزادات</button>{token ? <><button onClick={() => setPage('new-listing')}>إعلان جديد</button><button onClick={() => setPage('my-listings')}>إعلاناتي</button><button onClick={() => setPage('private')}>مزاد خاص</button>{user?.role === 'ADMIN' && <button onClick={() => setPage('admin')}>مراجعة الإعلانات</button>}<button disabled={accountBusy} onClick={logout}>خروج</button></> : <button onClick={() => { setPage('login'); setMessage(''); }}>تسجيل الدخول</button>}</nav></header>{page === 'auctions' && <>{!auctionId && <><section className="hero" id="auctions"><p className="breadcrumb">المزادات / جميع الأقسام</p><h2>المزادات</h2><p>تصفح المزادات</p></section><section className="cards">
+}, [page, auctionId, token]);
+ const categories = ['الكل', ...new Set(auctions.map(a => a.category_name).filter(Boolean))];
+ const activeCategory = categories.includes(category) ? category : 'الكل';
+ const shownAuctions = auctions.filter(a => activeCategory === 'الكل' || a.category_name === activeCategory);
+
+ return <main><header><img className="brand" src="/design/mezyad-logo.png" alt="مزياد" /><nav aria-label="القائمة الرئيسية"><button onClick={() => { setPage('auctions'); setAuctionId(null); setSelected(null); }}>المزادات</button>{token ? <><button onClick={() => setPage('new-listing')}>إعلان جديد</button><button onClick={() => setPage('my-listings')}>إعلاناتي</button><button onClick={() => setPage('private')}>مزاد خاص</button>{user?.role === 'ADMIN' && <button onClick={() => setPage('admin')}>مراجعة الإعلانات</button>}<button disabled={accountBusy} onClick={logout}>خروج</button></> : <button onClick={() => { setPage('login'); setMessage(''); }}>تسجيل الدخول</button>}</nav></header>{page === 'auctions' && <>{!auctionId && <div className="auction-browser"><section className="hero" id="auctions"><p className="breadcrumb">المزادات / جميع الأقسام</p><h2>المزادات</h2><p>تصفح المزادات</p></section>
+ <div className="auction-filters" aria-label="أقسام المزادات">
+   {categories.map(name => <button key={name} aria-pressed={activeCategory === name} onClick={() => setCategory(name)}>{name}</button>)}
+ </div><section className="cards">
   {auctionsLoading ? (
     <p role="status">جاري تحميل المزادات…</p>
   ) : auctionsError ? (
     <p role="alert">{auctionsError}</p>
-  ) : auctions.length === 0 ? (
+  ) : shownAuctions.length === 0 ? (
     <p>لا توجد مزادات عامة متاحة حاليًا.</p>
   ) : (
-    auctions.map(a => (
+    shownAuctions.map((a, index) => {
+      const image = a.image_url || (typeof a.images?.[0] === 'string' ? a.images[0] : a.images?.[0]?.image_url);
+      return (
       <article key={a.id}>
-        {(a.image_url || a.images?.[0]?.image_url) ? (
+        {image ? (
           <img
-            src={new URL(a.image_url || a.images[0].image_url, API).href}
+            src={new URL(image, API).href}
             alt={a.title}
 
           />
         ) : (
-          <p>لا توجد صورة</p>
+          <p className="no-image">لا توجد صورة</p>
         )}
-        <h3>{a.title}</h3>
-        <p>السعر الحالي: {a.current_price} ريال</p>
-        <p>
+        <div className="card-title"><h3>{a.title}</h3><span>{String(index + 1).padStart(2, '0')}</span></div>
+        <p className="card-price"><span>السعر الحالي</span><strong>{Number(a.current_price).toLocaleString('en-US')} ر.س</strong></p>
+        <p className="auction-status">
           الحالة: {{
             SCHEDULED: 'قادم',
             ACTIVE: 'نشط',
@@ -168,18 +190,19 @@ useEffect(() => {
           }[a.status] || a.status}
         </p>
         <button onClick={() => openAuction(a.id)}>
-          تفاصيل المزاد
+          عرض المزاد
         </button>
       </article>
-    ))
+      );
+    })
   )}
-</section></>}{auctionId && (
+</section></div>}{auctionId && (
   <section className="details-page">
     <button onClick={() => {
       setAuctionId(null);
       setSelected(null);
     }}>
-      إغلاق
+      العودة إلى المزادات
     </button>
 
     {detailsLoading ? (
@@ -188,7 +211,7 @@ useEffect(() => {
       <p role="alert">{detailsError}</p>
     ) : selected && selected.id === auctionId ? (
       <>
-        <div className="details-summary"><h2>{selected.title}</h2><p>السعر الحالي: {selected.current_price} ريال</p><p>بداية المزاد: {new Date(selected.start_time).toLocaleString('ar-SA')}</p><p>نهاية المزاد: {new Date(selected.end_time).toLocaleString('ar-SA')}</p></div><div className="details-images">
+        <div className="details-summary"><h2>{selected.title}</h2><p className="details-price"><span>السعر الحالي</span><strong>{Number(selected.current_price).toLocaleString('en-US')} ر.س</strong></p><p>بداية المزاد: {new Date(selected.start_time).toLocaleString('ar-SA')}</p><p>نهاية المزاد: {new Date(selected.end_time).toLocaleString('ar-SA')}</p></div><div className="details-images">
 
         {selected.images?.length ? (
           selected.images.map(image => (
@@ -207,6 +230,6 @@ useEffect(() => {
       </>
     ) : null}
   </section>
-)}</>}{token && page === 'new-listing' && <ListingForm key={token} api={API} token={token} />}{token && page === 'my-listings' && <MyListings key={token + '-items'} api={API} token={token} />}{token && page === 'private' && <PrivateAccess api={API} token={token} onBack={() => setPage('auctions')} onOpen={id => { setPage('auctions'); openAuction(id); }} />}{token && user?.role === 'ADMIN' && page === 'admin' && <AdminReview key={token + '-admin'} api={API} token={token} />}{(page === 'login' || page === 'register') && <section className={'account-screen ' + page} id="account"><div className="account-form"><p className="eyebrow">{page === 'register' ? 'حساب جديد' : 'حساب مزياد'}</p><h1>{page === 'register' ? 'أنشئ حسابك' : 'مرحبًا بعودتك'}</h1><p className="account-intro">{page === 'register' ? 'أنشئ حسابًا للمتابعة والمشاركة في المزادات.' : 'سجّل دخولك لمتابعة مزايداتك ومزاداتك.'}</p><form onSubmit={event => { event.preventDefault(); account(page); }}><fieldset disabled={accountBusy}>{page === 'register' && <label>الاسم الكامل<input placeholder="اكتب اسمك الكامل" autoComplete="name" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label>}<label>البريد الإلكتروني<input placeholder="أدخل بريدك الإلكتروني" type="email" autoComplete="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/></label><label>كلمة المرور<input placeholder={page === 'register' ? 'أنشئ كلمة مرور' : 'أدخل كلمة المرور'} type="password" autoComplete={page === 'register' ? 'new-password' : 'current-password'} value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/></label><button className="primary" type="submit">{accountBusy ? 'جاري تنفيذ الطلب…' : page === 'register' ? 'إنشاء الحساب' : 'تسجيل الدخول'}</button><button type="button" onClick={() => { setPage(page === 'register' ? 'login' : 'register'); setMessage(''); }}>{page === 'register' ? 'لدي حساب بالفعل' : 'إنشاء حساب'}</button></fieldset></form><p role="status">{message}</p></div></section>}{page !== 'login' && page !== 'register' && <p role="status">{message}</p>}<footer><img className="brand" src="/design/mezyad-logo.png" alt="مزياد" /><p>مزادات مختارة لمعروضات عالية القيمة</p><div><span>© 2026 مزياد. جميع الحقوق محفوظة.</span><span>المملكة العربية السعودية</span></div></footer></main>
+)}</>}{token && page === 'new-listing' && <ListingForm key={token} api={API} token={token} />}{token && page === 'my-listings' && <MyListings key={token + '-items'} api={API} token={token} />}{token && page === 'private' && <PrivateAccess api={API} token={token} onBack={() => setPage('auctions')} onOpen={id => { setPage('auctions'); openAuction(id); }} />}{token && user?.role === 'ADMIN' && page === 'admin' && <AdminReview key={token + '-admin'} api={API} token={token} />}{(page === 'login' || page === 'register') && <section className={'account-screen ' + page} id="account"><div className="account-form"><p className="eyebrow">{page === 'register' ? 'حساب جديد' : 'حساب مزياد'}</p><h1>{page === 'register' ? 'أنشئ حسابك' : 'مرحبًا بعودتك'}</h1><p className="account-intro">{page === 'register' ? 'أنشئ حسابًا للمتابعة والمشاركة في المزادات.' : 'سجّل دخولك لمتابعة مزايداتك ومزاداتك.'}</p><form onSubmit={event => { event.preventDefault(); account(page); }}><fieldset disabled={accountBusy}>{page === 'register' && <label>الاسم الكامل<input placeholder="اكتب اسمك الكامل" autoComplete="name" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label>}<label>البريد الإلكتروني<input placeholder="أدخل بريدك الإلكتروني" type="email" autoComplete="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/></label><label>كلمة المرور<input placeholder={page === 'register' ? 'أنشئ كلمة مرور' : 'أدخل كلمة المرور'} type="password" autoComplete={page === 'register' ? 'new-password' : 'current-password'} value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/></label><button className="primary" type="submit">{accountBusy ? 'جاري تنفيذ الطلب…' : page === 'register' ? 'إنشاء الحساب' : 'تسجيل الدخول'}</button>{page === 'login' && <p className="account-signup-prompt">ليس لديك حساب؟</p>}<button type="button" onClick={() => { setPage(page === 'register' ? 'login' : 'register'); setMessage(''); }}>{page === 'register' ? 'لدي حساب بالفعل' : 'إنشاء حساب'}</button></fieldset></form><p role="status">{message}</p></div></section>}{page !== 'login' && page !== 'register' && <p role="status">{message}</p>}<footer><img className="brand" src="/design/mezyad-logo.png" alt="مزياد" /><p>مزادات مختارة لمعروضات عالية القيمة</p><div><span>© 2026 مزياد. جميع الحقوق محفوظة.</span><span>المملكة العربية السعودية</span></div></footer></main>
 }
 createRoot(document.getElementById('root')).render(<App/>);

@@ -1,8 +1,10 @@
 import { query, pool } from "./db.js";
 
+// تعبير برمجي لحساب حالة المزاد مباشرة من قاعدة البيانات حسب الوقت الحالي (منتهي، نشط، أو مجدول)
 export const auctionStatus = `CASE WHEN a.status='CLOSED' OR a.end_time<=clock_timestamp() THEN 'CLOSED'
- WHEN a.start_time<=clock_timestamp() THEN 'ACTIVE' ELSE 'SCHEDULED' END`;
+  WHEN a.start_time<=clock_timestamp() THEN 'ACTIVE' ELSE 'SCHEDULED' END`;
 
+// دالة للتحقق مما إذا كان المستخدم مصرحاً له برؤية المزاد (عام، المالك، الأدمن، أو مسجل في المزاد الخاص)
 export async function accessible(auctionData, user) {
   if (
     auctionData.visibility === "PUBLIC" ||
@@ -17,6 +19,8 @@ export async function accessible(auctionData, user) {
   );
   return result.rowCount > 0;
 }
+
+// دالة لجلب تفاصيل المزاد الأساسية مع بيانات الإعلان المرتبط به
 export async function auction(id) {
   const result = await query(
     "SELECT a.*,i.seller_id,i.title FROM auctions a JOIN items i ON i.id=a.item_id WHERE a.id=$1",
@@ -24,6 +28,8 @@ export async function auction(id) {
   );
   return result.rows[0];
 }
+
+// دالة لإغلاق المزاد تلقائياً أو تحديث حالته بناءً على الوقت (تستخدم المعاملات وقفل الصفوف)
 export async function closeIfEnded(id) {
   const client = await pool.connect();
   try {
@@ -38,10 +44,13 @@ export async function closeIfEnded(id) {
       return;
     }
     const auctionData = result.rows[0];
+
     // نقرأ الوقت بعد القفل؛ ممكن الطلب كان ينتظر مزايدة ثانية.
     const databaseTime = await client.query(
       "SELECT clock_timestamp() AS current_time",
     );
+
+    // لو وقت المزاد انتهى ولم يتم إغلاقه بعد
     if (
       auctionData.status !== "CLOSED" &&
       new Date(auctionData.end_time) <= databaseTime.rows[0].current_time
@@ -59,6 +68,8 @@ export async function closeIfEnded(id) {
         [id, winningBidResult.rows[0]?.id || null],
       );
     }
+
+    // تحديث حالة المزاد إلى نشط إذا كان مجدولاً وحان وقت بدايته
     await client.query(
       "UPDATE auctions SET status='ACTIVE' WHERE id=$1 AND status='SCHEDULED' AND start_time<=clock_timestamp() AND end_time>clock_timestamp()",
       [id],
@@ -72,6 +83,7 @@ export async function closeIfEnded(id) {
   }
 }
 
+// دالة لجلب نتيجة المزاد ومعرفة ما إذا كان المستخدم الحالي هو الفائز
 export async function resultFor(auctionId, userId = null) {
   const result = await query(
     `SELECT r.winner_bid_id,r.closed_at,b.amount AS winning_amount,
@@ -83,6 +95,7 @@ export async function resultFor(auctionId, userId = null) {
   return result.rows[0] || null;
 }
 
+// دالة لجلب إحصائيات مشاركة المستخدم الحالي في المزاد (عدد مزايداته، أعلى مبلغ، وأحدث مزايدة)
 export async function participationFor(auctionId, userId) {
   if (!userId) return null;
   // نرجع بيانات مشاركته بس، وما نظهر هوية باقي المزايدين.
