@@ -10,12 +10,17 @@ import {
 } from "./uploads.js";
 
 export const listings = Router();
+
+// دالة للتحقق من صحة الـ UUID
 const uuid = (value) =>
   typeof value === "string" &&
   /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value);
+
+// دالة موحدة لإرجاع الأخطاء بالهيكل المطلوب
 const fail = (res, status, code, message) =>
   res.status(status).json({ error: { code, message } });
 
+// دالة لجلب تفاصيل الإعلان مع صوره الفردية
 export async function withImages(item, connection = { query }) {
   const images = await connection.query(
     "SELECT image_url FROM item_images WHERE item_id=$1 ORDER BY id",
@@ -28,7 +33,7 @@ export async function withImages(item, connection = { query }) {
   };
 }
 
-// نجيب صور الإعلانات كلها باستعلام واحد.
+// نجيب صور الإعلانات كلها باستعلام واحد عشان الأداء (Batch Fetch).
 export async function withListingImages(items) {
   if (!items.length) return [];
   const result = await query(
@@ -49,6 +54,7 @@ export async function withListingImages(items) {
   }));
 }
 
+// تحليل حقول الفئة والتأكد من أنها بصيغة JSON سليمة
 function parseCategoryFields(value) {
   if (typeof value === "string") {
     try {
@@ -63,6 +69,7 @@ function parseCategoryFields(value) {
   return value;
 }
 
+// التحقق من صحة حقول الإعلان الواردة في الطلب (إنشاء أو تعديل)
 export function parseListingFields(body, editing = false) {
   const hasCategoryFields = Object.hasOwn(body, "categoryFields");
   const hasLegacyFields = Object.hasOwn(body, "category_fields");
@@ -114,6 +121,7 @@ export function parseListingFields(body, editing = false) {
   };
 }
 
+// دالة مشتركة لكتابة وحفظ الإعلان (سواء إنشاء جديد POST أو تعديل PATCH)
 async function writeListing(req, res, next) {
   const editing = req.method === "PATCH";
   const input = parseListingFields(req.body || {}, editing);
@@ -121,15 +129,19 @@ async function writeListing(req, res, next) {
     return fail(res, 400, "INVALID_INPUT", "Valid listing fields required");
   if (!editing && req.is("multipart/form-data") && !req.files?.length)
     return fail(res, 400, "INVALID_IMAGE", "At least one image required");
+
   let client;
   let saved = [];
   let oldImages = [];
   let committed = false;
+
   try {
     client = await pool.connect();
     await client.query("BEGIN");
     let item;
+
     if (editing) {
+      // قفل السجل مؤقتاً للتعديل الآمن
       const result = await client.query(
         "SELECT * FROM items WHERE id=$1 FOR UPDATE",
         [req.params.id],
@@ -139,12 +151,14 @@ async function writeListing(req, res, next) {
         await client.query("ROLLBACK");
         return fail(res, 404, "NOT_FOUND", "Item not found");
       }
+
       // هنا نتأكد إن الإعلان يخص المستخدم.
       if (item.seller_id !== req.user.id) {
         await client.query("ROLLBACK");
         return fail(res, 403, "FORBIDDEN", "Not your item");
       }
-      // نسمح بإعادة الإرسال إذا كان الإعلان مرفوض.
+
+      // نسمح بإعادة الإرسال إذا كان الإعلان مرفوض فقط.
       if (item.status !== "REJECTED") {
         await client.query("ROLLBACK");
         return fail(
@@ -154,6 +168,7 @@ async function writeListing(req, res, next) {
           "Only rejected items can be resubmitted",
         );
       }
+
       if (
         input.categoryId !== undefined &&
         input.categoryId !== item.category_id
@@ -166,6 +181,8 @@ async function writeListing(req, res, next) {
           "Category cannot change on resubmission",
         );
       }
+
+      // تحديث بيانات الإعلان وإرجاع حالته لمراجعة جديدة
       const updatedItem = await client.query(
         `UPDATE items SET title=$1,description=$2,category_fields=$3,status='PENDING_REVIEW',
         review_reason=NULL,reviewed_by=NULL,reviewed_at=NULL WHERE id=$4 RETURNING *`,
@@ -178,6 +195,7 @@ async function writeListing(req, res, next) {
       );
       item = updatedItem.rows[0];
     } else {
+      // إنشاء إعلان جديد في قاعدة البيانات
       const createdItem = await client.query(
         `INSERT INTO items(seller_id,category_id,title,description,category_fields)
         VALUES($1,$2,$3,$4,$5) RETURNING *`,
@@ -191,6 +209,7 @@ async function writeListing(req, res, next) {
       );
       item = createdItem.rows[0];
     }
+
     // إذا انرفعت صور جديدة نستبدل مراجع القديمة داخل نفس المعاملة.
     saved = await saveImages(req.files);
     if (saved.length) {
@@ -207,7 +226,9 @@ async function writeListing(req, res, next) {
           [item.id, path],
         );
     }
+
     const data = await withImages(item, client);
+
     // نحفظ الإعلان وصوره مع بعض، وبعدها نحذف الملفات القديمة.
     await client.query("COMMIT");
     committed = true;
@@ -225,8 +246,13 @@ async function writeListing(req, res, next) {
   }
 }
 
+// مسار إنشاء إعلان جديد
 listings.post("/items", auth, uploadImages, writeListing);
+
+// مسار تعديل وإعادة إرسال الإعلان المرفوض
 listings.patch("/items/:id", auth, uploadImages, writeListing);
+
+// مسار استعراض قائمة الإعلانات (مع دعم فلترة الحالة للأدمن أو الإعلانات الخاصة بالمستخدم)
 listings.get("/items", auth, async (req, res, next) => {
   try {
     if (
@@ -252,6 +278,8 @@ listings.get("/items", auth, async (req, res, next) => {
     next(error);
   }
 });
+
+// مسار استعراض تفاصيل إعلان معين مع التحقق من الصلاحيات
 listings.get("/items/:id", auth, async (req, res, next) => {
   try {
     const result = await query("SELECT * FROM items WHERE id=$1", [
