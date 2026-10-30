@@ -5,12 +5,14 @@ import { randomBytes } from "node:crypto";
 import { query, pool } from "./db.js";
 import { auth, admin, hashToken, newToken } from "./auth.js";
 import { validMoney, toCents } from "./money.js";
-
+import { imageLink, serveImage } from "./uploads.js";
+import { attemptLimit } from "./limits.js";
 export const app = express();
 app.use(
   cors({ origin: process.env.FRONTEND_ORIGIN || "http://localhost:5173" }),
 );
 app.use(express.json({ limit: "100kb" }));
+app.get("/api/v1/images/:filename", serveImage);
 const err = (res, status, code, message) =>
   res.status(status).json({ error: { code, message } });
 const validUuid = (x) =>
@@ -358,6 +360,11 @@ app.get("/items", auth, async (req, res, next) => {
       );
       // نضيف الصور التي رجعت من الاستعلام إلى بيانات الإعلان الحالي.
      // BE-09 | Test 4: إرجاع images فارغة للإعلان الذي لا يملك صورًا.
+            // نجهز رابط عرض كل صورة.
+      for (const image of imagesResult.rows) {
+        image.image_url = imageLink(image.image_url);
+      }
+
       item.images = imagesResult.rows;
     }
     // نرسل قائمة الإعلانات مع صور كل إعلان، وإذا لم توجد إعلانات نرسل قائمة فارغة.
@@ -621,6 +628,9 @@ WHERE id = $1
     // التعامل مع الخطا اثناء انشاء المزاد
     // إذا حصل خطأ أثناء محاولة إنشاء المزاد، نستقبل الخطأ هنا
   } catch (e) {
+        if (e.code === "22007" || e.code === "22008") {
+      return err(res, 400, "INVALID_INPUT", "Invalid auction dates");
+    }//اذا رجعت قاعده البيانات خطأمتعلق بالتاريخ نرسل للمستخدم رساله واضحه التاريخ غير مقبول 
     //نفحص هل رمز الخطأ من قاعدة البيانات هو منع التكرار
     // BE-11 | Test 4: منع إنشاء مزاد آخر لنفس الإعلان وإرجاع 409.
     if (e.code === "23505")
@@ -734,7 +744,13 @@ app.get("/auctions/:id", async (req, res, next) => {
     next(e);
   }
 });
-app.post("/auctions/:id/access", auth, async (req, res, next) => {
+app.post(
+  "/auctions/:id/access",
+  auth,
+  attemptLimit({
+    key: (req) => req.user.id + ":" + req.params.id.toLowerCase(),
+  }),
+  async (req, res, next) => {
   try {
     const a = await auction(req.params.id);
     if (!a || a.visibility !== "PRIVATE")
@@ -936,5 +952,9 @@ app.get("/me/auctions", auth, async (req, res, next) => {
 app.use((error, req, res, next) => {
   console.error("API error", error.code || error.message);
   if (res.headersSent) return next(error);
+  // نرجع 400 إذا احتوى الطلب على أحرف ترفضها قاعدة البيانات.
+  if (error.code === "22021" || error.code === "22P05") {
+    return err(res, 400, "INVALID_INPUT", "Invalid characters in request");
+  }
   err(res, 500, "INTERNAL_ERROR", "Unexpected server error");
 });
