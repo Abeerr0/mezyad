@@ -94,7 +94,7 @@ export default function AuctionForm({ api, token, item, startOpen = false, onBac
         </fieldset>
       </form>}
       <p role="status">{message}</p>
-      {auction?.visibility === 'PRIVATE' && auction.accessCode && <p>رمز المزاد الخاص — احتفظي فيه: <strong dir="ltr">{auction.accessCode}</strong></p>}
+      {auction?.visibility === 'PRIVATE' && auction.accessCode && <p>رمز المزاد الخاص — احتفظ به: <strong dir="ltr">{auction.accessCode}</strong></p>}
     </section>
   );
 }

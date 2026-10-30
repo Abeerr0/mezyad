@@ -30,7 +30,7 @@ export default function PrivateAccess({ api, token, onOpen, onBack, onUnauthoriz
           INVALID_CODE: 'رمز الدخول غير صحيح',
           NOT_FOUND: 'المزاد غير موجود',
           INVALID_ID: 'معرّف المزاد غير صحيح',
-          OWNER: 'ما تقدرين تنضمين كمزايدة لمزادك'
+          OWNER: 'لا يمكنك المشاركة في مزادك'
         };
         throw new Error(errors[result.error?.code] || result.error?.message || 'تعذّر الدخول');
       }
