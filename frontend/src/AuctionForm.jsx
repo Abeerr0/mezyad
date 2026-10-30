@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function AuctionForm({ api, token, item, startOpen = false, onBack }) {
+export default function AuctionForm({ api, token, item, startOpen = false, onBack, onUnauthorized }) {
   const [open, setOpen] = useState(startOpen);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
@@ -39,6 +39,7 @@ export default function AuctionForm({ api, token, item, startOpen = false, onBac
           endTime: end.toISOString()
         })
       });
+      if (response.status === 401) onUnauthorized();
       const result = await response.json();
       if (response.status === 409 && result.error?.code === 'DUPLICATE_AUCTION') {
         setDuplicate(true);

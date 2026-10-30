@@ -8,7 +8,7 @@ const categoryText = {
   'Luxury Handbags': ['الحقائب الفاخرة', '']
 };
 
-export default function ListingForm({ api, token, item, onSaved, onCancel }) {
+export default function ListingForm({ api, token, item, onSaved, onCancel, onUnauthorized }) {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categoryError, setCategoryError] = useState('');
@@ -132,6 +132,7 @@ export default function ListingForm({ api, token, item, onSaved, onCancel }) {
         headers: { Authorization: 'Bearer ' + token },
         body: data
       });
+      if (response.status === 401) onUnauthorized();
       const result = await response.json();
       if (!response.ok) throw new Error(result.error?.message || 'تعذّر إرسال الإعلان');
       if (!result.data?.id || result.data.status !== 'PENDING_REVIEW' ||

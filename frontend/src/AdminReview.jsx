@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-export default function AdminReview({ api, token }) {
+export default function AdminReview({ api, token, onUnauthorized }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -21,6 +21,7 @@ export default function AdminReview({ api, token }) {
         const response = await fetch(api + '/items?status=PENDING_REVIEW', {
           headers: { Authorization: 'Bearer ' + token }
         });
+        if (response.status === 401) onUnauthorized();
         const result = await response.json();
         if (!response.ok) throw new Error(result.error?.message || 'تعذّر تحميل الإعلانات');
         if (!Array.isArray(result.data)) throw new Error('تعذّر تحميل الإعلانات');
@@ -52,6 +53,7 @@ export default function AdminReview({ api, token }) {
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
         body: JSON.stringify({ decision, reason: reason.trim() })
       });
+      if (response.status === 401) onUnauthorized();
       const result = await response.json();
       if (response.status === 409) {
         setSelectedId(null);

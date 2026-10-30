@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function PrivateAccess({ api, token, onOpen, onBack }) {
+export default function PrivateAccess({ api, token, onOpen, onBack, onUnauthorized }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [grantedId, setGrantedId] = useState('');
@@ -23,6 +23,7 @@ export default function PrivateAccess({ api, token, onOpen, onBack }) {
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
         body: JSON.stringify({ accessCode })
       });
+      if (response.status === 401) onUnauthorized();
       const result = await response.json();
       if (!response.ok) {
         const errors = {

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-export default function MyActivity({ api, token, user, onOpenAuction, onMyListings }) {
+export default function MyActivity({ api, token, user, onOpenAuction, onMyListings, onUnauthorized }) {
   const [items, setItems] = useState([]);
   const [auctions, setAuctions] = useState([]);
   const [tab, setTab] = useState('مزايداتي');
@@ -12,6 +12,7 @@ export default function MyActivity({ api, token, user, onOpenAuction, onMyListin
     const base = api.replace(/\/$/, '').replace(/\/api\/v1$/, '') + '/api/v1';
     async function get(path) {
       const response = await fetch(base + path, { headers: { Authorization: 'Bearer ' + token } });
+      if (response.status === 401) onUnauthorized();
       const result = await response.json();
       if (!response.ok) throw new Error(result.error?.message || 'Request failed');
       return result.data;

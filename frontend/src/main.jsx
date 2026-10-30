@@ -7,11 +7,21 @@ import MyActivity from './MyActivity';
 import AdminReview from './AdminReview';
 import PrivateAccess from './PrivateAccess';
 const API=import.meta.env.VITE_API_URL||'http://localhost:3000';
+const AUTH_KEY = 'mezyad-session';
+function savedAuth() {
+ try { return JSON.parse(sessionStorage.getItem(AUTH_KEY)) || {}; } catch { return {}; }
+}
+const initialAuth = savedAuth();
+function pageFromPath(token, user) {
+ if (location.pathname === '/activity') return token ? 'activity' : 'login';
+ if (location.pathname === '/admin') return !token ? 'login' : user?.role === 'ADMIN' ? 'admin' : 'auctions';
+ return 'auctions';
+}
 function App(){
- const [page, setPage] = useState('auctions');
+ const [page, setPage] = useState(() => pageFromPath(initialAuth.token, initialAuth.user));
  const [category, setCategory] = useState('الكل');
- const [auctions,setAuctions]=useState([]),[selected,setSelected]=useState(null),[form,setForm]=useState({name:'',email:'',password:''}),[token,setToken]=useState(''),[message,setMessage]=useState('');
- const [user, setUser] = useState(null);
+ const [auctions,setAuctions]=useState([]),[selected,setSelected]=useState(null),[form,setForm]=useState({name:'',email:'',password:''}),[token,setToken]=useState(initialAuth.token || ''),[message,setMessage]=useState('');
+ const [user, setUser] = useState(initialAuth.user || null);
  const [accountBusy, setAccountBusy] = useState(false);
  const [auctionsLoading, setAuctionsLoading] = useState(true);
 const [auctionsError, setAuctionsError] = useState('');
@@ -29,8 +39,39 @@ const [bidMessage, setBidMessage] = useState('');
 const [bidSucceeded, setBidSucceeded] = useState(false);
 const bidSending = useRef(false);
 const bidRequestId = useRef(null);
+ function expiredSession() {
+  sessionStorage.removeItem(AUTH_KEY);
+  setToken('');
+  setUser(null);
+  setSelected(null);
+  setAuctionId(null);
+  if (location.pathname !== '/') history.replaceState(null, '', '/');
+  setPage('login');
+  setMessage('انتهت جلستك، سجّل الدخول مرة أخرى');
+ }
+ useEffect(() => {
+  function syncPath() {
+   const auth = savedAuth();
+   if (location.pathname === '/admin' && auth.token && auth.user?.role !== 'ADMIN') {
+    history.replaceState(null, '', '/');
+    setMessage('ليس لديك صلاحية لمراجعة الإعلانات');
+    setPage('auctions');
+    return;
+   }
+   setPage(pageFromPath(auth.token, auth.user));
+  }
+  syncPath();
+  addEventListener('popstate', syncPath);
+  return () => removeEventListener('popstate', syncPath);
+ }, []);
+ useEffect(() => {
+  if (page === 'login' && (location.pathname === '/activity' || location.pathname === '/admin')) return;
+  const path = page === 'activity' ? '/activity' : page === 'admin' ? '/admin' : '/';
+  if (location.pathname !== path) history.pushState(null, '', path);
+ }, [page]);
  async function request(path,options={}){
   const r=await fetch(API+path,{...options,headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{}),...(options.headers||{})}});
+  if (r.status === 401 && token && path !== '/auth/login' && path !== '/auth/register') expiredSession();
   const json=await r.json();if(!r.ok){const error=Error(json.error?.message||'Request failed');error.code=json.error?.code;error.status=r.status;throw error;}return json.data;
  }
  function bidError(error) {
@@ -104,9 +145,16 @@ if (type === 'login') {
 
   setToken(data.token);
   setUser(data.user);
+  sessionStorage.setItem(AUTH_KEY, JSON.stringify({ token: data.token, user: data.user }));
   setSelected(null);
   setAuctionId(null);
-  setPage('auctions');
+  if (location.pathname === '/admin' && data.user?.role !== 'ADMIN') {
+    history.replaceState(null, '', '/');
+    setPage('auctions');
+    setMessage('ليس لديك صلاحية لمراجعة الإعلانات');
+    return;
+  }
+  setPage(pageFromPath(data.token, data.user));
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
     setMessage(type === 'login' ? '' : 'تم إنشاء الحساب');
@@ -122,14 +170,16 @@ async function logout() {
   setMessage('جاري تسجيل الخروج…');
   try {
     await request('/auth/logout', { method: 'POST' });
+    sessionStorage.removeItem(AUTH_KEY);
     setToken('');
     setUser(null);
+    if (location.pathname !== '/') history.replaceState(null, '', '/');
     setPage('login');
     setSelected(null);setAuctionId(null);
     setForm({ name: '', email: '', password: '' });
     setMessage('تم تسجيل الخروج');
   } catch (error) {
-    setMessage('تعذّر تسجيل الخروج، حاول مرة أخرى');
+    if (error.status !== 401) setMessage('تعذّر تسجيل الخروج، حاول مرة أخرى');
   } finally {
     setAccountBusy(false);
   }
@@ -364,6 +414,6 @@ useEffect(() => {
       </>
     ) : null}
   </section>
-)}</>}{token && page === 'activity' && <MyActivity api={API} token={token} user={user} onOpenAuction={id => { setPage('auctions'); openAuction(id); }} onMyListings={() => setPage('my-listings')} />}{token && page === 'new-listing' && <ListingForm key={token} api={API} token={token} />}{token && page === 'my-listings' && <MyListings key={token + '-items'} api={API} token={token} />}{token && page === 'private' && <PrivateAccess api={API} token={token} onBack={() => setPage('auctions')} onOpen={id => { setPage('auctions'); openAuction(id); }} />}{token && user?.role === 'ADMIN' && page === 'admin' && <AdminReview key={token + '-admin'} api={API} token={token} />}{(page === 'login' || page === 'register') && <section className={'account-screen ' + page} id="account"><div className="account-form"><p className="eyebrow">{page === 'register' ? 'حساب جديد' : 'حساب مزياد'}</p><h1>{page === 'register' ? 'أنشئ حسابك' : 'مرحبًا بعودتك'}</h1><p className="account-intro">{page === 'register' ? 'أنشئ حسابًا للمتابعة والمشاركة في المزادات.' : 'سجّل دخولك لمتابعة مزايداتك ومزاداتك.'}</p><form onSubmit={event => { event.preventDefault(); account(page); }}><fieldset disabled={accountBusy}>{page === 'register' && <label>الاسم الكامل<input placeholder="اكتب اسمك الكامل" autoComplete="name" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label>}<label>البريد الإلكتروني<input placeholder="أدخل بريدك الإلكتروني" type="email" autoComplete="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/></label><label>كلمة المرور<input placeholder={page === 'register' ? 'أنشئ كلمة مرور' : 'أدخل كلمة المرور'} type="password" autoComplete={page === 'register' ? 'new-password' : 'current-password'} value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/></label><button className="primary" type="submit">{accountBusy ? 'جاري تنفيذ الطلب…' : page === 'register' ? 'إنشاء الحساب' : 'تسجيل الدخول'}</button>{page === 'login' && <p className="account-signup-prompt">ليس لديك حساب؟</p>}<button type="button" onClick={() => { setPage(page === 'register' ? 'login' : 'register'); setMessage(''); }}>{page === 'register' ? 'لدي حساب بالفعل' : 'إنشاء حساب'}</button></fieldset></form><p role="status">{message}</p></div></section>}{page !== 'login' && page !== 'register' && <p role="status">{message}</p>}<footer><img className="brand" src="/design/mezyad-logo.png" alt="مزياد" /><p>مزادات مختارة لمعروضات عالية القيمة</p><div><span>© 2026 مزياد. جميع الحقوق محفوظة.</span><span>المملكة العربية السعودية</span></div></footer></main>
+)}</>}{token && page === 'activity' && <MyActivity api={API} token={token} user={user} onUnauthorized={expiredSession} onOpenAuction={id => { setPage('auctions'); openAuction(id); }} onMyListings={() => setPage('my-listings')} />}{token && page === 'new-listing' && <ListingForm key={token} api={API} token={token} onUnauthorized={expiredSession} />}{token && page === 'my-listings' && <MyListings key={token + '-items'} api={API} token={token} onUnauthorized={expiredSession} />}{token && page === 'private' && <PrivateAccess api={API} token={token} onUnauthorized={expiredSession} onBack={() => setPage('auctions')} onOpen={id => { setPage('auctions'); openAuction(id); }} />}{token && user?.role === 'ADMIN' && page === 'admin' && <AdminReview key={token + '-admin'} api={API} token={token} onUnauthorized={expiredSession} />}{(page === 'login' || page === 'register') && <section className={'account-screen ' + page} id="account"><div className="account-form"><p className="eyebrow">{page === 'register' ? 'حساب جديد' : 'حساب مزياد'}</p><h1>{page === 'register' ? 'أنشئ حسابك' : 'مرحبًا بعودتك'}</h1><p className="account-intro">{page === 'register' ? 'أنشئ حسابًا للمتابعة والمشاركة في المزادات.' : 'سجّل دخولك لمتابعة مزايداتك ومزاداتك.'}</p><form onSubmit={event => { event.preventDefault(); account(page); }}><fieldset disabled={accountBusy}>{page === 'register' && <label>الاسم الكامل<input placeholder="اكتب اسمك الكامل" autoComplete="name" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label>}<label>البريد الإلكتروني<input placeholder="أدخل بريدك الإلكتروني" type="email" autoComplete="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/></label><label>كلمة المرور<input placeholder={page === 'register' ? 'أنشئ كلمة مرور' : 'أدخل كلمة المرور'} type="password" autoComplete={page === 'register' ? 'new-password' : 'current-password'} value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/></label><button className="primary" type="submit">{accountBusy ? 'جاري تنفيذ الطلب…' : page === 'register' ? 'إنشاء الحساب' : 'تسجيل الدخول'}</button>{page === 'login' && <p className="account-signup-prompt">ليس لديك حساب؟</p>}<button type="button" onClick={() => { setPage(page === 'register' ? 'login' : 'register'); setMessage(''); }}>{page === 'register' ? 'لدي حساب بالفعل' : 'إنشاء حساب'}</button></fieldset></form><p role="status">{message}</p></div></section>}{page !== 'login' && page !== 'register' && <p role="status">{message}</p>}<footer><img className="brand" src="/design/mezyad-logo.png" alt="مزياد" /><p>مزادات مختارة لمعروضات عالية القيمة</p><div><span>© 2026 مزياد. جميع الحقوق محفوظة.</span><span>المملكة العربية السعودية</span></div></footer></main>
 }
 createRoot(document.getElementById('root')).render(<App/>);
