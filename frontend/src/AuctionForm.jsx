@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 
-export default function AuctionForm({ api, token, item }) {
-  const [open, setOpen] = useState(false);
+export default function AuctionForm({ api, token, item, startOpen = false, onBack, onUnauthorized }) {
+  const [open, setOpen] = useState(startOpen);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [auction, setAuction] = useState(null);
   const [duplicate, setDuplicate] = useState(false);
+  const [visibility, setVisibility] = useState('');
 
   async function createAuction(event) {
     event.preventDefault();
@@ -16,11 +17,11 @@ export default function AuctionForm({ api, token, item }) {
     const start = new Date(data.get('startTime'));
     const end = new Date(data.get('endTime'));
     if (![startingPrice, minimumIncrement].every(value => Number.isFinite(value) && value > 0 && value <= 999999999999.99)) {
-      setMessage('اكتبي سعر بداية وأقل زيادة أكبر من صفر');
+      setMessage('اكتب سعر بداية وأقل زيادة أكبر من صفر');
       return;
     }
     if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) {
-      setMessage('اختاري وقت البداية والنهاية، والنهاية تكون بعد البداية');
+      setMessage('اختر وقت البداية والنهاية، والنهاية تكون بعد البداية');
       return;
     }
     setBusy(true);
@@ -38,19 +39,20 @@ export default function AuctionForm({ api, token, item }) {
           endTime: end.toISOString()
         })
       });
+      if (response.status === 401) onUnauthorized();
       const result = await response.json();
       if (response.status === 409 && result.error?.code === 'DUPLICATE_AUCTION') {
         setDuplicate(true);
         throw new Error('الإعلان له مزاد بالفعل، ما نقدر ننشئ مزادًا مكررًا');
       }
       if (!response.ok) throw new Error(result.error?.message || 'تعذّر إنشاء المزاد');
-      if (!result.data?.id || result.data.item_id !== item.id) throw new Error('تعذّر تأكيد إنشاء المزاد؛ تحققي قبل إعادة الإرسال');
+      if (!result.data?.id || result.data.item_id !== item.id) throw new Error('تعذّر تأكيد إنشاء المزاد؛ تحقق قبل إعادة الإرسال');
       setAuction(result.data);
       setMessage(result.data.visibility === 'PRIVATE' && !result.data.accessCode
-        ? 'تم إنشاء المزاد، لكن رمز الخاص ما وصل؛ راجعي الفريق قبل المحاولة مرة ثانية'
+        ? 'تم إنشاء المزاد، لكن رمز الخاص ما وصل؛ راجع الفريق قبل المحاولة مرة أخرى'
         : 'تم إنشاء المزاد');
     } catch (error) {
-      setMessage(error instanceof TypeError ? 'تعذّر الاتصال بالخادم، حاولي لاحقًا' : error.message);
+      setMessage(error instanceof TypeError ? 'تعذّر الاتصال بالخادم، حاول لاحقًا' : error.message);
     } finally {
       setBusy(false);
     }
@@ -58,6 +60,20 @@ export default function AuctionForm({ api, token, item }) {
 
   if (item.status !== 'APPROVED') return null;
   if (!open) return <button onClick={() => setOpen(true)}>إنشاء مزاد</button>;
+
+  if (!visibility) return (
+    <section className="auction-type-screen">
+      <p className="breadcrumb">حسابي / إعلاناتي / اختر نوع المزاد</p>
+      <h2>اختر نوع المزاد</h2>
+      <p className="page-intro">تم اعتماد إعلانك. اختر نوع المزاد المناسب لسلعتك للمتابعة إلى الإعدادات.</p>
+      <p className="auction-type-item">{item.title}</p>
+      <div className="auction-type-options">
+        <article><img src="/design/auction-public.svg" alt="" /><h3>مزاد عام</h3><p>يظهر في قائمة المزادات العامة، ويمكن للمستخدمين الاطلاع عليه والمشاركة وفق شروط المزاد.</p><button className="primary" onClick={() => setVisibility('PUBLIC')}>إنشاء مزاد عام</button></article>
+        <article><img src="/design/auction-private.svg" alt="" /><h3>مزاد خاص</h3><p>لا يظهر في المزادات العامة، ويتطلب الدخول إليه رمز وصول تشاركه مع المدعوين.</p><button className="primary" onClick={() => setVisibility('PRIVATE')}>إنشاء مزاد خاص</button></article>
+      </div>
+      <button onClick={() => onBack ? onBack() : setOpen(false)}>العودة إلى إعلاناتي</button>
+    </section>
+  );
 
   return (
     <section className="listing-form auction-form">
@@ -67,20 +83,18 @@ export default function AuctionForm({ api, token, item }) {
       {!auction && !duplicate && <form onSubmit={createAuction}>
         <fieldset disabled={busy}>
           <label>الإعلان المعتمد<input value={item.title} readOnly /></label>
-          <label>نوع المزاد<select name="visibility" defaultValue="PUBLIC">
-            <option value="PUBLIC">عام</option>
-            <option value="PRIVATE">خاص</option>
-          </select></label>
+          <input type="hidden" name="visibility" value={visibility} />
           <label>سعر البداية بالريال<input name="startingPrice" type="number" min="0.01" max="999999999999.99" step="0.01" required /></label>
           <label>أقل زيادة بالريال<input name="minimumIncrement" type="number" min="0.01" max="999999999999.99" step="0.01" required /></label>
           <label>بداية المزاد — بتوقيت جهازك<input name="startTime" type="datetime-local" required /></label>
           <label>نهاية المزاد — بتوقيت جهازك<input name="endTime" type="datetime-local" required /></label>
           <button className="primary" type="submit">{busy ? 'جاري الإنشاء…' : 'إنشاء المزاد'}</button>
-          <button type="button" onClick={() => setOpen(false)}>إلغاء</button>
+          <button type="button" onClick={() => onBack ? onBack() : setOpen(false)}>إلغاء</button>
+          <button type="button" onClick={() => setVisibility('')}>تغيير نوع المزاد</button>
         </fieldset>
       </form>}
       <p role="status">{message}</p>
-      {auction?.visibility === 'PRIVATE' && auction.accessCode && <p>رمز المزاد الخاص — احتفظي فيه: <strong dir="ltr">{auction.accessCode}</strong></p>}
+      {auction?.visibility === 'PRIVATE' && auction.accessCode && <p>رمز المزاد الخاص — احتفظ به: <strong dir="ltr">{auction.accessCode}</strong></p>}
     </section>
   );
 }

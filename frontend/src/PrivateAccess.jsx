@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 
-export default function PrivateAccess({ api, token, onOpen, onBack }) {
+export default function PrivateAccess({ api, token, onOpen, onBack, onUnauthorized }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [grantedId, setGrantedId] = useState('');
 
   async function enter(event) {
     event.preventDefault();
@@ -11,7 +12,7 @@ export default function PrivateAccess({ api, token, onOpen, onBack }) {
     const id = fields.auctionId.value.trim();
     const accessCode = fields.accessCode.value.trim();
     if (!id || !accessCode) {
-      setMessage('اكتبي معرّف المزاد ورمز الدخول');
+      setMessage('اكتب معرّف المزاد ورمز الدخول');
       return;
     }
     setBusy(true);
@@ -22,25 +23,34 @@ export default function PrivateAccess({ api, token, onOpen, onBack }) {
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
         body: JSON.stringify({ accessCode })
       });
+      if (response.status === 401) onUnauthorized();
       const result = await response.json();
       if (!response.ok) {
         const errors = {
           INVALID_CODE: 'رمز الدخول غير صحيح',
           NOT_FOUND: 'المزاد غير موجود',
           INVALID_ID: 'معرّف المزاد غير صحيح',
-          OWNER: 'ما تقدرين تنضمين كمزايدة لمزادك'
+          OWNER: 'لا يمكنك المشاركة في مزادك'
         };
         throw new Error(errors[result.error?.code] || result.error?.message || 'تعذّر الدخول');
       }
       if (result.data?.accessGranted !== true) throw new Error('لم يتم تأكيد السماح بالدخول');
       setMessage('تم السماح بالدخول للمزاد');
-      onOpen(id);
+      setGrantedId(id);
     } catch (error) {
-      setMessage(error instanceof TypeError ? 'تعذّر الاتصال، حاولي مرة ثانية' : error.message);
+      setMessage(error instanceof TypeError ? 'تعذّر الاتصال، حاول مرة أخرى' : error.message);
     } finally {
       setBusy(false);
     }
   }
+
+  if (grantedId) return <section className="private-access-success">
+    <p className="breadcrumb">مزاد خاص / تم قبول رمز الوصول</p>
+    <h1>تم قبول الرمز</h1>
+    <p>يمكنك الآن متابعة تفاصيل المزاد.</p>
+    <button className="primary" onClick={() => onOpen(grantedId)}>عرض تفاصيل المزاد</button>
+    <button onClick={onBack}>العودة إلى المزادات</button>
+  </section>;
 
   return (
     <section className="account-screen private-access">
