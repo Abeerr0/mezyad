@@ -1213,18 +1213,22 @@ app.post("/auctions/:id/bids", auth, async (req, res, next) => {
         "Bid request already processed",
       );
     }
-    const commitment = await c.query(
-      "SELECT 1 FROM bid_commitments WHERE auction_id=$1 AND user_id=$2 AND status='SUCCESS'",
-      [a.id, req.user.id],
-    );
-    if (!commitment.rowCount) {
-      await c.query("ROLLBACK");
-      return err(
-        res,
-        403,
-        "COMMITMENT_REQUIRED",
-        "Verified commitment required",
+    // BE-14 | نفحص الالتزام البنكي فقط إذا فعّلنا الإعداد.
+    // حاليًا الفحص اختياري عشان نكمل تجربة المزايدة واختبارات BE-04.
+    if (process.env.REQUIRE_BANK_COMMITMENT === "true") {
+      const commitment = await c.query(
+        "SELECT 1 FROM bid_commitments WHERE auction_id=$1 AND user_id=$2 AND status='SUCCESS'",
+        [a.id, req.user.id],
       );
+      if (!commitment.rowCount) {
+        await c.query("ROLLBACK");
+        return err(
+          res,
+          403,
+          "COMMITMENT_REQUIRED",
+          "Verified commitment required",
+        );
+      }
     }
     const clock = await c.query("SELECT clock_timestamp() AS current_time");
     const now = clock.rows[0].current_time;
