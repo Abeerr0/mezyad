@@ -561,6 +561,8 @@ app.post("/auctions", auth, async (req, res, next) => {
     // نبدأ بدون بصمة للرمز.
     // codeHash: نحفظ فيه بصمة الرمز الناتجة من bcrypt، وهي التي سنخزنها في قاعدة البيانات بدل الرمز الأصلي
     let codeHash = null;
+    // نبدأ بدون بصمة بحث، لأن المزاد العام ما يحتاج رمز دخول.
+    let codeLookup = null;
     // إذا كان المزاد خاصًا، ننشئ له رمز دخول وبصمة.
     if (visibility === "PRIVATE") {
       // نولد بيانات عشوائية بحجم 12 بايت.
@@ -573,13 +575,15 @@ app.post("/auctions", auth, async (req, res, next) => {
       //بنفس الوقت ١٢ هنا لا يعني طول الرمز أو عدد البايتات
       // BE-11 | Test 11: حساب بصمة رمز الدخول باستخدام bcrypt.
       codeHash = await bcrypt.hash(accessCode, 12);
+      // نحسب بصمة ثابتة عشان نقدر نلقى المزاد بنفس الرمز وقت الدخول.
+      codeLookup = hashToken("auction:" + accessCode);
     }
     // نرسل استعلام إنشاء المزاد، وننتظر نتيجته ونحفظها في r.
     const r = await query(
       // نحدد جدول المزادات والأعمدة التي سنضيف فيها بيانات المزاد.
-      `INSERT INTO auctions(item_id,visibility,access_code_hash,starting_price,current_price,minimum_increment,start_time,end_time)
+      `INSERT INTO auctions(item_id,visibility,access_code_hash,starting_price,current_price,minimum_increment,start_time,end_time,access_code_lookup)
   -- نختار الإعلان المعتمد الذي يخص المستخدم الحالي. رموز الارقام تاخذ قيمتها من القائمه الموجودهد تحت الاستعلام
-SELECT id, $2, $3, $4, $4, $5, $6, $7
+SELECT id, $2, $3, $4, $4, $5, $6, $7, $9
 FROM items
 WHERE id = $1
 -- يشترط ان يكون صاحب الاعلان هو المستخدم اللي ارسل الطلب
@@ -610,6 +614,8 @@ WHERE id = $1
         endTime,
         // $8: معرّف المستخدم الحالي الذي تحققت منه دالة auth.
         req.user.id,
+        // نرسل بصمة البحث عشان تنحفظ مع المزاد.
+        codeLookup,
       ],
     );
     // اذا ما اضاف الاستعلام اي مزاد نرفض الطلب
@@ -743,6 +749,8 @@ app.get("/auctions/:id", async (req, res, next) => {
     current.status = getAuctionDisplayStatus(current, currentTime);
     // BE-12 | Test 2 | Test 6: حذف بصمة رمز الدخول من بيانات الرد.
     delete current.access_code_hash;
+    // نخفي بصمة البحث من تفاصيل المزاد اللي نرسلها للواجهة.
+    delete current.access_code_lookup;
     // إضافة صور الإعلان إلى تفاصيل مزاد واحد
     // نقرأ روابط صور الإعلان من قاعدة البيانات ونضيفها إلى بيانات تفاصيل المزاد المرسلة للواجهة
     const imagesResult = await query(
@@ -770,18 +778,46 @@ app.get("/auctions/:id", async (req, res, next) => {
   }
 });
 app.post(
-  "/auctions/:id/access",
+  // المشارك يدخل برمز المزاد فقط.
+  "/auctions/access",
   auth,
   attemptLimit({
-    key: (req) => req.user.id + ":" + req.params.id.toLowerCase(),
+    // نحسب محاولات إدخال الرمز لكل مشارك حسب حسابه.
+    key: (req) => req.user.id,
   }),
   async (req, res, next) => {
     try {
-      // نتحقق من صيغة معرف المزاد قبل الاستعلام.
-      if (!validUuid(req.params.id)) {
-        return err(res, 400, "INVALID_ID", "Invalid ID");
-      }
-      const a = await auction(req.params.id);
+      // نحفظ هنا معرّف المزاد بعد ما نلقاه برمز الدخول.
+      let auctionId;
+        // نأخذ رمز الدخول من بيانات الطلب.
+        const accessCode = req.body?.accessCode;
+
+        // نرفض الرمز إذا ما كان نص أو كان طوله غير 24 حرف.
+        if (typeof accessCode !== "string" || accessCode.length !== 24) {
+          return err(res, 403, "INVALID_CODE", "Invalid access code");
+        }
+
+        // نحسب بصمة الرمز بنفس الطريقة اللي استخدمناها وقت إنشاء المزاد.
+        const codeLookup = hashToken("auction:" + accessCode);
+
+        // نطلب من قاعدة البيانات معرّف المزاد الخاص اللي بصمته تطابق بصمة الرمز.
+        const result = await query(
+          "SELECT id FROM auctions WHERE visibility = 'PRIVATE' AND access_code_lookup = $1",
+          // $1 يأخذ قيمة البصمة اللي حسبناها.
+          [codeLookup],
+        );
+
+        // إذا ما لقينا مزاد بنفس البصمة، نرفض الدخول.
+        if (result.rows.length === 0) {
+          return err(res, 403, "INVALID_CODE", "Invalid access code");
+        }
+
+        // نأخذ معرّف المزاد من الصف اللي رجع لنا.
+        auctionId = result.rows[0].id;
+      
+
+      // نجيب بيانات المزاد بمعرّفه عشان نكمل التحقق قبل ما نسمح بالدخول.
+      const a = await auction(auctionId);
       if (!a || a.visibility !== "PRIVATE")
         return err(res, 404, "NOT_FOUND", "Private auction not found");
       if (a.seller_id === req.user.id)
@@ -795,7 +831,8 @@ app.post(
         "INSERT INTO private_auction_access(auction_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING",
         [a.id, req.user.id],
       );
-      res.json({ data: { accessGranted: true } });
+      // بعد التحقق من الرمز، نرجّع معرّف المزاد عشان الواجهة تفتح تفاصيله للمشارك.
+      res.json({ data: { accessGranted: true, auctionId: a.id } });
     } catch (e) {
       next(e);
     }
