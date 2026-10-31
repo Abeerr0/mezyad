@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-export default function PrivateAccess({ api, token, onOpen, onBack }) {
+export default function PrivateAccess({ api, token, onOpen, onBack, onUnauthorized }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -30,6 +30,7 @@ export default function PrivateAccess({ api, token, onOpen, onBack }) {
         },
         body: JSON.stringify({ accessCode }),
       });
+      if (response.status === 401) onUnauthorized?.();
 
       const result = await response.json();
       if (!response.ok) {
@@ -37,7 +38,7 @@ export default function PrivateAccess({ api, token, onOpen, onBack }) {
           INVALID_CODE: "رمز الدخول غير صحيح",
           NOT_FOUND: "المزاد غير موجود",
           INVALID_ID: "معرّف المزاد غير صحيح",
-          OWNER: "ما تقدرين تنضمين كمزايدة لمزادك",
+          OWNER: "لا يمكنك المشاركة في مزادك",
         };
         throw new Error(
           errors[result.error?.code] || result.error?.message || "تعذّر الدخول",
@@ -56,7 +57,7 @@ export default function PrivateAccess({ api, token, onOpen, onBack }) {
     } catch (error) {
       setMessage(
         error instanceof TypeError
-          ? "تعذّر الاتصال، حاولي مرة ثانية"
+          ? "تعذّر الاتصال، حاول مرة أخرى"
           : error.message,
       );
     } finally {
@@ -74,8 +75,8 @@ export default function PrivateAccess({ api, token, onOpen, onBack }) {
           <fieldset disabled={busy}>
             {/* تم التعديل من عبير: شلنا حقل المعرّف لأن الدخول صار بالرمز فقط. */}
             <label>
-              رمز الوصول
-              <input name="accessCode" placeholder="أدخل رمز المزاد" required />
+              رمز الدخول
+              <input name="accessCode" placeholder="أدخل رمز الدخول" required />
             </label>
             <button className="primary" type="submit">
               التحقق من الرمز

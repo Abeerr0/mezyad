@@ -32,6 +32,7 @@ function App() {
   const [page, setPage] = useState(() =>
     pageFromPath(initialAuth.token, initialAuth.user),
   );
+  const previousPage = useRef(page);
   const [category, setCategory] = useState("الكل");
   const [auctions, setAuctions] = useState([]),
     [selected, setSelected] = useState(null),
@@ -88,6 +89,12 @@ function App() {
   useEffect(() => {
     if (token && user?.role === "ADMIN" && page !== "admin") setPage("admin");
   }, [token, user?.role, page]);
+  useEffect(() => {
+    if (previousPage.current === "login" && page !== "login") {
+      setMessage(current => current === "ليس لديك صلاحية لمراجعة الإعلانات" ? current : "");
+    }
+    previousPage.current = page;
+  }, [page]);
   useEffect(() => {
     if (
       page === "login" &&
@@ -220,7 +227,9 @@ function App() {
       setMessage(type === "login" ? "" : "تم إنشاء الحساب");
     } catch (error) {
       setMessage(
-        error instanceof TypeError
+        type === "login" && error.code === "INVALID_CREDENTIALS"
+          ? "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+          : error instanceof TypeError
           ? "تعذّر الاتصال بالخادم، حاول مرة أخرى"
           : error.message,
       );
