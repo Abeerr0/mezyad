@@ -370,7 +370,6 @@ Classify defects as **Critical** (authorization, data corruption, false financia
 | `backend/` | Express service and tests |
 | `frontend/` | React browser client |
 | `database/` | PostgreSQL migration and seed |
-| `docs/STAGE_3_REVIEW_NOTES.md` | Stage 3 design discrepancies without editing its source |
 
 ### Appendix B — Technical guardrails
 
