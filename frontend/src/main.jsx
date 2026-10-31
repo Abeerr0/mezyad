@@ -20,6 +20,7 @@ function pageFromPath(token, user) {
 }
 function App(){
  const [page, setPage] = useState(() => pageFromPath(initialAuth.token, initialAuth.user));
+ const previousPage = useRef(page);
  const [category, setCategory] = useState('الكل');
  const [auctions,setAuctions]=useState([]),[selected,setSelected]=useState(null),[form,setForm]=useState({name:'',email:'',password:''}),[token,setToken]=useState(initialAuth.token || ''),[message,setMessage]=useState('');
  const [user, setUser] = useState(initialAuth.user || null);
@@ -68,6 +69,12 @@ const bidRequestId = useRef(null);
  useEffect(() => {
   if (token && user?.role === 'ADMIN' && page !== 'admin') setPage('admin');
  }, [token, user?.role, page]);
+ useEffect(() => {
+  if (previousPage.current === 'login' && page !== 'login') {
+   setMessage(current => current === 'ليس لديك صلاحية لمراجعة الإعلانات' ? current : '');
+  }
+  previousPage.current = page;
+ }, [page]);
  useEffect(() => {
   if (page === 'login' && (location.pathname === '/activity' || location.pathname === '/admin')) return;
   const path = page === 'activity' ? '/activity' : page === 'admin' ? '/admin' : '/';
@@ -163,7 +170,9 @@ if (type === 'login') {
 }
     setMessage(type === 'login' ? '' : 'تم إنشاء الحساب');
   } catch (error) {
-    setMessage(error instanceof TypeError ? 'تعذّر الاتصال بالخادم، حاول مرة أخرى' : error.message);
+    setMessage(type === 'login' && error.code === 'INVALID_CREDENTIALS'
+      ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
+      : error instanceof TypeError ? 'تعذّر الاتصال بالخادم، حاول مرة أخرى' : error.message);
     } finally {
     setAccountBusy(false);
   }
