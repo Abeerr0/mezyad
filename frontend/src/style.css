@@ -2,7 +2,10 @@
 * { box-sizing: border-box; }
 body { margin: 0; }
 main { max-width: 1440px; margin: auto; padding: 0 76px 80px; }
-header { display: flex; align-items: center; justify-content: space-between; min-height: 82px; border-bottom: 1px solid #d8cbb8; background: #fff; }
+header { position: relative; display: flex; align-items: center; justify-content: space-between; min-height: 82px; background: #fff; }
+header::before { content: ''; position: absolute; inset: 0 auto 0 50%; width: 100vw; background: #fff; transform: translateX(-50%); }
+header > * { position: relative; }
+header::after { content: ''; position: absolute; bottom: 0; left: 50%; width: 100vw; border-bottom: 1px solid #d8cbb8; transform: translateX(-50%); }
 .brand { width: 178px; height: 62px; object-fit: contain; }
 nav { display: flex; gap: 36px; flex-wrap: wrap; align-items: center; }
 nav button { border: 0; padding: 8px 0; background: transparent; font-size: 14px; }

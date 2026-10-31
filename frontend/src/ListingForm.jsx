@@ -4,8 +4,7 @@ const categoryText = {
   'Real Estate': ['العقارات', 'العقارات السكنية والأراضي'],
   Camels: ['الإبل', 'صور ومعلومات عن الإبل المعروضة'],
   'Vehicle Plates': ['اللوحات المميزة', 'لوحات السيارات المميزة'],
-  'Rare Vehicles': ['السيارات النادرة', 'الموديلات المحدودة والنادرة'],
-  'Luxury Handbags': ['الحقائب الفاخرة', '']
+  'Rare Vehicles': ['السيارات النادرة', 'الموديلات المحدودة والنادرة']
 };
 
 export default function ListingForm({ api, token, item, onSaved, onCancel, onUnauthorized }) {
@@ -176,7 +175,7 @@ export default function ListingForm({ api, token, item, onSaved, onCancel, onUna
         <fieldset disabled={busy}>
           <input type="hidden" name="categoryId" value={categoryId} />
           {step === 0 && <>
-            <div className="category-options">{categories.map(category => {
+            <div className="category-options">{categories.filter(category => category.name !== 'Luxury Handbags').map(category => {
               const [name, description] = categoryText[category.name] || [category.name, ''];
               return <button type="button" key={category.id} aria-pressed={categoryId === category.id} onClick={() => setCategoryId(category.id)}><strong>{name}</strong>{description && <span>{description}</span>}</button>;
             })}</div>

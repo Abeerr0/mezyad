@@ -13,6 +13,7 @@ function savedAuth() {
 }
 const initialAuth = savedAuth();
 function pageFromPath(token, user) {
+ if (token && user?.role === 'ADMIN') return 'admin';
  if (location.pathname === '/activity') return token ? 'activity' : 'login';
  if (location.pathname === '/admin') return !token ? 'login' : user?.role === 'ADMIN' ? 'admin' : 'auctions';
  return 'auctions';
@@ -64,6 +65,9 @@ const bidRequestId = useRef(null);
   addEventListener('popstate', syncPath);
   return () => removeEventListener('popstate', syncPath);
  }, []);
+ useEffect(() => {
+  if (token && user?.role === 'ADMIN' && page !== 'admin') setPage('admin');
+ }, [token, user?.role, page]);
  useEffect(() => {
   if (page === 'login' && (location.pathname === '/activity' || location.pathname === '/admin')) return;
   const path = page === 'activity' ? '/activity' : page === 'admin' ? '/admin' : '/';
@@ -317,7 +321,7 @@ useEffect(() => {
  const activeCategory = categories.includes(category) ? category : 'الكل';
  const shownAuctions = auctions.filter(a => activeCategory === 'الكل' || a.category_name === activeCategory);
 
- return <main><header><img className="brand" src="/design/mezyad-logo.png" alt="مزياد" /><nav aria-label="القائمة الرئيسية"><button onClick={() => { setPage('auctions'); setAuctionId(null); setSelected(null); }}>المزادات</button>{token ? <><button onClick={() => setPage('activity')}>حسابي</button><button onClick={() => setPage('new-listing')}>إعلان جديد</button><button onClick={() => setPage('my-listings')}>إعلاناتي</button><button onClick={() => setPage('private')}>مزاد خاص</button>{user?.role === 'ADMIN' && <button onClick={() => setPage('admin')}>مراجعة الإعلانات</button>}<button disabled={accountBusy} onClick={logout}>خروج</button></> : <button onClick={() => { setPage('login'); setMessage(''); }}>تسجيل الدخول</button>}</nav></header>{page === 'auctions' && <>{!auctionId && <div className="auction-browser"><section className="hero" id="auctions"><p className="breadcrumb">المزادات / جميع الأقسام</p><h2>المزادات</h2><p>تصفح المزادات</p></section>
+ return <main><header><img className="brand" src="/design/mezyad-logo.png" alt="مزياد" /><nav aria-label="القائمة الرئيسية">{token && user?.role === 'ADMIN' ? <><button onClick={() => setPage('admin')}>مراجعة الإعلانات</button><button disabled={accountBusy} onClick={logout}>خروج</button></> : <><button onClick={() => { setPage('auctions'); setAuctionId(null); setSelected(null); }}>المزادات</button>{token ? <><button onClick={() => setPage('activity')}>حسابي</button><button onClick={() => setPage('new-listing')}>إعلان جديد</button><button onClick={() => setPage('my-listings')}>إعلاناتي</button><button onClick={() => setPage('private')}>مزاد خاص</button><button disabled={accountBusy} onClick={logout}>خروج</button></> : <button onClick={() => { setPage('login'); setMessage(''); }}>تسجيل الدخول</button>}</>}</nav></header>{page === 'auctions' && <>{!auctionId && <div className="auction-browser"><section className="hero" id="auctions"><p className="breadcrumb">المزادات / جميع الأقسام</p><h2>المزادات</h2><p>تصفح المزادات</p></section>
  <div className="auction-filters" aria-label="أقسام المزادات">
    {categories.map(name => <button key={name} aria-pressed={activeCategory === name} onClick={() => setCategory(name)}>{name}</button>)}
  </div><section className="cards">

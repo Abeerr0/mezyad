@@ -9,16 +9,15 @@ export default function PrivateAccess({ api, token, onOpen, onBack, onUnauthoriz
     event.preventDefault();
     if (busy) return;
     const fields = event.currentTarget.elements;
-    const id = fields.auctionId.value.trim();
     const accessCode = fields.accessCode.value.trim();
-    if (!id || !accessCode) {
-      setMessage('اكتب معرّف المزاد ورمز الدخول');
+    if (!accessCode) {
+      setMessage('اكتب رمز الدخول');
       return;
     }
     setBusy(true);
     setMessage('جاري التحقق من الرمز…');
     try {
-      const response = await fetch(api + '/auctions/' + encodeURIComponent(id) + '/access', {
+      const response = await fetch(api + '/auctions/access', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
         body: JSON.stringify({ accessCode })
@@ -29,14 +28,13 @@ export default function PrivateAccess({ api, token, onOpen, onBack, onUnauthoriz
         const errors = {
           INVALID_CODE: 'رمز الدخول غير صحيح',
           NOT_FOUND: 'المزاد غير موجود',
-          INVALID_ID: 'معرّف المزاد غير صحيح',
           OWNER: 'لا يمكنك المشاركة في مزادك'
         };
         throw new Error(errors[result.error?.code] || result.error?.message || 'تعذّر الدخول');
       }
-      if (result.data?.accessGranted !== true) throw new Error('لم يتم تأكيد السماح بالدخول');
+      if (result.data?.accessGranted !== true || !result.data.auctionId) throw new Error('لم يتم تأكيد السماح بالدخول');
       setMessage('تم السماح بالدخول للمزاد');
-      setGrantedId(id);
+      setGrantedId(result.data.auctionId);
     } catch (error) {
       setMessage(error instanceof TypeError ? 'تعذّر الاتصال، حاول مرة أخرى' : error.message);
     } finally {
@@ -60,8 +58,7 @@ export default function PrivateAccess({ api, token, onOpen, onBack, onUnauthoriz
       <p className="account-intro">أدخل رمز الوصول الذي شاركه معك البائع.</p>
       <form onSubmit={enter}>
         <fieldset disabled={busy}>
-          <label>معرّف المزاد<input name="auctionId" required /></label>
-          <label>رمز الوصول<input name="accessCode" placeholder="أدخل رمز المزاد" required /></label>
+          <label>رمز الدخول<input name="accessCode" placeholder="أدخل رمز الدخول" required /></label>
           <button className="primary" type="submit">التحقق من الرمز</button>
           <button type="button" onClick={onBack}>العودة إلى المزادات</button>
         </fieldset>
