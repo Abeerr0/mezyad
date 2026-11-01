@@ -46,13 +46,14 @@ export default function MyListings({ api, token, onUnauthorized }) {
 
   const auctionItem = items.find(item => item.id === auctionItemId);
   if (auctionItem) return <AuctionForm api={api} token={token} item={auctionItem} startOpen onBack={() => setAuctionItemId(null)} onUnauthorized={onUnauthorized} />;
+  if (editing) return <ListingForm key={editing.id} api={api} token={token} item={editing} onSaved={saved} onCancel={() => setEditing(null)} onUnauthorized={onUnauthorized} />;
 
   return (
     <section className="panel own-listings">
       <p className="breadcrumb">حسابي / إعلاناتي</p>
       <h2>{selectedId ? 'تفاصيل الإعلان' : 'إعلاناتي'}</h2>
       {selectedId && <button onClick={() => setSelectedId(null)}>العودة إلى إعلاناتي</button>}
-      <button disabled={loading || Boolean(editing)} onClick={() => setRefresh(refresh + 1)}>تحديث إعلاناتي</button>
+      {!selectedId && <button disabled={loading} onClick={() => setRefresh(refresh + 1)}>تحديث إعلاناتي</button>}
       {loading ? <p role="status">جاري تحميل إعلاناتك…</p> :
         error ? <p role="alert">{error}</p> :
         !items.length ? <p>ما عندك إعلانات حاليًا.</p> :
@@ -66,13 +67,10 @@ export default function MyListings({ api, token, onUnauthorized }) {
             {item.status === 'REJECTED' && <p>سبب الرفض: {item.review_reason || 'لم يذكر سبب'}</p>}
             </div>
             {!selectedId && <button onClick={() => setSelectedId(item.id)}>عرض الإعلان</button>}
-            {selectedId && item.status === 'REJECTED' && <>
-              <button disabled={Boolean(editing)} onClick={() => { setEditing(item); setMessage(''); }}>تعديل وإعادة إرسال</button>
-            </>}
+            {!selectedId && item.status === 'REJECTED' && <button onClick={() => { setEditing(item); setMessage(''); }}>تحديث إعلاني</button>}
             {selectedId && item.status === 'APPROVED' && <button onClick={() => setAuctionItemId(item.id)}>إنشاء مزاد</button>}
           </article>
         ))}
-      {editing && <ListingForm key={editing.id} api={api} token={token} item={editing} onSaved={saved} onCancel={() => setEditing(null)} onUnauthorized={onUnauthorized} />}
       <p role="status">{message}</p>
     </section>
   );

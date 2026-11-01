@@ -185,7 +185,7 @@ export default function ListingForm({ api, token, item, onSaved, onCancel, onUna
           <label>عنوان الإعلان<input name="title" required={step === 1} maxLength={240} defaultValue={item?.title ?? ''} /></label>
           <label>القسم<input value={selectedCategoryName} readOnly /></label>
           <label>وصف المعروض<textarea name="description" required={step === 1} maxLength={20000} rows={4} defaultValue={item?.description ?? ''} /></label>
-          <label>مواصفات القسم — اختيارية<textarea name="specifications" rows={3} defaultValue={specifications} placeholder={'كل مواصفة بسطر، مثل:\nاللون: بني'} /></label>
+          <label>مواصفات القسم — اختيارية<textarea name="specifications" rows={3} defaultValue={specifications} /></label>
           </div>
           <div className="photo-upload" data-step="2" hidden={step !== 2}>
             <div className="listing-photo-layout">
