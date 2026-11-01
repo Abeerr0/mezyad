@@ -24,6 +24,9 @@ function App(){
  const [category, setCategory] = useState('الكل');
  const [auctions,setAuctions]=useState([]),[selected,setSelected]=useState(null),[form,setForm]=useState({name:'',email:'',password:''}),[token,setToken]=useState(initialAuth.token || ''),[message,setMessage]=useState('');
  const [user, setUser] = useState(initialAuth.user || null);
+ const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+ const accountMenuRef = useRef(null);
+ const accountButtonRef = useRef(null);
  const [accountBusy, setAccountBusy] = useState(false);
  const [auctionsLoading, setAuctionsLoading] = useState(true);
 const [auctionsError, setAuctionsError] = useState('');
@@ -41,6 +44,25 @@ const [bidMessage, setBidMessage] = useState('');
 const [bidSucceeded, setBidSucceeded] = useState(false);
 const bidSending = useRef(false);
 const bidRequestId = useRef(null);
+ useEffect(() => {
+  if (!accountMenuOpen) return;
+  function closeOnOutside(event) {
+   if (!accountMenuRef.current?.contains(event.target)) setAccountMenuOpen(false);
+  }
+  function closeOnEscape(event) {
+   if (event.key === 'Escape') {
+    setAccountMenuOpen(false);
+    accountButtonRef.current?.focus();
+   }
+  }
+  document.addEventListener('pointerdown', closeOnOutside);
+  document.addEventListener('keydown', closeOnEscape);
+  return () => {
+   document.removeEventListener('pointerdown', closeOnOutside);
+   document.removeEventListener('keydown', closeOnEscape);
+  };
+ }, [accountMenuOpen]);
+ useEffect(() => { setAccountMenuOpen(false); }, [page, token]);
  function expiredSession() {
   sessionStorage.removeItem(AUTH_KEY);
   setToken('');
@@ -326,13 +348,19 @@ useEffect(() => {
     clearTimeout(timer);
   };
 }, [page, auctionId, token]);
- const categories = ['الكل', ...new Set(auctions.map(a => a.category_name).filter(Boolean))];
- const activeCategory = categories.includes(category) ? category : 'الكل';
- const shownAuctions = auctions.filter(a => activeCategory === 'الكل' || a.category_name === activeCategory);
+ const categories = [
+  { label: 'الكل', value: null },
+  { label: 'الإبل', value: 'Camels' },
+  { label: 'العقارات', value: 'Real Estate' },
+  { label: 'السيارات', value: 'Rare Vehicles' },
+  { label: 'اللوحات', value: 'Vehicle Plates' },
+ ];
+ const activeCategory = categories.find(item => item.label === category) || categories[0];
+ const shownAuctions = auctions.filter(a => !activeCategory.value || a.category_name === activeCategory.value);
 
- return <main><header><img className="brand" src="/design/mezyad-logo.png" alt="مزياد" /><nav aria-label="القائمة الرئيسية">{token && user?.role === 'ADMIN' ? <><button onClick={() => setPage('admin')}>مراجعة الإعلانات</button><button disabled={accountBusy} onClick={logout}>خروج</button></> : <><button onClick={() => { setPage('auctions'); setAuctionId(null); setSelected(null); }}>المزادات</button>{token ? <><button onClick={() => setPage('activity')}>حسابي</button><button onClick={() => setPage('new-listing')}>إعلان جديد</button><button onClick={() => setPage('my-listings')}>إعلاناتي</button><button onClick={() => setPage('private')}>مزاد خاص</button><button disabled={accountBusy} onClick={logout}>خروج</button></> : <button onClick={() => { setPage('login'); setMessage(''); }}>تسجيل الدخول</button>}</>}</nav></header>{page === 'auctions' && <>{!auctionId && <div className="auction-browser"><section className="hero" id="auctions"><p className="breadcrumb">المزادات / جميع الأقسام</p><h2>المزادات</h2><p>تصفح المزادات</p></section>
+ return <main><header><img className="brand" src="/design/mezyad-logo.png" alt="مزياد" /><nav aria-label="القائمة الرئيسية">{token && user?.role === 'ADMIN' ? <><button onClick={() => setPage('admin')}>مراجعة الإعلانات</button><button disabled={accountBusy} onClick={logout}>خروج</button></> : <><button onClick={() => { setPage('auctions'); setAuctionId(null); setSelected(null); }}>المزادات</button>{token ? <div className="account-menu" ref={accountMenuRef}><button ref={accountButtonRef} className="account-menu-trigger" aria-expanded={accountMenuOpen} aria-haspopup="true" aria-controls="account-menu-options" onClick={() => setAccountMenuOpen(open => !open)}>الحساب <span className="account-menu-chevron" aria-hidden="true" /></button>{accountMenuOpen && <div id="account-menu-options" className="account-menu-options" dir="rtl"><button onClick={() => { setAccountMenuOpen(false); setPage('activity'); }}>حسابي</button><button onClick={() => { setAccountMenuOpen(false); setPage('new-listing'); }}>إعلان جديد</button><button onClick={() => { setAccountMenuOpen(false); setPage('my-listings'); }}>إعلاناتي</button><button onClick={() => { setAccountMenuOpen(false); setPage('private'); }}>مزاد خاص</button><button className="account-menu-logout" disabled={accountBusy} onClick={() => { setAccountMenuOpen(false); logout(); }}>تسجيل خروج</button></div>}</div> : <button onClick={() => { setPage('login'); setMessage(''); }}>تسجيل الدخول</button>}</>}</nav></header>{page === 'auctions' && <>{!auctionId && <div className="auction-browser"><section className="hero" id="auctions"><p className="breadcrumb">المزادات / جميع الأقسام</p><h2>المزادات</h2><p>تصفح المزادات</p></section>
  <div className="auction-filters" aria-label="أقسام المزادات">
-   {categories.map(name => <button key={name} aria-pressed={activeCategory === name} onClick={() => setCategory(name)}>{name}</button>)}
+   {categories.map(({ label }) => <button key={label} aria-pressed={activeCategory.label === label} onClick={() => setCategory(label)}>{label}</button>)}
  </div><section className="cards">
   {auctionsLoading ? (
     <p role="status">جاري تحميل المزادات…</p>
