@@ -58,7 +58,13 @@ export default function ListingForm({ api, token, item, onSaved, onCancel, onUna
     event.preventDefault();
     const form = event.currentTarget.form;
     const fields = form.querySelectorAll('[data-step="' + step + '"] input, [data-step="' + step + '"] textarea');
-    if ([...fields].some(field => !field.reportValidity())) return;
+    // هنا نوقف الانتقال اذا فيه حقل ناقص ونوضح للمستخدم وش المطلوب بالعربي
+    const invalidField = [...fields].find(field => !field.checkValidity());
+    if (invalidField) {
+      setMessage('أكمل الحقول المطلوبة قبل المتابعة');
+      invalidField.focus();
+      return;
+    }
     if (step === 2 && imageError(images)) {
       setMessage(imageError(images));
       return;
@@ -166,8 +172,9 @@ export default function ListingForm({ api, token, item, onSaved, onCancel, onUna
 
   return (
     <section className={'panel listing-form listing-editor' + (step === 0 ? ' listing-category-step' : step >= 2 ? ' listing-visual-step' : '')}>
-      {step === 0 && <p className="breadcrumb">حسابي / أنشئ مزادك</p>}
-      {step >= 2 && <p className="breadcrumb">{step === 3 ? 'أنشئ مزادك / مراجعة' : 'أنشئ مزادك / الصور'}</p>}
+      {/* هنا اسم المسار يوضح ان المستخدم ينشئ اعلان مو مزاد */}
+      {step === 0 && <p className="breadcrumb">حسابي / إنشاء إعلان</p>}
+      {step >= 2 && <p className="breadcrumb">{step === 3 ? 'إنشاء إعلان / مراجعة' : 'إنشاء إعلان / الصور'}</p>}
       <h2>{['اختر فئة السلعة', item ? 'تعديل الإعلان المرفوض' : 'تفاصيل الإعلان', 'صور الإعلان', 'راجع إعلانك'][step]}</h2>
       {step === 0 && <p className="page-intro">ابدأ باختيار القسم المناسب قبل إضافة تفاصيل الإعلان.</p>}
       {step >= 2 && <p className="page-intro">{step === 2 ? 'أضف صورًا واضحة للمعروض نفسه ومن زوايا مختلفة.' : 'تأكد من العنوان والصورة والمعلومات قبل إرسال الإعلان للمراجعة.'}</p>}

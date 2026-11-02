@@ -45,7 +45,10 @@ export default function AuctionForm({ api, token, item, startOpen = false, onBac
         setDuplicate(true);
         throw new Error('الإعلان له مزاد بالفعل، ما نقدر ننشئ مزادًا مكررًا');
       }
-      if (!response.ok) throw new Error(result.error?.message || 'تعذّر إنشاء المزاد');
+      // اذا الخادم رجع خطا تقني نعرض كلام واضح ونخلي الرسائل العربيه المفيده مثل ما هي
+      if (!response.ok) throw new Error(response.status >= 500
+        ? 'تعذر انشاء المزاد حاليا. تحقق من مزاداتك قبل المحاوله مره اخرى.'
+        : result.error?.message || 'تعذّر إنشاء المزاد');
       if (!result.data?.id || result.data.item_id !== item.id) throw new Error('تعذّر تأكيد إنشاء المزاد؛ تحقق قبل إعادة الإرسال');
       setAuction(result.data);
       setMessage(result.data.visibility === 'PRIVATE' && !result.data.accessCode
@@ -95,6 +98,8 @@ export default function AuctionForm({ api, token, item, startOpen = false, onBac
       </form>}
       <p role="status">{message}</p>
       {auction?.visibility === 'PRIVATE' && auction.accessCode && <p>رمز المزاد الخاص — احتفظ به: <strong dir="ltr">{auction.accessCode}</strong></p>}
+      {/* زر الرجوع يطلع بس بعد ما يثبت نجاح انشاء المزاد */}
+      {auction && <button type="button" onClick={() => onBack ? onBack() : setOpen(false)}>العودة إلى إعلاناتي</button>}
     </section>
   );
 }

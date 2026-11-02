@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 
-export default function MyActivity({ api, token, user, onOpenAuction, onMyListings, onUnauthorized }) {
+// التبويب جاي من الصفحه الام عشان يبقى نفسه اذا فتحنا مزاد ورجعنا
+export default function MyActivity({ api, token, user, tab, onTabChange, onOpenAuction, onMyListings, onUnauthorized }) {
   const [items, setItems] = useState([]);
   const [auctions, setAuctions] = useState([]);
-  const [tab, setTab] = useState('مزايداتي');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -60,13 +60,14 @@ export default function MyActivity({ api, token, user, onOpenAuction, onMyListin
     <h1>{user?.name ? 'مرحبًا، ' + user.name : 'حسابي'}</h1>
     <p className="activity-intro">تابع مزايداتك ومزاداتك ونتائجها.</p>
     <div className="activity-tabs" role="tablist" aria-label="أقسام نشاطي">
-      {['مزايداتي', 'مزاداتي', 'النتائج'].map(name => <button key={name} role="tab" aria-selected={tab === name} onClick={() => setTab(name)}>{name}</button>)}
+      {['مزايداتي', 'مزاداتي', 'النتائج'].map(name => <button key={name} role="tab" aria-selected={tab === name} onClick={() => onTabChange(name)}>{name}</button>)}
     </div>
     {loading ? <p role="status">جاري تحميل نشاطك…</p> : <>
       {error && <p role="alert">{error}</p>}
       {!error.startsWith('تعذّر تحميل نشاطك') && <>
       <h2>{tab === 'مزايداتي' ? 'مزايداتي الحالية' : tab}</h2>
-      {visible.length === 0 ? <p>لا توجد {tab} لعرضها حاليًا.</p> : visible.map(auction =>
+      {/* هنا نخلي نص الحاله الفارغه واضح حسب التبويب */}
+      {visible.length === 0 ? <p>لا توجد {tab === 'النتائج' ? 'نتائج' : tab === 'مزايداتي' ? 'مزايدات' : tab} لعرضها حاليًا.</p> : visible.map(auction =>
         <article className="activity-card" key={auction.id}>
           {auction.images?.[0] && <img src={new URL(typeof auction.images[0] === 'string' ? auction.images[0] : auction.images[0].image_url, api).href} alt={auction.title} />}
           <div><h3>{auction.title}</h3>

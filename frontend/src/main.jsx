@@ -33,6 +33,9 @@ function App() {
     pageFromPath(initialAuth.token, initialAuth.user),
   );
   const previousPage = useRef(page);
+  // نخلي التبويب محفوظ اذا فتح المستخدم مزاد من نشاطي ورجع له
+  const [activityTab, setActivityTab] = useState("مزايداتي");
+  const auctionOrigin = useRef("auctions");
   const [category, setCategory] = useState("الكل");
   const [auctions, setAuctions] = useState([]),
     [selected, setSelected] = useState(null),
@@ -246,7 +249,13 @@ function App() {
         setPage(pageFromPath(data.token, data.user));
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
-      setMessage(type === "login" ? "" : "تم إنشاء الحساب");
+      // بعد نجاح التسجيل نعرض الرساله في صفحه الدخول عشان المستخدم يعرف الخطوه الجايه
+      if (type === "register") {
+        setPage("login");
+        setMessage("تم إنشاء الحساب بنجاح، يمكنك تسجيل الدخول الآن");
+      } else {
+        setMessage("");
+      }
     } catch (error) {
       setMessage(
         type === "login" && error.code === "INVALID_CREDENTIALS"
@@ -280,8 +289,9 @@ function App() {
       setAccountBusy(false);
     }
   }
-  function openAuction(id) {
+  function openAuction(id, origin = "auctions") {
     if (id === auctionId) return;
+    auctionOrigin.current = origin;
     setSelected(null);
     setDetailsError("");
     setDetailsLoading(true);
@@ -619,6 +629,8 @@ function App() {
                   onClick={() => {
                     setAuctionId(null);
                     setSelected(null);
+                    if (auctionOrigin.current === "activity") setPage("activity");
+                    auctionOrigin.current = "auctions";
                   }}
                 >
                   العودة إلى المزادات
@@ -672,6 +684,8 @@ function App() {
                               selected.status !== "ACTIVE"
                             }
                           />
+                          {/* نعرض نفس الحد الادنى اللي نستخدمه في التحقق قبل ما يضغط المستخدم */}
+                          {minimumBid !== null && <p className="bid-minimum">الحد الأدنى للمزايدة: {minimumBid.toLocaleString("en-US")} ر.س</p>}
                           <p className="bid-help">
                             إضافة المزايدة تعني إرسال عرضك على هذا المعروض.
                             البيع لا يكتمل بمجرد انتهاء المزاد.
@@ -834,10 +848,12 @@ function App() {
           api={API}
           token={token}
           user={user}
+          tab={activityTab}
+          onTabChange={setActivityTab}
           onUnauthorized={expiredSession}
           onOpenAuction={(id) => {
             setPage("auctions");
-            openAuction(id);
+            openAuction(id, "activity");
           }}
           onMyListings={() => setPage("my-listings")}
         />
@@ -863,7 +879,17 @@ function App() {
           api={API}
           token={token}
           onUnauthorized={expiredSession}
-          onBack={() => setPage("auctions")}
+          onBack={() => {
+            // الرجوع من المزاد الخاص يرجع للقائمه بدون نموذج المزايده السابق
+            setAuctionId(null);
+            setSelected(null);
+            setBidOpen(false);
+            setBidConfirm(false);
+            setBidAmount("");
+            setBidMessage("");
+            auctionOrigin.current = "auctions";
+            setPage("auctions");
+          }}
           onOpen={(id) => {
             setPage("auctions");
             openAuction(id);
