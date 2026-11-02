@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 export default function AdminReview({ api, token, onUnauthorized }) {
+  const itemsApi = api.replace(/\/$/, '').replace(/\/api\/v1$/, '') + '/api/v1/items';
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -21,8 +22,8 @@ export default function AdminReview({ api, token, onUnauthorized }) {
     async function loadOverview() {
       setOverviewError('');
       try {
-        const paths = ['/items?status=APPROVED', '/items?status=REJECTED', '/auctions?scope=all&status=ACTIVE'];
-        const responses = await Promise.all(paths.map(path => fetch(api + path, {
+        const paths = [itemsApi + '?status=APPROVED', itemsApi + '?status=REJECTED', api + '/auctions?scope=all&status=ACTIVE'];
+        const responses = await Promise.all(paths.map(path => fetch(path, {
           headers: { Authorization: 'Bearer ' + token }
         })));
         if (responses.some(response => response.status === 401)) onUnauthorized();
@@ -37,7 +38,7 @@ export default function AdminReview({ api, token, onUnauthorized }) {
     }
     loadOverview();
     return () => { active = false; };
-  }, [api, token, refresh]);
+  }, [api, itemsApi, token, refresh]);
 
   useEffect(() => {
     let active = true;
@@ -45,7 +46,7 @@ export default function AdminReview({ api, token, onUnauthorized }) {
       setLoading(true);
       setError('');
       try {
-        const response = await fetch(api + '/items?status=PENDING_REVIEW', {
+        const response = await fetch(itemsApi + '?status=PENDING_REVIEW', {
           headers: { Authorization: 'Bearer ' + token }
         });
         if (response.status === 401) onUnauthorized();
@@ -64,7 +65,7 @@ export default function AdminReview({ api, token, onUnauthorized }) {
     }
     loadPending();
     return () => { active = false; };
-  }, [api, token, refresh]);
+  }, [itemsApi, token, refresh]);
 
   async function review(item, decision, reason = '') {
     if (busy) return;
@@ -89,7 +90,16 @@ export default function AdminReview({ api, token, onUnauthorized }) {
       }
       if (!response.ok) throw new Error(result.error?.message || 'تعذّر حفظ القرار');
       if (result.data?.id !== item.id || result.data.status !== decision) throw new Error('تعذّر تأكيد حفظ القرار');
-      setItems(items.filter(oldItem => oldItem.id !== item.id));
+      setItems(current => current.filter(oldItem => oldItem.id !== item.id));
+      setOverview(current => current && ({
+        ...current,
+        [decision === 'APPROVED' ? 'approved' : 'rejected']: [
+          result.data,
+          ...current[decision === 'APPROVED' ? 'approved' : 'rejected'].filter(oldItem => oldItem.id !== item.id)
+        ]
+      }));
+      setTab(decision === 'APPROVED' ? 'approved' : 'rejected');
+      setListingStatus(decision);
       setSelectedId(null);
       setDecision('');
       setReason('');
@@ -110,8 +120,14 @@ export default function AdminReview({ api, token, onUnauthorized }) {
   return (
     <section className="panel review-list">
       <div className="admin-tabs" role="tablist" aria-label="أقسام المشرف">
-        {[['dashboard', 'لوحة التحكم'], ['pending', 'الإعلانات قيد المراجعة'], ['auctions', 'متابعة المزادات']].map(([key, label]) =>
-          <button key={key} role="tab" aria-selected={tab === key} onClick={() => { setTab(key); setListingStatus('PENDING_REVIEW'); setSelectedId(null); }}>{label}</button>
+        {[
+          ['dashboard', 'لوحة التحكم'],
+          ['pending', 'قيد المراجعة', loading ? null : items.length, 'PENDING_REVIEW'],
+          ['approved', 'المعتمدة', overview?.approved.length, 'APPROVED'],
+          ['rejected', 'المرفوضة', overview?.rejected.length, 'REJECTED'],
+          ['auctions', 'متابعة المزادات']
+        ].map(([key, label, count, status]) =>
+          <button key={key} role="tab" aria-selected={tab === key} onClick={() => { setTab(key); setListingStatus(status || 'PENDING_REVIEW'); setSelectedId(null); }}>{label}{count != null ? ` (${count})` : ''}</button>
         )}
       </div>
       <p className="breadcrumb">حساب المشرف / {selectedId ? 'مراجعة الإعلان' : tab === 'dashboard' ? 'لوحة التحكم' : tab === 'auctions' ? 'متابعة المزادات' : listTitle}</p>
@@ -122,8 +138,8 @@ export default function AdminReview({ api, token, onUnauthorized }) {
           <div className="admin-stats">
             {[
               ['الإعلانات بانتظار المراجعة', items.length, 'pending', 'PENDING_REVIEW'],
-              ['الإعلانات المعتمدة', overview.approved.length, 'pending', 'APPROVED'],
-              ['الإعلانات المرفوضة', overview.rejected.length, 'pending', 'REJECTED'],
+              ['الإعلانات المعتمدة', overview.approved.length, 'approved', 'APPROVED'],
+              ['الإعلانات المرفوضة', overview.rejected.length, 'rejected', 'REJECTED'],
               ['المزادات الجارية', overview.auctions.length, 'auctions', 'PENDING_REVIEW']
             ].map(([label, count, nextTab, nextStatus]) =>
               <button key={label} onClick={() => { setTab(nextTab); setListingStatus(nextStatus); setSelectedId(null); }}><span>{label}</span><strong>{count}</strong></button>
@@ -140,7 +156,7 @@ export default function AdminReview({ api, token, onUnauthorized }) {
         overviewError ? <p role="alert">{overviewError}</p> : !overview ? <p role="status">جاري تحميل الإعلانات…</p> :
         reviewedItems.length ? reviewedItems.map(item => <article className="review-card admin-status-card" key={item.id}>
           <div className="review-images">{item.images?.[0] && <img className="listing-photo" src={new URL(typeof item.images[0] === 'string' ? item.images[0] : item.images[0].image_url, api).href} alt={item.title} />}</div>
-          <div className="listing-info"><h3>{item.title}</h3><p>{item.description}</p><p className="listing-status">{listTitle}</p></div>
+          <div className="listing-info"><h3>{item.title}</h3><p>{item.description}</p><p className="listing-status">{listTitle}</p>{listingStatus === 'REJECTED' && item.review_reason && <p>سبب الرفض: {item.review_reason}</p>}</div>
         </article>) : <p>لا توجد إعلانات في هذه الحالة.</p>
       ) : <>
         {selectedId && <button disabled={busy} onClick={() => setSelectedId(null)}>العودة إلى الإعلانات</button>}
