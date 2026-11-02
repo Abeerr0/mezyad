@@ -3,6 +3,7 @@ import ListingForm from './ListingForm';
 import AuctionForm from './AuctionForm';
 
 export default function MyListings({ api, token, onUnauthorized }) {
+  // هنا نخزن اعلانات الحساب وحاله الطلب والاعلان المفتوح عشان ما نخلط العرض بالتعديل
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -12,6 +13,7 @@ export default function MyListings({ api, token, onUnauthorized }) {
   const [selectedId, setSelectedId] = useState(null);
   const [auctionItemId, setAuctionItemId] = useState(null);
 
+  // هنا نطلب اعلانات صاحب الجلسه فقط ونستخدم رمز دخوله عشان ما تظهر بيانات حساب ثاني
   useEffect(() => {
     let active = true;
     async function loadItems() {
@@ -26,6 +28,7 @@ export default function MyListings({ api, token, onUnauthorized }) {
         const result = await response.json();
         if (!response.ok) throw new Error(result.error?.message || 'تعذّر تحميل إعلاناتك');
         if (!Array.isArray(result.data)) throw new Error('Invalid items response');
+        // هنا نحط نتيجه الخادم في الصفحه اذا المستخدم ما غادرها اثناء التحميل
         if (active) setItems(result.data);
       } catch {
         if (active) setError('تعذّر تحميل إعلاناتك، حاول التحديث');
@@ -37,6 +40,7 @@ export default function MyListings({ api, token, onUnauthorized }) {
     return () => { active = false; };
   }, [api, token, refresh]);
 
+  // بعد حفظ تعديل الاعلان نحدثه في القائمه ونرجع لتفاصيله بدل ما نخليه بنسخته القديمه
   function saved(item) {
     setItems(items.map(oldItem => oldItem.id === item.id ? item : oldItem));
     setEditing(null);
@@ -44,10 +48,12 @@ export default function MyListings({ api, token, onUnauthorized }) {
     setMessage('تمت إعادة إرسال الإعلان، بانتظار المراجعة');
   }
 
+  // هنا نفصل صفحه انشاء المزاد ونموذج تعديل المرفوض عن عرض تفاصيل الاعلان
   const auctionItem = items.find(item => item.id === auctionItemId);
   if (auctionItem) return <AuctionForm api={api} token={token} item={auctionItem} startOpen onBack={() => setAuctionItemId(null)} onUnauthorized={onUnauthorized} />;
   if (editing) return <ListingForm key={editing.id} api={api} token={token} item={editing} onSaved={saved} onCancel={() => setEditing(null)} onUnauthorized={onUnauthorized} />;
 
+  // هنا نعرض حاله كل اعلان وسبب الرفض ونخلي انشاء المزاد للاعلان المعتمد فقط
   return (
     <section className="panel own-listings">
       <p className="breadcrumb">حسابي / إعلاناتي</p>

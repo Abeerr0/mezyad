@@ -8,10 +8,12 @@ import AdminReview from './AdminReview';
 import PrivateAccess from './PrivateAccess';
 const API=import.meta.env.VITE_API_URL||'http://localhost:3000';
 const AUTH_KEY = 'mezyad-session';
+// هنا نقرا جلسه الدخول المحفوظه في نفس تبويب المتصفح عشان المستخدم ما يطلع مع تحديث الصفحه
 function savedAuth() {
  try { return JSON.parse(sessionStorage.getItem(AUTH_KEY)) || {}; } catch { return {}; }
 }
 const initialAuth = savedAuth();
+// هنا نحدد الصفحه من الرابط والدور عشان الادمن يروح للمراجعه والمستخدم العادي ما يفتحها
 function pageFromPath(token, user) {
  if (token && user?.role === 'ADMIN') return 'admin';
  if (location.pathname === '/activity') return token ? 'activity' : 'login';
@@ -19,8 +21,11 @@ function pageFromPath(token, user) {
  return 'auctions';
 }
 function App(){
+ // هنا نخزن الصفحه والحساب والمزادات وحالات التحميل عشان كل جزء يعرض نتيجته الحاليه
  const [page, setPage] = useState(() => pageFromPath(initialAuth.token, initialAuth.user));
  const previousPage = useRef(page);
+ const [activityTab, setActivityTab] = useState('مزايداتي');
+ const auctionOrigin = useRef('auctions');
  const [category, setCategory] = useState('الكل');
  const [auctions,setAuctions]=useState([]),[selected,setSelected]=useState(null),[form,setForm]=useState({name:'',email:'',password:''}),[token,setToken]=useState(initialAuth.token || ''),[message,setMessage]=useState('');
  const [user, setUser] = useState(initialAuth.user || null);
@@ -44,6 +49,7 @@ const [bidMessage, setBidMessage] = useState('');
 const [bidSucceeded, setBidSucceeded] = useState(false);
 const bidSending = useRef(false);
 const bidRequestId = useRef(null);
+ // هنا نقفل قائمه الحساب اذا ضغط المستخدم براها او ضغط Escape ونرجع التركيز للزر
  useEffect(() => {
   if (!accountMenuOpen) return;
   function closeOnOutside(event) {
@@ -63,6 +69,7 @@ const bidRequestId = useRef(null);
   };
  }, [accountMenuOpen]);
  useEffect(() => { setAccountMenuOpen(false); }, [page, token]);
+ // هنا نمسح الجلسه المحليه اذا الخادم قال انها انتهت ونرجع المستخدم للدخول برساله واضحه
  function expiredSession() {
   sessionStorage.removeItem(AUTH_KEY);
   setToken('');
@@ -74,6 +81,7 @@ const bidRequestId = useRef(null);
   setMessage('انتهت جلستك، سجّل الدخول مرة أخرى');
  }
  useEffect(() => {
+  // هنا نتابع الرابط المباشر وزر الرجوع ونتاكد ان المستخدم العادي ما يدخل صفحه الادمن
   function syncPath() {
    const auth = savedAuth();
    if (location.pathname === '/admin' && auth.token && auth.user?.role !== 'ADMIN') {
@@ -89,9 +97,11 @@ const bidRequestId = useRef(null);
   return () => removeEventListener('popstate', syncPath);
  }, []);
  useEffect(() => {
+  // هنا نثبت الادمن على صفحه المراجعه حتى لو حاول يفتح صفحه مستخدم عادي
   if (token && user?.role === 'ADMIN' && page !== 'admin') setPage('admin');
  }, [token, user?.role, page]);
  useEffect(() => {
+  // هنا نمسح خطا الدخول اذا ترك المستخدم صفحته عشان ما يبقى ظاهر بصفحه ثانيه
   if (previousPage.current === 'login' && page !== 'login') {
    setMessage(current => current === 'ليس لديك صلاحية لمراجعة الإعلانات' ? current : '');
   }
@@ -99,14 +109,17 @@ const bidRequestId = useRef(null);
  }, [page]);
  useEffect(() => {
   if (page === 'login' && (location.pathname === '/activity' || location.pathname === '/admin')) return;
+  // هنا نخلي رابط المتصفح يمشي مع الصفحه المختاره عشان الفتح المباشر والتحديث يشتغلون
   const path = page === 'activity' ? '/activity' : page === 'admin' ? '/admin' : '/';
   if (location.pathname !== path) history.pushState(null, '', path);
  }, [page]);
+ // هنا نرسل طلبات الواجهه للخادم ونضيف رمز الجلسه ونعالج 401 قبل عرض البيانات
  async function request(path,options={}){
   const r=await fetch(API+path,{...options,headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{}),...(options.headers||{})}});
   if (r.status === 401 && token && path !== '/auth/login' && path !== '/auth/register') expiredSession();
   const json=await r.json();if(!r.ok){const error=Error(json.error?.message||'Request failed');error.code=json.error?.code;error.status=r.status;throw error;}return json.data;
  }
+ // هنا نحول رموز خطا المزايده المعروفه لرسائل عربيه بدون ما نظهر تفاصيل تقنيه للمستخدم
  function bidError(error) {
   if (error instanceof TypeError) return 'تعذّر الاتصال بالخادم، حاول مرة أخرى';
   const messages = {
@@ -121,6 +134,7 @@ const bidRequestId = useRef(null);
   if (error.code || error.status) console.error('Bid API error:', error.code, error.status);
   return messages[error.code] || 'تعذّر إكمال طلب المزايدة، حاول مرة أخرى';
  }
+ // هنا نجيب المزادات العامه من الخادم ونحدثها كل خمس ثواني عشان السعر والحاله ما يعلقون
  async function load() {
   try {
     const data = await request('/auctions');
@@ -134,6 +148,7 @@ const bidRequestId = useRef(null);
   }
 }
  useEffect(()=>{load();const id=setInterval(load,5000);return()=>clearInterval(id)},[]);
+// هنا نفحص حقول التسجيل والدخول ثم نرسلها للخادم ونخزن الجلسه اذا نجح الدخول
 async function account(type) {
   if (accountBusy) return;
   if (type === 'login') {
@@ -181,6 +196,7 @@ if (type === 'login') {
   sessionStorage.setItem(AUTH_KEY, JSON.stringify({ token: data.token, user: data.user }));
   setSelected(null);
   setAuctionId(null);
+  // هنا نتاكد ان المستخدم العادي ما يكمل على رابط الادمن حتى بعد نجاح دخوله
   if (location.pathname === '/admin' && data.user?.role !== 'ADMIN') {
     history.replaceState(null, '', '/');
     setPage('auctions');
@@ -190,8 +206,14 @@ if (type === 'login') {
   setPage(pageFromPath(data.token, data.user));
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-    setMessage(type === 'login' ? '' : 'تم إنشاء الحساب');
+    if (type === 'register') {
+      setPage('login');
+      setMessage('تم إنشاء الحساب بنجاح، يمكنك تسجيل الدخول الآن');
+    } else {
+      setMessage('');
+    }
   } catch (error) {
+    // هنا نترجم خطا بيانات الدخول المعروف ونخلي باقي اخطاء الخادم برسائلها المناسبه
     setMessage(type === 'login' && error.code === 'INVALID_CREDENTIALS'
       ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
       : error instanceof TypeError ? 'تعذّر الاتصال بالخادم، حاول مرة أخرى' : error.message);
@@ -199,6 +221,7 @@ if (type === 'login') {
     setAccountBusy(false);
   }
 }
+// هنا نطلب الخروج من الخادم ونمسح جلسه المتصفح بعد نجاحه
 async function logout() {
   if (accountBusy) return;
   setAccountBusy(true);
@@ -219,8 +242,10 @@ async function logout() {
     setAccountBusy(false);
   }
 }
- function openAuction(id) {
+ // هنا نفتح مزاد جديد ونصفر مبلغ المزايده ورسائل المزاد السابق عشان ما تختلط البيانات
+ function openAuction(id, origin = 'auctions') {
     if (id === auctionId) return;
+  auctionOrigin.current = origin;
   setSelected(null);
   setDetailsError('');
   setDetailsLoading(true);
@@ -235,6 +260,7 @@ async function logout() {
   bidRequestId.current = null;
 }
 
+// هنا نطلب سجل المزايدات قبل حساب الحد الادنى واذا ما فيه جلسه نرجع للدخول
 async function openBid() {
   if (!token) {
     setPage('login');
@@ -257,6 +283,7 @@ async function openBid() {
   }
 }
 
+// هنا اذا تغير السعر من التحديث الموجود نعيد فحص اول مزايده بدل التخمين من السعر وحده
 useEffect(() => {
   if (!bidOpen || bidCount !== 0 || bidPriceAtCount === null || !selected || Number(selected.current_price) === bidPriceAtCount) return;
   let active = true;
@@ -269,10 +296,12 @@ useEffect(() => {
   return () => { active = false; };
 }, [bidOpen, bidCount, bidPriceAtCount, selected?.current_price, auctionId, token]);
 
+// هنا نحسب الحد الادنى من سعر البدايه اذا ما فيه مزايدات ومن السعر الحالي مع الزياده اذا فيه
 const minimumBid = selected && bidCount !== null && !bidRefreshing
   ? (bidCount > 0 ? Math.round((Number(selected.current_price) + Number(selected.minimum_increment)) * 100) / 100 : Number(selected.starting_price))
   : null;
 
+// هنا نفحص مبلغ المزايده في الواجهه ثم نفتح نافذه التاكيد قبل الارسال
 function checkBid(event) {
   event.preventDefault();
   if (bidBusy || minimumBid === null || selected?.status !== 'ACTIVE') return;
@@ -285,6 +314,7 @@ function checkBid(event) {
   setBidConfirm(true);
 }
 
+// هنا نمنع الضغط المكرر ونرسل المبلغ مع نفس requestId لين يرد الخادم على الطلب
 async function sendBid() {
   if (bidSending.current || bidBusy || !bidConfirm || minimumBid === null || selected?.status !== 'ACTIVE') return;
   if (Number(bidAmount) < minimumBid) {
@@ -297,11 +327,13 @@ async function sendBid() {
   setBidConfirm(false);
   setBidMessage('جاري إرسال المزايدة…');
   try {
+    // ليش نخزن المعرف هنا لان اعاده نفس الطلب لازم تحمل نفس المعرف لين نعرف نتيجته
     if (!bidRequestId.current) bidRequestId.current = crypto.randomUUID();
     const result = await request('/auctions/' + auctionId + '/bids', {
       method: 'POST',
       body: JSON.stringify({ amount: Number(bidAmount), requestId: bidRequestId.current })
     });
+    // هنا نتاكد ان الخادم رجع معرف المزايده قبل ما نظهر نجاح فعلي للمستخدم
     if (!result?.bidId) throw new Error('لم يؤكد الخادم حفظ المزايدة');
     setBidSucceeded(true);
     bidRequestId.current = null;
@@ -322,6 +354,7 @@ useEffect(() => {
   let active = true;
   let timer;
 
+  // هنا نحدث تفاصيل المزاد المفتوح كل خمس ثواني ونوقف الطلبات اذا تغير المزاد او الصفحه
   async function loadDetails() {
     try {
       const data = await request('/auctions/' + auctionId);
@@ -348,6 +381,7 @@ useEffect(() => {
     clearTimeout(timer);
   };
 }, [page, auctionId, token]);
+ // هنا نخلي اسماء التصنيفات عربيه ونحتفظ بقيم الخادم عشان الفلتر يطابق بيانات المزادات
  const categories = [
   { label: 'الكل', value: null },
   { label: 'الإبل', value: 'Camels' },
@@ -357,6 +391,8 @@ useEffect(() => {
  ];
  const activeCategory = categories.find(item => item.label === category) || categories[0];
  const shownAuctions = auctions.filter(a => !activeCategory.value || a.category_name === activeCategory.value);
+
+ // هنا نعرض روابط الادمن لحاله وروابط المستخدم داخل قائمه الحساب ونحمي الصفحات حسب الجلسه
 
  return <main><header><img className="brand" src="/design/mezyad-logo.png" alt="مزياد" /><nav aria-label="القائمة الرئيسية">{token && user?.role === 'ADMIN' ? <><button onClick={() => setPage('admin')}>مراجعة الإعلانات</button><button disabled={accountBusy} onClick={logout}>خروج</button></> : <><button onClick={() => { setPage('auctions'); setAuctionId(null); setSelected(null); }}>المزادات</button>{token ? <div className="account-menu" ref={accountMenuRef}><button ref={accountButtonRef} className="account-menu-trigger" aria-expanded={accountMenuOpen} aria-haspopup="true" aria-controls="account-menu-options" onClick={() => setAccountMenuOpen(open => !open)}>الحساب <span className="account-menu-chevron" aria-hidden="true" /></button>{accountMenuOpen && <div id="account-menu-options" className="account-menu-options" dir="rtl"><button onClick={() => { setAccountMenuOpen(false); setPage('activity'); }}>حسابي</button><button onClick={() => { setAccountMenuOpen(false); setPage('new-listing'); }}>إعلان جديد</button><button onClick={() => { setAccountMenuOpen(false); setPage('my-listings'); }}>إعلاناتي</button><button onClick={() => { setAccountMenuOpen(false); setPage('private'); }}>مزاد خاص</button><button className="account-menu-logout" disabled={accountBusy} onClick={() => { setAccountMenuOpen(false); logout(); }}>تسجيل خروج</button></div>}</div> : <button onClick={() => { setPage('login'); setMessage(''); }}>تسجيل الدخول</button>}</>}</nav></header>{page === 'auctions' && <>{!auctionId && <div className="auction-browser"><section className="hero" id="auctions"><p className="breadcrumb">المزادات / جميع الأقسام</p><h2>المزادات</h2><p>تصفح المزادات</p></section>
  <div className="auction-filters" aria-label="أقسام المزادات">
@@ -403,6 +439,8 @@ useEffect(() => {
     {!bidOpen && <button onClick={() => {
       setAuctionId(null);
       setSelected(null);
+      if (auctionOrigin.current === 'activity') setPage('activity');
+      auctionOrigin.current = 'auctions';
     }}>
       العودة إلى المزادات
     </button>}
@@ -423,6 +461,7 @@ useEffect(() => {
             <form onSubmit={checkBid}>
               <label htmlFor="bid-amount">قيمة مزايدتك (ر.س)</label>
               <input id="bid-amount" type="number" inputMode="decimal" min={minimumBid ?? undefined} step="0.01" placeholder="أدخل مبلغًا أعلى من أعلى مزايدة" value={bidAmount} onChange={event => { setBidAmount(event.target.value); setBidMessage(''); setBidSucceeded(false); }} disabled={bidBusy || minimumBid === null || selected.status !== 'ACTIVE'} />
+              {minimumBid !== null && <p className="bid-minimum">الحد الأدنى للمزايدة: {minimumBid.toLocaleString('en-US')} ر.س</p>}
               <p className="bid-help">إضافة المزايدة تعني إرسال عرضك على هذا المعروض. البيع لا يكتمل بمجرد انتهاء المزاد.</p>
               {minimumBid === null && <p role="status">جاري التحقق من الحد الأدنى للمزايدة…</p>}
               {selected.status !== 'ACTIVE' && <p role="status">المزاد غير نشط حاليًا.</p>}
@@ -455,6 +494,6 @@ useEffect(() => {
       </>
     ) : null}
   </section>
-)}</>}{token && page === 'activity' && <MyActivity api={API} token={token} user={user} onUnauthorized={expiredSession} onOpenAuction={id => { setPage('auctions'); openAuction(id); }} onMyListings={() => setPage('my-listings')} />}{token && page === 'new-listing' && <ListingForm key={token} api={API} token={token} onUnauthorized={expiredSession} />}{token && page === 'my-listings' && <MyListings key={token + '-items'} api={API} token={token} onUnauthorized={expiredSession} />}{token && page === 'private' && <PrivateAccess api={API} token={token} onUnauthorized={expiredSession} onBack={() => setPage('auctions')} onOpen={id => { setPage('auctions'); openAuction(id); }} />}{token && user?.role === 'ADMIN' && page === 'admin' && <AdminReview key={token + '-admin'} api={API} token={token} onUnauthorized={expiredSession} />}{(page === 'login' || page === 'register') && <section className={'account-screen ' + page} id="account"><div className="account-form"><p className="eyebrow">{page === 'register' ? 'حساب جديد' : 'حساب مزياد'}</p><h1>{page === 'register' ? 'أنشئ حسابك' : 'مرحبًا بعودتك'}</h1><p className="account-intro">{page === 'register' ? 'أنشئ حسابًا للمتابعة والمشاركة في المزادات.' : 'سجّل دخولك لمتابعة مزايداتك ومزاداتك.'}</p><form onSubmit={event => { event.preventDefault(); account(page); }}><fieldset disabled={accountBusy}>{page === 'register' && <label>الاسم الكامل<input placeholder="اكتب اسمك الكامل" autoComplete="name" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label>}<label>البريد الإلكتروني<input placeholder="أدخل بريدك الإلكتروني" type="email" autoComplete="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/></label><label>كلمة المرور<input placeholder={page === 'register' ? 'أنشئ كلمة مرور' : 'أدخل كلمة المرور'} type="password" autoComplete={page === 'register' ? 'new-password' : 'current-password'} value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/></label><button className="primary" type="submit">{accountBusy ? 'جاري تنفيذ الطلب…' : page === 'register' ? 'إنشاء الحساب' : 'تسجيل الدخول'}</button>{page === 'login' && <p className="account-signup-prompt">ليس لديك حساب؟</p>}<button type="button" onClick={() => { setPage(page === 'register' ? 'login' : 'register'); setMessage(''); }}>{page === 'register' ? 'لدي حساب بالفعل' : 'إنشاء حساب'}</button></fieldset></form><p role="status">{message}</p></div></section>}{page !== 'login' && page !== 'register' && <p role="status">{message}</p>}<footer><img className="brand" src="/design/mezyad-logo.png" alt="مزياد" /><p>مزادات مختارة لمعروضات عالية القيمة</p><div><span>© 2026 مزياد. جميع الحقوق محفوظة.</span><span>المملكة العربية السعودية</span></div></footer></main>
+)}</>}{token && page === 'activity' && <MyActivity api={API} token={token} user={user} tab={activityTab} onTabChange={setActivityTab} onUnauthorized={expiredSession} onOpenAuction={id => { setPage('auctions'); openAuction(id, 'activity'); }} onMyListings={() => setPage('my-listings')} />}{token && page === 'new-listing' && <ListingForm key={token} api={API} token={token} onUnauthorized={expiredSession} />}{token && page === 'my-listings' && <MyListings key={token + '-items'} api={API} token={token} onUnauthorized={expiredSession} />}{token && page === 'private' && <PrivateAccess api={API} token={token} onUnauthorized={expiredSession} onBack={() => { setAuctionId(null); setSelected(null); setBidOpen(false); setBidConfirm(false); setBidAmount(''); setBidMessage(''); auctionOrigin.current = 'auctions'; setPage('auctions'); }} onOpen={id => { setPage('auctions'); openAuction(id); }} />}{token && user?.role === 'ADMIN' && page === 'admin' && <AdminReview key={token + '-admin'} api={API} token={token} onUnauthorized={expiredSession} />}{(page === 'login' || page === 'register') && <section className={'account-screen ' + page} id="account"><div className="account-form"><p className="eyebrow">{page === 'register' ? 'حساب جديد' : 'حساب مزياد'}</p><h1>{page === 'register' ? 'أنشئ حسابك' : 'مرحبًا بعودتك'}</h1><p className="account-intro">{page === 'register' ? 'أنشئ حسابًا للمتابعة والمشاركة في المزادات.' : 'سجّل دخولك لمتابعة مزايداتك ومزاداتك.'}</p><form noValidate onSubmit={event => { event.preventDefault(); account(page); }}><fieldset disabled={accountBusy}>{page === 'register' && <label>الاسم الكامل<input placeholder="اكتب اسمك الكامل" autoComplete="name" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/></label>}<label>البريد الإلكتروني<input placeholder="أدخل بريدك الإلكتروني" type="email" autoComplete="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/></label><label>كلمة المرور<input placeholder={page === 'register' ? 'أنشئ كلمة مرور' : 'أدخل كلمة المرور'} type="password" autoComplete={page === 'register' ? 'new-password' : 'current-password'} value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/></label><button className="primary" type="submit">{accountBusy ? 'جاري تنفيذ الطلب…' : page === 'register' ? 'إنشاء الحساب' : 'تسجيل الدخول'}</button>{page === 'login' && <p className="account-signup-prompt">ليس لديك حساب؟</p>}<button type="button" onClick={() => { setPage(page === 'register' ? 'login' : 'register'); setMessage(''); }}>{page === 'register' ? 'لدي حساب بالفعل' : 'إنشاء حساب'}</button></fieldset></form><p role="status">{message}</p></div></section>}{page !== 'login' && page !== 'register' && <p role="status">{message}</p>}<footer><img className="brand" src="/design/mezyad-logo.png" alt="مزياد" /><p>مزادات مختارة لمعروضات عالية القيمة</p><div><span>© 2026 مزياد. جميع الحقوق محفوظة.</span><span>المملكة العربية السعودية</span></div></footer></main>
 }
 createRoot(document.getElementById('root')).render(<App/>);

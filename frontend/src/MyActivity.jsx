@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
 
-export default function MyActivity({ api, token, user, onOpenAuction, onMyListings, onUnauthorized }) {
+export default function MyActivity({ api, token, user, tab, onTabChange, onOpenAuction, onMyListings, onUnauthorized }) {
+  // هنا نخزن نشاط صاحب الحساب والتبويب وحالات التحميل عشان ما نعرض نتائج من حساب ثاني
   const [items, setItems] = useState([]);
   const [auctions, setAuctions] = useState([]);
-  const [tab, setTab] = useState('مزايداتي');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // هنا نطلب اعلانات ومزادات المستخدم من مسارات حسابه ونوقف تحديث الواجهه اذا غادرها
   useEffect(() => {
     let active = true;
     const base = api.replace(/\/$/, '').replace(/\/api\/v1$/, '') + '/api/v1';
+    // هنا نرسل رمز الجلسه مع كل طلب ونعالج 401 اذا انتهت الجلسه
     async function get(path) {
       const response = await fetch(base + path, { headers: { Authorization: 'Bearer ' + token } });
       if (response.status === 401) onUnauthorized();
@@ -21,6 +23,7 @@ export default function MyActivity({ api, token, user, onOpenAuction, onMyListin
       try {
         const [myItems, myAuctions] = await Promise.all([get('/me/items'), get('/me/auctions')]);
         if (!Array.isArray(myItems) || !Array.isArray(myAuctions)) throw new Error('Invalid activity response');
+        // بعدين نجيب تفاصيل كل مزاد عشان نعرف المشاركه والنتيجه من الخادم الحقيقي
         const details = await Promise.all(myAuctions.map(async auction => {
           try {
             return { ...auction, ...await get('/auctions/' + auction.id) };
@@ -43,30 +46,33 @@ export default function MyActivity({ api, token, user, onOpenAuction, onMyListin
     return () => { active = false; };
   }, [api, token]);
 
+  // هنا نفرز مزايداتي ومزاداتي والنتائج من البيانات الخاصه بنفس الحساب
   const ownItemIds = new Set(items.map(item => item.id));
   const myBids = auctions.filter(auction => auction.participation?.hasBid);
   const myAuctions = auctions.filter(auction => ownItemIds.has(auction.item_id));
   const results = auctions.filter(auction => auction.status === 'CLOSED' && (auction.participation?.hasBid || ownItemIds.has(auction.item_id)));
   const visible = tab === 'مزايداتي' ? myBids : tab === 'مزاداتي' ? myAuctions : results;
 
+  // هنا نطلع نتيجه المزاد حسب وجود مزايده وفوز فعلي في رد الخادم
   function outcome(auction) {
     if (!auction.result?.winner_bid_id) return 'انتهى المزاد دون مزايدات.';
     if (auction.participation?.hasBid) return auction.result.isWinner ? 'فزت بهذا المزاد.' : 'لم تفز بهذا المزاد.';
     return 'انتهى المزاد بمزايدة فائزة.';
   }
 
+  // هنا نعرض تحميل او خطا او حاله فارغه ثم بطاقات النشاط حسب التبويب المختار
   return <section className="my-activity" dir="rtl">
     <p className="breadcrumb">حسابي / نظرة عامة</p>
     <h1>{user?.name ? 'مرحبًا، ' + user.name : 'حسابي'}</h1>
     <p className="activity-intro">تابع مزايداتك ومزاداتك ونتائجها.</p>
     <div className="activity-tabs" role="tablist" aria-label="أقسام نشاطي">
-      {['مزايداتي', 'مزاداتي', 'النتائج'].map(name => <button key={name} role="tab" aria-selected={tab === name} onClick={() => setTab(name)}>{name}</button>)}
+      {['مزايداتي', 'مزاداتي', 'النتائج'].map(name => <button key={name} role="tab" aria-selected={tab === name} onClick={() => onTabChange(name)}>{name}</button>)}
     </div>
     {loading ? <p role="status">جاري تحميل نشاطك…</p> : <>
       {error && <p role="alert">{error}</p>}
       {!error.startsWith('تعذّر تحميل نشاطك') && <>
       <h2>{tab === 'مزايداتي' ? 'مزايداتي الحالية' : tab}</h2>
-      {visible.length === 0 ? <p>لا توجد {tab} لعرضها حاليًا.</p> : visible.map(auction =>
+      {visible.length === 0 ? <p>لا توجد {tab === 'النتائج' ? 'نتائج' : tab === 'مزايداتي' ? 'مزايدات' : tab} لعرضها حاليًا.</p> : visible.map(auction =>
         <article className="activity-card" key={auction.id}>
           {auction.images?.[0] && <img src={new URL(typeof auction.images[0] === 'string' ? auction.images[0] : auction.images[0].image_url, api).href} alt={auction.title} />}
           <div><h3>{auction.title}</h3>

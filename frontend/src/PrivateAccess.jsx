@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 
 export default function PrivateAccess({ api, token, onOpen, onBack, onUnauthorized }) {
+  // هنا نخزن حاله التحقق والرساله ومعرف المزاد اللي رجعه الخادم اذا قبل الرمز
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [grantedId, setGrantedId] = useState('');
 
+  // هنا ناخذ رمز الدخول فقط ونتاكد انه مو فاضي قبل ارساله
   async function enter(event) {
     event.preventDefault();
     if (busy) return;
@@ -17,6 +19,7 @@ export default function PrivateAccess({ api, token, onOpen, onBack, onUnauthoriz
     setBusy(true);
     setMessage('جاري التحقق من الرمز…');
     try {
+      // بعدين نرسل الرمز للخادم الحقيقي وهو يقرر اذا المستخدم مسموح له يدخل
       const response = await fetch(api + '/auctions/access', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
@@ -24,6 +27,7 @@ export default function PrivateAccess({ api, token, onOpen, onBack, onUnauthoriz
       });
       if (response.status === 401) onUnauthorized();
       const result = await response.json();
+      // اذا الرمز غلط او المزاد مو موجود نعرض السبب بدون ما نفتح التفاصيل
       if (!response.ok) {
         const errors = {
           INVALID_CODE: 'رمز الدخول غير صحيح',
@@ -32,6 +36,7 @@ export default function PrivateAccess({ api, token, onOpen, onBack, onUnauthoriz
         };
         throw new Error(errors[result.error?.code] || result.error?.message || 'تعذّر الدخول');
       }
+      // هنا نتاكد ان الرد فيه سماح ومعرف مزاد قبل ما نظهر قبول الرمز
       if (result.data?.accessGranted !== true || !result.data.auctionId) throw new Error('لم يتم تأكيد السماح بالدخول');
       setMessage('تم السماح بالدخول للمزاد');
       setGrantedId(result.data.auctionId);
@@ -42,6 +47,7 @@ export default function PrivateAccess({ api, token, onOpen, onBack, onUnauthoriz
     }
   }
 
+  // هنا نعرض شاشه القبول فقط بعد رد ناجح ونستخدم المعرف اللي وصل من الخادم لفتح التفاصيل
   if (grantedId) return <section className="private-access-success">
     <p className="breadcrumb">مزاد خاص / تم قبول رمز الوصول</p>
     <h1>تم قبول الرمز</h1>

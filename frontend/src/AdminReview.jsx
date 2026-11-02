@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 export default function AdminReview({ api, token, onUnauthorized }) {
+  // هنا نخزن اعلانات المراجعه وحالات التحميل والقرار عشان الادمن يشوف وضع كل طلب بوضوح
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -16,6 +17,7 @@ export default function AdminReview({ api, token, onUnauthorized }) {
   const [overview, setOverview] = useState(null);
   const [overviewError, setOverviewError] = useState('');
 
+  // هنا نجيب بيانات البطاقات والتبويبات من الطلبات الحقيقيه عشان ما نعرض ارقام من عندنا
   useEffect(() => {
     let active = true;
     async function loadOverview() {
@@ -39,6 +41,7 @@ export default function AdminReview({ api, token, onUnauthorized }) {
     return () => { active = false; };
   }, [api, token, refresh]);
 
+  // هنا نجيب الاعلانات اللي تنتظر قرار الادمن ونوقف التحديث اذا طلع من الصفحه
   useEffect(() => {
     let active = true;
     async function loadPending() {
@@ -66,6 +69,7 @@ export default function AdminReview({ api, token, onUnauthorized }) {
     return () => { active = false; };
   }, [api, token, refresh]);
 
+  // هنا نرسل موافقه او رفض للاعلان ونطلب سبب واضح اذا كان القرار رفض
   async function review(item, decision, reason = '') {
     if (busy) return;
     if (decision === 'REJECTED' && !reason.trim()) {
@@ -82,12 +86,14 @@ export default function AdminReview({ api, token, onUnauthorized }) {
       });
       if (response.status === 401) onUnauthorized();
       const result = await response.json();
+      // اذا تغير الاعلان عند شخص ثاني نحدث القائمه بدل ما نعرض قرار قديم
       if (response.status === 409) {
         setSelectedId(null);
         setRefresh(refresh + 1);
         throw new Error('الإعلان تمت مراجعته أو تغيرت حالته؛ بنحدّث القائمة');
       }
       if (!response.ok) throw new Error(result.error?.message || 'تعذّر حفظ القرار');
+      // هنا نتاكد ان الخادم رجع نفس الاعلان ونفس القرار قبل ما نظهر النجاح
       if (result.data?.id !== item.id || result.data.status !== decision) throw new Error('تعذّر تأكيد حفظ القرار');
       setItems(items.filter(oldItem => oldItem.id !== item.id));
       setSelectedId(null);
@@ -107,6 +113,7 @@ export default function AdminReview({ api, token, onUnauthorized }) {
   const reviewedItems = listingStatus === 'APPROVED' ? overview?.approved : overview?.rejected;
   const listTitle = listingStatus === 'APPROVED' ? 'الإعلانات المعتمدة' : listingStatus === 'REJECTED' ? 'الإعلانات المرفوضة' : 'الإعلانات قيد المراجعة';
 
+  // هنا التبويبات تغير العرض والبطاقات تعرض العدد الحقيقي ونوافذ القرار تمنع التاكيد بالغلط
   return (
     <section className="panel review-list">
       <div className="admin-tabs" role="tablist" aria-label="أقسام المشرف">

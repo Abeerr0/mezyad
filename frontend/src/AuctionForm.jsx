@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 
 export default function AuctionForm({ api, token, item, startOpen = false, onBack, onUnauthorized }) {
+  // هنا نخزن نوع المزاد وحاله الارسال ونتيجته عشان النموذج ما يكرر الانشاء
   const [open, setOpen] = useState(startOpen);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
@@ -8,6 +9,7 @@ export default function AuctionForm({ api, token, item, startOpen = false, onBac
   const [duplicate, setDuplicate] = useState(false);
   const [visibility, setVisibility] = useState('');
 
+  // هنا نتاكد ان الاعلان معتمد والمبالغ والاوقات صحيحه قبل ما نرسل طلب انشاء المزاد
   async function createAuction(event) {
     event.preventDefault();
     if (busy || auction || duplicate || item.status !== 'APPROVED') return;
@@ -27,6 +29,7 @@ export default function AuctionForm({ api, token, item, startOpen = false, onBac
     setBusy(true);
     setMessage('جاري إنشاء المزاد…');
     try {
+      // بعدين نرسل نوع المزاد وسعره واوقاته للخادم مع رمز دخول صاحب الاعلان
       const response = await fetch(api + '/auctions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
@@ -41,11 +44,15 @@ export default function AuctionForm({ api, token, item, startOpen = false, onBac
       });
       if (response.status === 401) onUnauthorized();
       const result = await response.json();
+      // اذا الخادم قال المزاد موجود نوقف الاعاده عشان ما ننشئ مزاد ثاني لنفس الاعلان
       if (response.status === 409 && result.error?.code === 'DUPLICATE_AUCTION') {
         setDuplicate(true);
         throw new Error('الإعلان له مزاد بالفعل، ما نقدر ننشئ مزادًا مكررًا');
       }
-      if (!response.ok) throw new Error(result.error?.message || 'تعذّر إنشاء المزاد');
+      if (!response.ok) throw new Error(response.status >= 500
+        ? 'تعذر انشاء المزاد حاليا. تحقق من مزاداتك قبل المحاوله مره اخرى.'
+        : result.error?.message || 'تعذّر إنشاء المزاد');
+      // هنا نتاكد ان الرد رجع مزاد مربوط بنفس الاعلان قبل ما نعرض رساله النجاح
       if (!result.data?.id || result.data.item_id !== item.id) throw new Error('تعذّر تأكيد إنشاء المزاد؛ تحقق قبل إعادة الإرسال');
       setAuction(result.data);
       setMessage(result.data.visibility === 'PRIVATE' && !result.data.accessCode
@@ -61,6 +68,7 @@ export default function AuctionForm({ api, token, item, startOpen = false, onBac
   if (item.status !== 'APPROVED') return null;
   if (!open) return <button onClick={() => setOpen(true)}>إنشاء مزاد</button>;
 
+  // هنا نخلي المستخدم يختار عام او خاص وبعدها يطلع له نموذج الاعداد المناسب
   if (!visibility) return (
     <section className="auction-type-screen">
       <p className="breadcrumb">حسابي / إعلاناتي / اختر نوع المزاد</p>
@@ -95,6 +103,7 @@ export default function AuctionForm({ api, token, item, startOpen = false, onBac
       </form>}
       <p role="status">{message}</p>
       {auction?.visibility === 'PRIVATE' && auction.accessCode && <p>رمز المزاد الخاص — احتفظ به: <strong dir="ltr">{auction.accessCode}</strong></p>}
+      {auction && <button type="button" onClick={() => onBack ? onBack() : setOpen(false)}>العودة إلى إعلاناتي</button>}
     </section>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
+// هنا نحول اسم القسم اللي يرجع من الخادم لكلام عربي واضح في الواجهه بدون تغيير قيمته في الطلب
 const categoryText = {
   'Real Estate': ['العقارات', 'العقارات السكنية والأراضي'],
   Camels: ['الإبل', 'صور ومعلومات عن الإبل المعروضة'],
@@ -8,6 +9,7 @@ const categoryText = {
 };
 
 export default function ListingForm({ api, token, item, onSaved, onCancel, onUnauthorized }) {
+  // هنا نخزن خطوه النموذج والقسم والصور عشان المستخدم يكمل الاعلان مرحله مرحله
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categoryError, setCategoryError] = useState('');
@@ -19,6 +21,7 @@ export default function ListingForm({ api, token, item, onSaved, onCancel, onUna
   const [images, setImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
 
+  // هنا نسوي روابط مؤقته لمعاينه الصور ونلغيها بعدين عشان ما تبقى في ذاكره المتصفح
   useEffect(() => {
     const previews = images.map(image => ({
       name: image.name,
@@ -28,6 +31,7 @@ export default function ListingForm({ api, token, item, onSaved, onCancel, onUna
     return () => previews.forEach(image => URL.revokeObjectURL(image.url));
   }, [images]);
 
+  // هنا نتاكد من عدد الصور ونوعها وحجمها قبل ما نحاول نرفعها
   function imageError(files) {
     if ((!item && files.length < 1) || files.length > 6) {
       return 'اختر حتى 6 صور، وصورة واحدة على الأقل للإعلان الجديد';
@@ -54,11 +58,17 @@ export default function ListingForm({ api, token, item, onSaved, onCancel, onUna
     setMessage('');
   }
 
+  // هنا نفحص حقول الخطوه الحاليه ونحفظ المعاينه قبل الانتقال للخطوه اللي بعدها
   function next(event) {
     event.preventDefault();
     const form = event.currentTarget.form;
     const fields = form.querySelectorAll('[data-step="' + step + '"] input, [data-step="' + step + '"] textarea');
-    if ([...fields].some(field => !field.reportValidity())) return;
+    const invalidField = [...fields].find(field => !field.checkValidity());
+    if (invalidField) {
+      setMessage('أكمل الحقول المطلوبة قبل المتابعة');
+      invalidField.focus();
+      return;
+    }
     if (step === 2 && imageError(images)) {
       setMessage(imageError(images));
       return;
@@ -68,6 +78,7 @@ export default function ListingForm({ api, token, item, onSaved, onCancel, onUna
     setStep(step + 1);
   }
 
+  // هنا نجيب الاقسام الحقيقيه من الخادم عشان المعرف المرسل يطابق قسم موجود
   useEffect(() => {
     let active = true;
     async function loadCategories() {
@@ -87,6 +98,7 @@ export default function ListingForm({ api, token, item, onSaved, onCancel, onUna
     return () => { active = false; };
   }, [api]);
 
+  // هنا نجمع بيانات الاعلان والمواصفات والصور ونرسلها بعد ما نتاكد منها
   async function submitListing(event) {
     event.preventDefault();
     if (busy) return;
@@ -95,6 +107,7 @@ export default function ListingForm({ api, token, item, onSaved, onCancel, onUna
     const title = data.get('title').trim();
     const description = data.get('description').trim();
     let categoryFields = {};
+    // هنا نحول كل سطر مواصفه لاسم وقيمه ونمنع الاسم المكرر او السطر الناقص
     for (const line of data.get('specifications').split('\n')) {
       if (!line.trim()) continue;
       const separator = line.indexOf(':');
@@ -117,6 +130,7 @@ export default function ListingForm({ api, token, item, onSaved, onCancel, onUna
       setMessage(imageError(images));
       return;
     }
+    // بعدين نحط الصور والحقول المنظمه في نفس الطلب عشان الخادم يستقبلها مع بعض
     data.delete('images');
     images.forEach(image => data.append('images', image));
     data.set('title', title);
@@ -126,6 +140,7 @@ export default function ListingForm({ api, token, item, onSaved, onCancel, onUna
     setBusy(true);
     setMessage('جاري إرسال الإعلان…');
     try {
+      // اذا هذا اعلان مرفوض نحدثه واذا جديد ننشئه بنفس النموذج
       const response = await fetch(api + '/items' + (item ? '/' + item.id : ''), {
         method: item ? 'PATCH' : 'POST',
         headers: { Authorization: 'Bearer ' + token },
@@ -134,6 +149,7 @@ export default function ListingForm({ api, token, item, onSaved, onCancel, onUna
       if (response.status === 401) onUnauthorized();
       const result = await response.json();
       if (!response.ok) throw new Error(result.error?.message || 'تعذّر إرسال الإعلان');
+      // هنا نتاكد ان الخادم حفظ الاعلان والصور ورجعه للمراجعه قبل ما نقول تم
       if (!result.data?.id || result.data.status !== 'PENDING_REVIEW' ||
           (item && result.data.id !== item.id) ||
           (images.length > 0 && (!Array.isArray(result.data.images) || result.data.images.length !== images.length))) {
@@ -153,6 +169,7 @@ export default function ListingForm({ api, token, item, onSaved, onCancel, onUna
 
   const specifications = Object.entries(item?.categoryFields ?? item?.category_fields ?? {})
     .map(([name, value]) => name + ': ' + (typeof value === 'object' ? JSON.stringify(value) : value)).join('\n');
+  // هنا نعرض الصور الجديده للمعاينه او الصور الاصليه اذا المستخدم ما اختار بديل
   const shownImages = images.length ? imagePreviews : (item?.images ?? []).map((image, index) => ({
     name: 'صورة الإعلان ' + (index + 1),
     url: new URL(typeof image === 'string' ? image : image.image_url, api).href
@@ -164,10 +181,11 @@ export default function ListingForm({ api, token, item, onSaved, onCancel, onUna
   if (categoryError) return <p role="alert">{categoryError}</p>;
   if (!categories.length) return <p>لا توجد أقسام للإعلان حاليًا.</p>;
 
+  // هنا نعرض اختيار القسم ثم التفاصيل ثم الصور ثم المراجعه حسب الخطوه الحاليه
   return (
     <section className={'panel listing-form listing-editor' + (step === 0 ? ' listing-category-step' : step >= 2 ? ' listing-visual-step' : '')}>
-      {step === 0 && <p className="breadcrumb">حسابي / أنشئ مزادك</p>}
-      {step >= 2 && <p className="breadcrumb">{step === 3 ? 'أنشئ مزادك / مراجعة' : 'أنشئ مزادك / الصور'}</p>}
+      {step === 0 && <p className="breadcrumb">حسابي / إنشاء إعلان</p>}
+      {step >= 2 && <p className="breadcrumb">{step === 3 ? 'إنشاء إعلان / مراجعة' : 'إنشاء إعلان / الصور'}</p>}
       <h2>{['اختر فئة السلعة', item ? 'تعديل الإعلان المرفوض' : 'تفاصيل الإعلان', 'صور الإعلان', 'راجع إعلانك'][step]}</h2>
       {step === 0 && <p className="page-intro">ابدأ باختيار القسم المناسب قبل إضافة تفاصيل الإعلان.</p>}
       {step >= 2 && <p className="page-intro">{step === 2 ? 'أضف صورًا واضحة للمعروض نفسه ومن زوايا مختلفة.' : 'تأكد من العنوان والصورة والمعلومات قبل إرسال الإعلان للمراجعة.'}</p>}

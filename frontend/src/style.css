@@ -1,14 +1,17 @@
+/* هنا نحط خط والوان مزياد الاساسيه عشان صفحات مهامي تطلع بهويه وحده */
 :root { font-family: 'Listing Noto Sans Arabic', 'Segoe UI', sans-serif; color: #292520; background: #fcfbf8; font-synthesis: none; }
 * { box-sizing: border-box; }
 body { margin: 0; overflow-x: clip; }
 main { max-width: 1440px; min-height: 100vh; margin: auto; padding: 0 76px; display: flex; flex-direction: column; }
 header { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; min-height: 82px; background: #fff; }
+/* هنا نمد بياض الهيدر والخط بعرض الشاشه مع بقاء المحتوى بمكانه */
 header::before { content: ''; position: absolute; inset: 0 auto 0 50%; width: 100vw; background: #fff; transform: translateX(-50%); }
 header > * { position: relative; }
 header::after { content: ''; position: absolute; bottom: 0; left: 50%; width: 100vw; border-bottom: 1px solid #d8cbb8; transform: translateX(-50%); }
 .brand { width: 178px; height: 62px; object-fit: contain; }
 nav { display: flex; gap: 36px; flex-wrap: wrap; align-items: center; }
 nav button { border: 0; padding: 8px 0; background: transparent; font-size: 14px; }
+/* هنا نخلي قائمه الحساب تحت زرها وباتجاه يناسب العربيه */
 .account-menu { position: relative; }
 .account-menu-trigger { display: inline-flex; align-items: center; gap: 9px; }
 .account-menu-chevron { width: 7px; height: 7px; border-right: 1px solid currentColor; border-bottom: 1px solid currentColor; transform: rotate(45deg) translateY(-2px); }
@@ -16,6 +19,7 @@ nav button { border: 0; padding: 8px 0; background: transparent; font-size: 14px
 nav .account-menu-options button { display: block; width: 100%; padding: 11px 12px; text-align: right; white-space: nowrap; }
 nav .account-menu-options button:hover, nav .account-menu-options button:focus-visible { background: #ebe6dd; }
 nav .account-menu-options .account-menu-logout { margin-top: 7px; border-top: 1px solid #d8cbb8; }
+/* هنا خلفيات التسجيل والدخول والمزاد الخاص تاخذ عرض الصفحه والنموذج يبقى واضح فوقها */
 .account-screen { margin: 0 -76px; padding: 61px 70px 36px; background-size: cover; background-position: center top; min-height: 902px; }
 .account-screen.login { background-image: url('/design/login-background.jpg'); }
 .account-screen.private-access { background-image: url('/design/private-background.png'); }
@@ -29,6 +33,7 @@ nav .account-menu-options .account-menu-logout { margin-top: 7px; border-top: 1p
 .account-form button { display: block; width: 100%; height: 54px; margin-top: 18px; padding: 10px; }
 .account-screen + footer { margin-top: 0; }
 .primary { background: #e8d9bb; border-color: #292520; }
+/* هنا نخلي الفوتر تحت المحتوى ونمد خلفيته بعرض الشاشه بدون ما يغطي الصفحات */
 footer { position: relative; margin-top: auto; padding: 34px 0; background: #ebe6dd; font-size: 14px; }
 footer::before { content: ''; position: absolute; inset: 0 auto 0 50%; width: 100vw; background: #ebe6dd; transform: translateX(-50%); }
 footer > * { position: relative; }
@@ -39,6 +44,7 @@ footer > div { display: flex; justify-content: space-between; gap: 20px; margin-
 .hero h2 { font-size: 42px; margin: 24px 0 16px; }
 .hero p { color: #6d655d; font-size: 14px; }
 .hero .breadcrumb { color: #b69a70; font-size: 12px; }
+/* هنا نرتب بطاقات المزادات بثلاثه اعمده عشان الصوره والسعر يطلعون بشكل ثابت */
 .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 72px 32px; }
 article { min-width: 0; }
 .cards article > img { display: block; width: 100%; height: 310px; object-fit: cover; }
@@ -54,6 +60,7 @@ article { min-width: 0; }
 .listing-form .actions { justify-content: space-between; margin-top: 40px; }
 .listing-form .actions button { min-width: 220px; }
 .listing-preview p { white-space: pre-line; }
+/* هنا نخلي ملخص المزاد والصور جنب بعض بدون ما ينعكس ترتيب صفحه التفاصيل */
 .details-page { display: grid; grid-template-columns: 1fr 1.8fr; gap: 32px 54px; padding-top: 64px; }
 .details-page > button { grid-column: 1 / -1; justify-self: start; }
 .details-summary { grid-column: 1; grid-row: 2; }
@@ -85,6 +92,7 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
 @media (max-width: 800px) { main { padding: 0 24px; } .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 20px; } .cards article > img { height: 220px; } nav { gap: 18px; } }
 @media (max-width: 520px) { .cards { grid-template-columns: 1fr; } .hero h2 { font-size: 32px; } .panel { padding: 20px; } .brand { width: 130px; } }
 
+/* هنا نرتب حقول الاعلان ومعاينه الصور وخطوات المراجعه عشان المستخدم يمشي فيها بوضوح */
 .listing-editor { max-width: none; }
 @font-face { font-family: 'Listing Noto Sans Arabic'; src: url('/design/NotoSansArabic.ttf') format('truetype'); font-weight: 100 900; font-display: swap; }
 .listing-editor { padding: 0; background: transparent; font-family: 'Listing Noto Sans Arabic', 'Segoe UI', sans-serif; }
@@ -242,6 +250,7 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
 .details-page .details-images img:first-child { height: auto; aspect-ratio: 1.16; }
 @media (max-width: 800px) { .details-page .details-summary { margin-top: 32px; } .details-page .details-images img:first-child { height: 320px; } }
 
+/* هنا نعطي نموذج المزايده اتجاه عربي ونخلي صورته وملخصه متوازنين */
 .bid-page { grid-template-columns: 1fr 1fr; gap: 40px 80px; direction: rtl; }
 .bid-summary { grid-column: 1; grid-row: 1; }
 .bid-summary .breadcrumb { color: #b69a70; font-size: 12px; }
@@ -254,6 +263,7 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
 .bid-summary form { margin-top: 34px; }
 .bid-summary label { display: block; margin-bottom: 14px; }
 .bid-summary input { display: block; width: 100%; height: 60px; padding: 12px 18px; background: #fff; border: 1px solid #d8cbb8; direction: rtl; }
+.bid-minimum { margin: 12px 0 0; color: #2c241d; font-size: 16px; font-weight: 600; }
 .bid-help { margin: 14px 0 28px; }
 .bid-summary form button, .bid-back { display: block; width: 100%; min-height: 56px; }
 .bid-back { margin-top: 12px; }
@@ -267,6 +277,7 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
 .details-page > .open-bid { grid-column: 1; justify-self: stretch; }
 @media (max-width: 800px) { .bid-page { display: flex; flex-direction: column; gap: 24px; } .bid-summary, .bid-image { width: 100%; } .bid-summary h2 { font-size: 34px; } }
 
+/* هنا نرتب تبويبات نشاطي وبطاقات المزادات ونخلي النص عربي والصوره بمكان ثابت */
 .my-activity { padding: 64px 0; min-height: 680px; }
 .my-activity .breadcrumb { color: #b69a70; font-size: 12px; }
 .my-activity h1 { font-family: 'Browse El Messiri', 'Listing Noto Sans Arabic', sans-serif; font-size: 42px; margin: 14px 0; }
@@ -294,12 +305,15 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
 .own-listings .listing-info p { font-size: 14px; color: #6d655d; }
 .own-listings .listing-info .listing-status { color: #b69a70; }
 .own-listings article > button { direction: rtl; grid-column: 2; grid-row: 2; justify-self: end; width: min(100%,320px); margin-top: 0; min-width: 0; background: #e8d9bb; border-color: #292520; }
+.own-listings article > button + button { grid-row: 3; }
 .own-listings [role='status'], .own-listings [role='alert'] { overflow-wrap: anywhere; }
 .own-listings [role='status']:empty { display: none; }
 @media (max-width: 800px) { .own-listings article { grid-template-columns: minmax(0,1fr); grid-template-rows: auto; gap: 16px; } .own-listings article > .listing-photo, .own-listings .listing-info, .own-listings article > button { grid-column: 1; grid-row: auto; } .own-listings article > .listing-photo { height: 220px; } .own-listings article > button { width: 100%; } }
+@media (max-width: 800px) { .own-listings article > button + button { grid-row: auto; } }
 @media (max-width: 520px) { .own-listings > h2 { font-size: 30px; } }
 
 
+/* هنا نعرض نموذج اعداد المزاد داخل مسار اعلاناتي بعد اعتماد الاعلان */
 .own-listings .auction-form { direction: rtl; grid-column: 1 / -1; padding-top: 32px; width: 100%; max-width: 1000px; }
 .auction-form > h2 { font-size: 40px; font-weight: 700; margin: 0 0 28px; }
 .auction-form .breadcrumb { color: #b69a70; font-size: 12px; margin: 0 0 26px; }
@@ -319,6 +333,7 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
 .private-access .account-form button { height: auto; }
 .private-access [role='status'] { overflow-wrap: anywhere; }
 .private-access [role='status']:empty { display: none; }
+/* هنا نخلي شاشه رمز المزاد الخاص باتجاه عربي ورسائلها واضحه تحت الحقل */
 .account-screen.private-access { direction: rtl; color: #241f1b; font-family: 'Listing Noto Sans Arabic', 'Segoe UI', sans-serif; padding-bottom: 66px; }
 .private-access .account-form { min-height: 775px; padding-top: 53px; background: rgba(254,253,250,.78); }
 .private-access .account-form .eyebrow { line-height: 27px; margin: 0 0 28px; font-size: 13px; color: #a7834b; }
@@ -339,6 +354,7 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
 
 
 .review-list { padding: 0; background: transparent; font-family: 'Listing Noto Sans Arabic', 'Segoe UI', sans-serif; }
+/* هنا نرتب تبويبات الادمن وبطاقات الارقام من اليمين لليسار عشان القرار واضح */
 .review-list .admin-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 32px 0 60px; direction: rtl; }
 .review-list .admin-tabs button { min-height: 54px; background: #f8f5ef; }
 .review-list .admin-tabs button[aria-selected='true'] { background: #e7d8bc; border-color: #241f1b; }
@@ -375,6 +391,7 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
 .review-list .review-detail form button { min-width: 180px; margin-inline-end: 16px; }
 .review-list .review-detail form button:first-of-type { background: #f8f5ef; }
 .review-list .review-detail form button:first-of-type:hover { background: #e8d9bb; }
+/* هنا نخلي خطوه اختيار القسم عربيه ونبرز القسم المختار قبل المتابعه */
 .listing-editor.listing-category-step { direction: rtl; padding-top: 64px; }
 .listing-editor.listing-category-step > h2 { font-family: 'Listing El Messiri', 'Listing Noto Sans Arabic', sans-serif; font-size: 42px; font-weight: 700; line-height: 66px; color: #241f1b; margin: 0 0 8px; }
 .listing-editor.listing-category-step > .page-intro { font-size: 15px; color: #6d655d; margin: 0 0 64px; }
@@ -386,6 +403,7 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
 .listing-editor .category-options button[aria-pressed='true'] { background: #e7d8bc; border-color: #241f1b; }
 .listing-editor.listing-category-step .actions { margin-top: 56px; }
 .listing-editor.listing-category-step .actions .primary { width: 429px; max-width: 100%; min-height: 54px; background: #e7d8bc; border: 1px solid #241f1b; }
+/* هنا نعرض العام والخاص ببطاقتين واضحتين قبل نموذج اعداد المزاد */
 .auction-type-screen { direction: rtl; padding: 64px 0; }
 .auction-type-screen h2 { font-family: 'Listing El Messiri', 'Listing Noto Sans Arabic', sans-serif; font-size: 40px; font-weight: 700; line-height: 66px; margin: 20px 0; }
 .auction-type-screen .page-intro { color: #6d655d; }
@@ -404,6 +422,7 @@ fieldset { min-width: 0; border: 0; padding: 0; margin: 0; }
 .private-access-success button { width: 425px; max-width: 100%; min-height: 54px; margin-bottom: 16px; }
 .review-list .review-detail > .review-decisions { grid-column: 1 / -1; display: flex; gap: 16px; }
 .review-list .review-detail > .review-decisions button { min-width: 180px; }
+/* هنا نخلي نوافذ موافقه ورفض الادمن فوق الصفحه عشان يراجع قراره قبل الحفظ */
 .review-modal-backdrop { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 24px; background: rgba(0,0,0,.45); }
 .review-modal { width: 700px; max-width: 100%; padding: 40px; background: #fff; border: 1px solid #d8cbb8; box-shadow: 0 16px 48px rgba(0,0,0,.14); direction: rtl; }
 .review-modal h3 { font-size: 28px; margin-top: 0; }
