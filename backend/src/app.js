@@ -10,7 +10,9 @@ import { imageLink, serveImage } from "./uploads.js";
 import { attemptLimit } from "./limits.js";
 import { startCommitment } from "./bank.js";
 import { auctionStatus, resultFor, participationFor } from "./auctions.js";
-
+// نستخدم دالة رمز التحقق وارساله
+//داله تحقق الايميل
+import { saveAndSendCode } from "./email.js";
 export const app = express();
 app.use(
   cors({ origin: process.env.FRONTEND_ORIGIN || "http://localhost:5173" }),
@@ -123,12 +125,16 @@ async function closeIfEnded(id) {
   }
 }
 app.get("/health", (_req, res) => res.json({ data: { status: "ok" } }));
+const accounts = express.Router();
+app.use("/auth", accounts);
+app.use("/api/v1/auth", accounts);
 // استقبال طلب إنشاء حساب جديد
 // نستخدم async عشان نقدر نستخدم await لانتظار نتيجة عملية، مثل حفظ الحساب في قاعدة البيانات.
 //عندما يصل طلب POST لمسار تسجيل الحساب، نفّذ التعليمات الموجودة داخل هذه الدالة
 // هذا الرمز يعني او || إذا كان الاسم ليس نصًا، أو كان فارغًا بعد إزالة المسافات من الأطراف، نرفض الطلب.
-app.post("/auth/register", async (req, res, next) => {
+accounts.post("/register", async (req, res, next) => {
   try {
+    // نتحقق من بيانات الحساب قبل ما نحفظه.
     const data = req.body || {};
     const name = data.name;
     const email = data.email;
@@ -165,11 +171,44 @@ app.post("/auth/register", async (req, res, next) => {
         "Valid name, email and password (8+ chars) required",
       );
     const hash = await bcrypt.hash(password, 12);
+    // الحساب العام يطلع USER؛ ما ناخذ صلاحية الأدمن من الطلب.
     const r = await query(
       "INSERT INTO users(name,email,password_hash) VALUES($1,$2,$3) RETURNING id,name,email,role",
       [name.trim(), email.trim().toLowerCase(), hash],
     );
-    res.status(201).json({ data: r.rows[0] });
+    // ناخذ بيانات الحساب الجديد
+    //إرسال رمز التحقق بعد إنشاء حساب جديد
+    // ناخذ بيانات الحساب الجديد اللي رجعت من قاعدة البيانات
+    const user = r.rows[0];
+
+    // نحفظ بصمة الرمز ونحاول نرسله للايميل
+    // نحفظ بصمة الرمز ونحاول نرسله ونحفظ نتيجة الارسال
+    const emailSent = await saveAndSendCode(user);
+
+    // نرجع بيانات الحساب وحالة التحقق والارسال
+    // نرجع 201 يعني الحساب انحفظ ونرسل الرد بصيغة json
+    res.status(201).json({
+      // نحط بيانات الرد داخل data
+      data: {
+        // معرف الحساب
+        id: user.id,
+        // اسم المستخدم
+        name: user.name,
+        // ايميل المستخدم
+        email: user.email,
+        // صلاحية الحساب مستخدم او ادمن
+        role: user.role,
+
+        // ايميل الحساب الجديد ما تأكد للحين
+        // نوضح ان الايميل للحين مو مؤكد
+        emailVerified: false,
+
+        // نتيجة محاولة ارسال الرمز
+        // نرجع نتيجة محاولة ارسال الرمز
+        emailSent: emailSent,
+      },
+      // نهاية ارسال الرد
+    });
     // إذا كان رمز الخطأ 23505، نرسل رد 409 ورسالة أن الإيميل مسجل مسبقًا.
     // الدالة err تجهز رد الخطأ وترسله.
     // return تنهي معالجة طلب التسجيل الحالي، ويظل الباك إند شغالًا.
@@ -181,44 +220,7 @@ app.post("/auth/register", async (req, res, next) => {
     next(e);
   }
 });
-const accounts = express.Router();
-app.use("/auth", accounts);
-app.use("/api/v1/auth", accounts);
-accounts.post("/register", async (req, res, next) => {
-  try {
-    // نتحقق من بيانات الحساب قبل ما نحفظه.
-    const { name, email, password } = req.body || {};
-    if (
-      typeof name !== "string" ||
-      !name.trim() ||
-      name.trim().length > 160 ||
-      typeof email !== "string" ||
-      email.trim().toLowerCase().length > 254 ||
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
-      typeof password !== "string" ||
-      password.length < 8 ||
-      Buffer.byteLength(password, "utf8") > 72
-    )
-      return err(
-        res,
-        400,
-        "INVALID_INPUT",
-        "Valid name, email and password (8+ chars) required",
-      );
-    const hash = await bcrypt.hash(password, 12);
-    // الحساب العام يطلع USER؛ ما ناخذ صلاحية الأدمن من الطلب.
-    const r = await query(
-      "INSERT INTO users(name,email,password_hash) VALUES($1,$2,$3) RETURNING id,name,email,role",
-      [name.trim(), email.trim().toLowerCase(), hash],
-    );
-    res.status(201).json({ data: r.rows[0] });
-  } catch (e) {
-    if (e.code === "23505")
-      return err(res, 409, "DUPLICATE_EMAIL", "Email already registered");
-    next(e);
-  }
-});
-app.post("/auth/login", async (req, res, next) => {
+accounts.post("/login", async (req, res, next) => {
   try {
     // ياخذ بيانات الطلب وإذا ما وصلت بيانات يستخدم كائن فارغ.
     const data = req.body || {};
@@ -252,6 +254,7 @@ app.post("/auth/login", async (req, res, next) => {
       );
     }
     //     rيبحث  في جدول المستخدمين عن االحساب باستخدام الايميمل ويحفظ نتيجه البحث في r
+    // هنا نطابق كلمة المرور مع البصمة المحفوظة.
     const r = await query("SELECT * FROM users WHERE email=$1", [
       //نشيل المسافات من اطرف الايميمل ويحول حروفه الى سمول احرف صغيره يعني
       email.trim().toLowerCase(),
@@ -263,54 +266,23 @@ app.post("/auth/login", async (req, res, next) => {
       !(await bcrypt.compare(password, r.rows[0].password_hash))
     )
       return err(res, 401, "INVALID_CREDENTIALS", "Invalid credentials");
-    const token = newToken(),
-      u = r.rows[0];
-    await query(
-      "INSERT INTO user_sessions(user_id,token_hash,expires_at) VALUES($1,$2,now()+interval '7 days')",
-      [u.id, hashToken(token)],
-    );
-    res.json({
-      data: {
-        token,
-        user: { id: u.id, name: u.name, email: u.email, role: u.role },
-      },
-    });
-  } catch (e) {
-    next(e);
-  }
-});
-// نتحقق من الجلسة قبل إرجاع بيانات المستخدم.
-app.get("/auth/me", auth, (req, res) => {
-  // نرسل بيانات المستخدم التي جهزتها دالة auth.
-  res.json({ data: { user: req.user } });
-});
-accounts.post("/login", async (req, res, next) => {
-  try {
-    const { email, password } = req.body || {};
-    if (
-      typeof email !== "string" ||
-      !email.trim() ||
-      email.trim().toLowerCase().length > 254 ||
-      typeof password !== "string" ||
-      password.length === 0 ||
-      Buffer.byteLength(password, "utf8") > 72
-    ) {
+    //يمنع تسجيل الدخول لين المستخدم يأكد إيميله برمز التحقق
+    // نرفض الدخول اذا ايميل الحساب ما تأكد
+    // نرفض تسجيل الدخول اذا المستخدم ما اكد ايميله
+    if (!r.rows[0].email_verified_at) {
+      // نرجع خطا ونوقف طلب تسجيل الدخول
       return err(
+        // نمرر الرد لدالة الخطا
         res,
-        400,
-        "INVALID_INPUT",
-        "Valid email and password required",
+        // رقم الحالة يعني الدخول ممنوع
+        403,
+        // رمز الخطا اللي يظهر للفرونت
+        "EMAIL_NOT_VERIFIED",
+        // رسالة تطلب تأكيد الايميل قبل الدخول
+        "Verify your email before signing in",
       );
+      // نهاية فحص تأكيد الايميل
     }
-    // هنا نطابق كلمة المرور مع البصمة المحفوظة.
-    const r = await query("SELECT * FROM users WHERE email=$1", [
-      email.trim().toLowerCase(),
-    ]);
-    if (
-      !r.rowCount ||
-      !(await bcrypt.compare(password, r.rows[0].password_hash))
-    )
-      return err(res, 401, "INVALID_CREDENTIALS", "Invalid credentials");
     const token = newToken(),
       u = r.rows[0];
     // نخزن بصمة الجلسة بدل الرمز نفسه.
@@ -328,15 +300,191 @@ accounts.post("/login", async (req, res, next) => {
     next(e);
   }
 });
-app.post("/auth/logout", auth, async (req, res, next) => {
-  try {
-    await query("DELETE FROM user_sessions WHERE token_hash=$1", [
-      hashToken(req.token),
-    ]);
-    res.json({ data: { signedOut: true } });
-  } catch (e) {
-    next(e);
-  }
+// نستقبل طلب تأكيد الايميل بالرمز اللي وصل للمستخدم.
+accounts.post(
+  "/verify-email",
+  // نحد الطلبات المتكررة خلال مدة عشان نقلل تخمين الرمز.
+  // نحد محاولات الطلب عشان نقلل تخمين الرمز.
+  attemptLimit({
+    // نميز المحاولات باستخدام عنوان الشبكة والايميل مع بعض.
+    key: (req) =>
+      "verify:" +
+      req.ip +
+      ":" +
+      String(req.body?.email || "")
+        .trim()
+        .toLowerCase(),
+  }),
+  // نستقبل الطلب ونستخدم await لانتظار الاستعلامات.
+  async (req, res, next) => {
+    try {
+      // ناخذ الايميل والرمز من بيانات الطلب.
+      // ناخذ بيانات الطلب، وإذا ما وصلت نستخدم كائن فارغ.
+      const data = req.body || {};
+      // ناخذ الايميل من بيانات الطلب.
+      const email = data.email;
+      // ناخذ رمز التحقق اللي كتبه المستخدم.
+      const code = data.code;
+      // نرفض الطلب إذا تحقق أي شرط من شروط البيانات الغلط.
+      if (
+        // نتأكد من صيغة الايميل والرمز، ونرفض البيانات غير الصحيحة.
+        // الايميل لازم يكون نص.
+        typeof email !== "string" ||
+        // نرفض الايميل إذا تجاوز حد قاعدة البيانات.
+        email.trim().length > 254 ||
+        // نتأكد من صيغة الايميل بعد إزالة المسافات من الأطراف.
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
+        // رمز التحقق لازم يكون نص.
+        typeof code !== "string" ||
+        // الرمز لازم يكون ٦ أرقام بالضبط.
+        !/^\d{6}$/.test(code)
+      )
+        // نرجع خطأ 400 ونوقف الطلب إذا البيانات غير صحيحة.
+        return err(
+          res,
+          400,
+          "INVALID_INPUT",
+          "Valid email and 6-digit code required",
+        );
+      // نبحث عن الحساب ونتأكد أنه موجود وايميله ما تأكد من قبل.
+      // نبحث عن الحساب بالايميل ونجيب معرفه وحالة تأكيده.
+      const userResult = await query(
+        "SELECT id, email_verified_at FROM users WHERE email=$1",
+        // ننظف الايميل ونمرره مكان $1 في الاستعلام.
+        [email.trim().toLowerCase()],
+      );
+      // إذا ما لقينا الحساب نرفض الرمز.
+      if (!userResult.rowCount)
+        return err(res, 400, "INVALID_CODE", "Invalid or expired code");
+      // ناخذ بيانات الحساب من أول صف في النتيجة.
+      const user = userResult.rows[0];
+      // نوقف الطلب إذا ايميل الحساب مؤكد من قبل.
+      if (user.email_verified_at)
+        return err(res, 409, "ALREADY_VERIFIED", "Email already verified");
+      // نفحص صلاحية الرمز وحد المحاولات، ونحسب المحاولة ونجيب البصمة.
+      // نزيد المحاولات ونجيب بصمة الرمز في نفس الاستعلام.
+      // يتم التحديث إذا الرمز ما انتهى وقته والمحاولات أقل من ٥.
+      const codeResult = await query(
+        "UPDATE users SET email_code_attempts=email_code_attempts+1 " +
+          "WHERE id=$1 AND email_verified_at IS NULL " +
+          "AND email_code_hash IS NOT NULL " +
+          "AND email_code_expires_at>now() AND email_code_attempts<5 " +
+          "RETURNING email_code_hash",
+        // نمرر معرف الحساب مكان $1.
+        [user.id],
+      );
+      // نرفض إذا الاستعلام ما رجع بصمة الرمز.
+      if (!codeResult.rowCount)
+        return err(res, 400, "INVALID_CODE", "Invalid or expired code");
+      // نقارن الرمز اللي كتبه المستخدم بالبصمة، ونرفضه إذا ما تطابق.
+      // ناخذ بصمة الرمز المحفوظة في قاعدة البيانات.
+      const codeHash = codeResult.rows[0].email_code_hash;
+      // نقارن الرمز اللي كتبه المستخدم بالبصمة باستخدام bcrypt.
+      const validCode = await bcrypt.compare(code, codeHash);
+      // إذا الرمز ما يطابق البصمة نرفضه ونوقف الطلب.
+      if (!validCode)
+        return err(res, 400, "INVALID_CODE", "Invalid or expired code");
+      // نأكد ايميل الحساب ونمسح البصمة وصلاحيتها ونصفر المحاولات.
+      // يتم التأكيد إذا نفس البصمة ما زالت محفوظة والرمز ما انتهى.
+      // نحفظ وقت تأكيد الايميل ونمسح البصمة ووقت الصلاحية ونصفر المحاولات.
+      const verified = await query(
+        "UPDATE users SET email_verified_at=now(), email_code_hash=NULL, " +
+          "email_code_expires_at=NULL, email_code_attempts=0 " +
+          "WHERE id=$1 AND email_verified_at IS NULL " +
+          // نتأكد أن البصمة ما تغيرت وأن الرمز ما انتهى وقته.
+          "AND email_code_hash=$2 AND email_code_expires_at>now() RETURNING id",
+        [user.id, codeHash],
+      );
+      // إذا ما تأكد أي حساب نرفض الرمز ونوقف الطلب.
+      if (!verified.rowCount)
+        return err(res, 400, "INVALID_CODE", "Invalid or expired code");
+      // نرسل للواجهة أن الايميل تأكد بنجاح.
+      res.json({ data: { emailVerified: true } });
+      // إذا حصل خطأ نستقبله في e.
+    } catch (e) {
+      // نمرر الخطأ لمعالج الأخطاء الموجود في الباك.
+      next(e);
+    }
+  },
+);
+// نستقبل طلب إعادة إرسال رمز التحقق للايميل.
+accounts.post(
+  "/resend-code",
+  // نسمح بثلاثة طلبات لكل ايميل خلال عشر دقايق عشان نحد كثرة الإرسال.
+  attemptLimit({
+    max: 3,
+    windowMs: 10 * 60 * 1000,
+    key: (req) =>
+      "resend:" +
+      String(req.body?.email || "")
+        .trim()
+        .toLowerCase(),
+  }),
+  async (req, res, next) => {
+    try {
+      // ناخذ الايميل من بيانات الطلب.
+      const data = req.body || {};
+      const email = data.email;
+      // نتأكد من صيغة الايميل ونرفض البيانات غير الصحيحة.
+      if (
+        typeof email !== "string" ||
+        email.trim().length > 254 ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+      )
+        return err(res, 400, "INVALID_INPUT", "Valid email required");
+      // نبحث عن الحساب ونجيب الايميل وحالة تأكيده.
+      const userResult = await query(
+        "SELECT id, email, email_verified_at FROM users WHERE email=$1",
+        [email.trim().toLowerCase()],
+      );
+      const user = userResult.rows[0];
+      // نرسل رمز جديد فقط إذا الحساب موجود وايميله ما تأكد.
+      if (user && !user.email_verified_at) {
+        // نسجل وقت الطلب إذا مرّت دقيقة على الإرسال السابق أو ما سبق أرسلنا.
+        // التحديث في قاعدة البيانات يمنع قبول طلبين متزامنين لنفس الحساب.
+        const ready = await query(
+          "UPDATE users SET email_code_sent_at=now() " +
+            "WHERE id=$1 AND email_verified_at IS NULL " +
+            "AND (email_code_sent_at IS NULL " +
+            "OR email_code_sent_at<=now()-interval '60 seconds') RETURNING id",
+          [user.id],
+        );
+        // إذا ما تم تحديث الحساب نوقف الطلب ونطلب الانتظار دقيقة.
+        //ready.rowCount هو عدد الصفوف اللي حدّثها الاستعلام إذا كان صفر، يتحقق الشرط ونرجع الخطأ
+        if (!ready.rowCount)
+          return err(
+            res,
+            429,
+            "TOO_SOON",
+            "Wait one minute before requesting a new code",
+          );
+        // نولد رمز جديد ونحفظ بصمته ونصفر محاولاته ونحاول نرسله.
+        const emailSent = await saveAndSendCode(user);
+        if (!emailSent)
+          return err(
+            res,
+            502,
+            "EMAIL_SEND_FAILED",
+            "Could not send the code. Try again later",
+          );
+      }
+      // نرجع رسالة عامة عشان ما نكشف إذا الايميل مسجل أو مؤكد.
+      res.json({
+        data: {
+          message:
+            "If the account exists and is not verified, a new code was sent",
+        },
+      });
+    } catch (e) {
+      // نمرر أي خطأ غير متوقع لمعالج الأخطاء الموجود في الباك.
+      next(e);
+    }
+  },
+);
+// نتحقق من الجلسة قبل إرجاع بيانات المستخدم.
+app.get("/auth/me", auth, (req, res) => {
+  // نرسل بيانات المستخدم التي جهزتها دالة auth.
+  res.json({ data: { user: req.user } });
 });
 app.get("/categories", async (_req, res, next) => {
   try {
@@ -1075,32 +1223,31 @@ api.post(
     try {
       // نحفظ هنا معرّف المزاد بعد ما نلقاه برمز الدخول.
       let auctionId;
-        // نأخذ رمز الدخول من بيانات الطلب.
-        const accessCode = req.body?.accessCode;
+      // نأخذ رمز الدخول من بيانات الطلب.
+      const accessCode = req.body?.accessCode;
 
-        // نرفض الرمز إذا ما كان نص أو كان طوله غير 24 حرف.
-        if (typeof accessCode !== "string" || accessCode.length !== 24) {
-          return err(res, 403, "INVALID_CODE", "Invalid access code");
-        }
+      // نرفض الرمز إذا ما كان نص أو كان طوله غير 24 حرف.
+      if (typeof accessCode !== "string" || accessCode.length !== 24) {
+        return err(res, 403, "INVALID_CODE", "Invalid access code");
+      }
 
-        // نحسب بصمة الرمز بنفس الطريقة اللي استخدمناها وقت إنشاء المزاد.
-        const codeLookup = hashToken("auction:" + accessCode);
+      // نحسب بصمة الرمز بنفس الطريقة اللي استخدمناها وقت إنشاء المزاد.
+      const codeLookup = hashToken("auction:" + accessCode);
 
-        // نطلب من قاعدة البيانات معرّف المزاد الخاص اللي بصمته تطابق بصمة الرمز.
-        const result = await query(
-          "SELECT id FROM auctions WHERE visibility = 'PRIVATE' AND access_code_lookup = $1",
-          // $1 يأخذ قيمة البصمة اللي حسبناها.
-          [codeLookup],
-        );
+      // نطلب من قاعدة البيانات معرّف المزاد الخاص اللي بصمته تطابق بصمة الرمز.
+      const result = await query(
+        "SELECT id FROM auctions WHERE visibility = 'PRIVATE' AND access_code_lookup = $1",
+        // $1 يأخذ قيمة البصمة اللي حسبناها.
+        [codeLookup],
+      );
 
-        // إذا ما لقينا مزاد بنفس البصمة، نرفض الدخول.
-        if (result.rows.length === 0) {
-          return err(res, 403, "INVALID_CODE", "Invalid access code");
-        }
+      // إذا ما لقينا مزاد بنفس البصمة، نرفض الدخول.
+      if (result.rows.length === 0) {
+        return err(res, 403, "INVALID_CODE", "Invalid access code");
+      }
 
-        // نأخذ معرّف المزاد من الصف اللي رجع لنا.
-        auctionId = result.rows[0].id;
-      
+      // نأخذ معرّف المزاد من الصف اللي رجع لنا.
+      auctionId = result.rows[0].id;
 
       // نجيب بيانات المزاد بمعرّفه عشان نكمل التحقق قبل ما نسمح بالدخول.
       const a = await auction(auctionId);
@@ -1215,6 +1362,7 @@ app.post("/auctions/:id/bids", auth, async (req, res, next) => {
     }
     // BE-14 | نفحص الالتزام البنكي فقط إذا فعّلنا الإعداد.
     // حاليًا الفحص اختياري عشان نكمل تجربة المزايدة واختبارات BE-04.
+    //عدلت هذا الشرط عشان يقبل يكمل
     if (process.env.REQUIRE_BANK_COMMITMENT === "true") {
       const commitment = await c.query(
         "SELECT 1 FROM bid_commitments WHERE auction_id=$1 AND user_id=$2 AND status='SUCCESS'",
@@ -1328,7 +1476,7 @@ api.post("/auctions/:id/bids", auth, async (req, res, next) => {
         "Bid request already processed",
       );
     }
-        // BE-14 | نفحص الالتزام البنكي فقط إذا فعّلنا الإعداد.
+    // BE-14 | نفحص الالتزام البنكي فقط إذا فعّلنا الإعداد.
     if (process.env.REQUIRE_BANK_COMMITMENT === "true") {
       const commitment = await c.query(
         "SELECT 1 FROM bid_commitments WHERE auction_id=$1 AND user_id=$2 AND status='SUCCESS'",
