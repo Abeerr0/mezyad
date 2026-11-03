@@ -506,12 +506,9 @@ function App() {
         <img className="brand" src="/design/mezyad-logo.png" alt="مزياد" />
         <nav aria-label="القائمة الرئيسية">
           {token && user?.role === "ADMIN" ? (
-            <>
-              <button onClick={() => setPage("admin")}>مراجعة الإعلانات</button>
-              <button disabled={accountBusy} onClick={logout}>
-                خروج
-              </button>
-            </>
+            <button disabled={accountBusy} onClick={logout}>
+              تسجيل خروج
+            </button>
           ) : (
             <>
               <button

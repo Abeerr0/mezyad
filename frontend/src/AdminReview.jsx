@@ -104,7 +104,6 @@ export default function AdminReview({ api, token, onUnauthorized }) {
       setDecision('');
       setReason('');
       setMessage(decision === 'APPROVED' ? 'تمت الموافقة على الإعلان' : 'تم رفض الإعلان');
-      setRefresh(value => value + 1);
     } catch (error) {
       setMessage(error instanceof TypeError ? 'تعذّر الاتصال، لم نتأكد من حفظ القرار؛ حدّث القائمة قبل المحاولة' : error.message);
       setDecision('');
@@ -119,21 +118,20 @@ export default function AdminReview({ api, token, onUnauthorized }) {
 
   return (
     <section className="panel review-list">
-      <div className="admin-tabs" role="tablist" aria-label="أقسام المشرف">
+      {(selectedId || tab !== 'dashboard') && <button type="button" className="admin-back" disabled={busy} onClick={() => { if (selectedId) setSelectedId(null); else { setTab('dashboard'); setListingStatus('PENDING_REVIEW'); } }} aria-label={selectedId ? 'العودة إلى الإعلانات' : 'العودة إلى لوحة التحكم'} title={selectedId ? 'العودة إلى الإعلانات' : 'العودة إلى لوحة التحكم'}>→</button>}
+      {tab !== 'dashboard' && tab !== 'auctions' && !selectedId && <div className="admin-tabs" role="tablist" aria-label="حالات الإعلانات">
         {[
-          ['dashboard', 'لوحة التحكم'],
           ['pending', 'قيد المراجعة', loading ? null : items.length, 'PENDING_REVIEW'],
           ['approved', 'المعتمدة', overview?.approved.length, 'APPROVED'],
-          ['rejected', 'المرفوضة', overview?.rejected.length, 'REJECTED'],
-          ['auctions', 'متابعة المزادات']
+          ['rejected', 'المرفوضة', overview?.rejected.length, 'REJECTED']
         ].map(([key, label, count, status]) =>
           <button key={key} role="tab" aria-selected={tab === key} onClick={() => { setTab(key); setListingStatus(status || 'PENDING_REVIEW'); setSelectedId(null); }}>{label}{count != null ? ` (${count})` : ''}</button>
         )}
-      </div>
-      <p className="breadcrumb">حساب المشرف / {selectedId ? 'مراجعة الإعلان' : tab === 'dashboard' ? 'لوحة التحكم' : tab === 'auctions' ? 'متابعة المزادات' : listTitle}</p>
+      </div>}
+      {tab !== 'dashboard' || selectedId ? <p className="breadcrumb">حساب المشرف / {selectedId ? 'مراجعة الإعلان' : tab === 'auctions' ? 'متابعة المزادات' : listTitle}</p> : null}
       <h2>{selectedId ? 'مراجعة الإعلان' : tab === 'dashboard' ? 'لوحة تحكم المشرف' : tab === 'auctions' ? 'متابعة المزادات' : listTitle}</h2>
       <p className="page-intro">{selectedId ? 'افحص المعلومات والصور المرفقة، ثم اتخذ قرارًا واضحًا بشأن الإعلان.' : 'راجع الإعلانات واتخذ القرار، وتابع حالات المزادات ونتائجها.'}</p>
-      {tab === 'dashboard' && <>
+      {tab === 'dashboard' && !selectedId && <>
         {overviewError ? <p role="alert">{overviewError}</p> : loading || !overview ? <p role="status">جاري تحميل إحصاءات المشرف…</p> : error ? <p role="alert">{error}</p> :
           <div className="admin-stats">
             {[
@@ -142,7 +140,7 @@ export default function AdminReview({ api, token, onUnauthorized }) {
               ['الإعلانات المرفوضة', overview.rejected.length, 'rejected', 'REJECTED'],
               ['المزادات الجارية', overview.auctions.length, 'auctions', 'PENDING_REVIEW']
             ].map(([label, count, nextTab, nextStatus]) =>
-              <button key={label} onClick={() => { setTab(nextTab); setListingStatus(nextStatus); setSelectedId(null); }}><span>{label}</span><strong>{count}</strong></button>
+              <button key={label} className={'admin-stat admin-stat-' + nextTab} onClick={() => { setTab(nextTab); setListingStatus(nextStatus); setSelectedId(null); }}><span>{label}</span><strong>{count}</strong></button>
             )}
           </div>}
         <h3>إعلانات بانتظار قرارك</h3>
@@ -159,11 +157,9 @@ export default function AdminReview({ api, token, onUnauthorized }) {
           <div className="listing-info"><h3>{item.title}</h3><p>{item.description}</p><p className="listing-status">{listTitle}</p>{listingStatus === 'REJECTED' && item.review_reason && <p>سبب الرفض: {item.review_reason}</p>}</div>
         </article>) : <p>لا توجد إعلانات في هذه الحالة.</p>
       ) : <>
-        {selectedId && <button disabled={busy} onClick={() => setSelectedId(null)}>العودة إلى الإعلانات</button>}
-        <button disabled={loading || busy} onClick={() => setRefresh(value => value + 1)}>تحديث الإعلانات</button>
         {loading ? <p role="status">جاري تحميل الإعلانات المعلقة…</p> :
           error ? <p role="alert">{error}</p> :
-          !items.length ? <p>لا توجد إعلانات بانتظار المراجعة.</p> :
+          !items.length ? <p className="admin-empty">لا توجد إعلانات تحتاج مراجعة حاليًا</p> :
           items.filter(item => !selectedId || item.id === selectedId).map(item => (
             <article key={item.id} className={selectedId ? 'review-detail' : 'review-card'}>
               <div className="listing-info"><h3>{item.title}</h3><p className="listing-status">بانتظار المراجعة</p><p>{item.description}</p></div>
