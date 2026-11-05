@@ -9,6 +9,13 @@ import { listings, withImages, withListingImages } from "./listings.js";
 import { imageLink, serveImage } from "./uploads.js";
 import { attemptLimit } from "./limits.js";
 import { startCommitment } from "./bank.js";
+// هنا نستخدم دوال ميسر لفحص المفتاح وجلب العملية وفحص الحجز وإلغائه
+import {
+  moyasarReady,
+  getPayment,
+  voidPayment,
+  checkPayment,
+} from "./moyasar.js";
 import { auctionStatus, resultFor, participationFor } from "./auctions.js";
 // نستخدم دالة رمز التحقق وارساله
 //داله تحقق الايميل
@@ -120,8 +127,289 @@ async function closeIfEnded(id) {
   } catch (e) {
     await client.query("ROLLBACK");
     throw e;
-  } finally {
+    } finally {
     client.release();
+  }
+  // هنا نبدأ فك حجوزات غير الفائزين بعد حفظ نتيجة المزاد
+  releaseLosingHolds(id).catch((e) =>
+    console.error("Release holds failed", e.message),
+  );
+}
+// دالة releasePayment لفك حجز المبلغ في ميسر وترجع هل نجح الإلغاء أو لا
+// هنا نطلب فك الحجز من ميسر ونرجع هل نجح أو لا
+async function releasePayment(paymentId) {
+  // هنا نحاول نلغي الحجز وإذا حصل خطأ نروح إلى catch
+  try {
+    // هنا نرسل رقم العملية إلى دالة الإلغاء الموجودة في moyasar.js
+    const result = await voidPayment(paymentId);
+
+    // هنا نرجع true إذا ميسر أكدت إلغاء نفس العملية
+    if (
+      result.status === 200 &&
+      result.body?.status === "voided" &&
+      String(result.body?.id).toLowerCase() === paymentId.toLowerCase()
+    ) {
+      return true;
+    }
+
+    // هنا نطبع تعثر الإلغاء في التيرمنال ونرجع false
+    console.error("Moyasar void failed", paymentId, result.status);
+    return false;
+  } catch (e) {
+    // هنا نستقبل خطأ الاتصال ونرجع false عشان ما نوقف إغلاق المزاد
+    console.error("Moyasar void error", paymentId, e.message);
+    return false;
+  }
+}
+// دالة releaseLosingHolds لفك حجوزات غير الفائزين بعد إغلاق المزاد
+async function releaseLosingHolds(auctionId) {
+  // هنا نوقف إذا مفتاح ميسر التجريبي مو جاهز
+  if (!moyasarReady()) return;
+
+  try {
+    // هنا نجيب حجوزات المزاد المقفل اللي ما انفكت ونستثني الفائز
+    const holds = await query(
+      "SELECT c.id,c.user_id,c.sandbox_reference,c.max_amount FROM bid_commitments c " +
+        "JOIN auctions a ON a.id=c.auction_id " +
+        "JOIN auction_results r ON r.auction_id=a.id " +
+        "LEFT JOIN bids w ON w.id=r.winner_bid_id AND w.auction_id=a.id " +
+        "WHERE c.auction_id=$1 AND a.status='CLOSED' AND c.status='SUCCESS' " +
+        "AND c.max_amount IS NOT NULL AND c.released_at IS NULL " +
+        "AND (w.bidder_id IS NULL OR c.user_id<>w.bidder_id)",
+      [auctionId],
+    );
+
+    // هنا نفحص كل حجز لحاله
+    for (const hold of holds.rows) {
+      // هنا نتجاوز الحجز إذا رقم عملية ميسر مو صحيح
+      if (!validUuid(hold.sandbox_reference)) continue;
+
+      try {
+        // هنا نجيب حالة العملية من ميسر قبل محاولة فكها
+        const found = await getPayment(hold.sandbox_reference);
+        if (found.status !== 200 || !found.body) {
+          console.error("Moyasar payment fetch failed", hold.sandbox_reference);
+          continue;
+        }
+        const payment = found.body;
+        const metadata = payment.metadata || {};
+
+        // هنا نتأكد أن العملية تخص نفس المزاد والمستخدم والمبلغ
+        if (
+          String(payment.id).toLowerCase() !==
+            hold.sandbox_reference.toLowerCase() ||
+          String(metadata.auction_id).toLowerCase() !==
+            auctionId.toLowerCase() ||
+          String(metadata.user_id).toLowerCase() !==
+            hold.user_id.toLowerCase() ||
+          payment.currency !== "SAR" ||
+          payment.amount !== toCents(hold.max_amount)
+        ) {
+          console.error("Moyasar payment mismatch", hold.sandbox_reference);
+          continue;
+        }
+
+        // هنا نفك الحجز باستخدام الدالة اللي أضفناها قبل
+        if (payment.status === "authorized") {
+          const released = await releasePayment(hold.sandbox_reference);
+          if (!released) continue;
+        } else if (payment.status !== "voided") {
+          // هنا نترك الحالات الثانية للمراجعة وما نسجلها كمفكوكة
+          console.error("Moyasar hold not voidable", hold.sandbox_reference);
+          continue;
+        }
+
+        // هنا نحفظ وقت الفك بعد ما تأكدنا أن العملية انفكت في ميسر
+        await query(
+          "UPDATE bid_commitments SET released_at=now() " +
+            "WHERE id=$1 AND sandbox_reference=$2 AND released_at IS NULL",
+          [hold.id, hold.sandbox_reference],
+        );
+      } catch (e) {
+        // هنا نسجل التعثر ونكمل باقي الحجوزات
+        console.error("Moyasar hold release failed", e.message);
+      }
+    }
+  } catch (e) {
+    // هنا نسجل الخطأ بدون ما نغير نتيجة إغلاق المزاد
+    console.error("Release holds failed", e.message);
+  }
+}
+//داله createCommitment التأكد من حجز مبلغ موجود في ميسر
+// هنا نستقبل رقم عملية ميسر ونفحص الحجز قبل حفظ الالتزام
+async function createCommitment(req, res, next) {
+  let c;
+  try {
+    // هنا ناخذ رقم العملية ونتأكد من صيغة رقم المزاد ورقم العملية
+    const data = req.body || {};
+    const paymentId = data.paymentId;
+    if (!validUuid(req.params.id) || !validUuid(paymentId))
+      return err(
+        res,
+        400,
+        "INVALID_INPUT",
+        "Valid auction and paymentId required",
+      );
+    // هنا نجيب المزاد ونفحص صلاحية المستخدم مثل المسار الموجود
+    const a = await auction(req.params.id);
+    if (!a || !(await accessible(a, req.user)))
+      return err(res, 404, "NOT_FOUND", "Auction not found");
+    if (a.seller_id === req.user.id)
+      return err(res, 403, "OWNER", "Cannot commit to own auction");
+    // هنا نوقف الطلب إذا مفتاح ميسر التجريبي مو جاهز
+    if (!moyasarReady())
+      return err(
+        res,
+        503,
+        "BANK_SANDBOX_UNAVAILABLE",
+        "Moyasar test key is not configured",
+      );
+    // هنا نجيب العملية من ميسر ونتعامل مع تعذر الاتصال
+    const found = await getPayment(paymentId).catch(() => null);
+    if (!found || (found.status !== 200 && found.status !== 404))
+      return err(
+        res,
+        503,
+        "BANK_SANDBOX_UNAVAILABLE",
+        "Could not fetch the Moyasar payment",
+      );
+    if (found.status === 404)
+      return err(res, 404, "PAYMENT_NOT_FOUND", "Moyasar payment not found");
+    const payment = found.body;
+    if (
+      !payment ||
+      String(payment.id).toLowerCase() !== paymentId.toLowerCase()
+    )
+      return err(
+        res,
+        503,
+        "BANK_SANDBOX_UNAVAILABLE",
+        "Moyasar returned an invalid payment",
+      );
+    // هنا نقفل صف المزاد لين نخلص عشان المزايدة والإغلاق ما يتعارضون مع الحفظ
+    c = await pool.connect();
+    await c.query("BEGIN");
+    const locked = await c.query(
+      "SELECT * FROM auctions WHERE id=$1 FOR UPDATE",
+      [a.id],
+    );
+    if (!locked.rowCount) {
+      await c.query("ROLLBACK");
+      return err(res, 404, "NOT_FOUND", "Auction not found");
+    }
+    const current = locked.rows[0];
+
+    // هنا نجيب الالتزام السابق عشان نحافظ على الحجز الناجح الموجود
+    const previous = await c.query(
+      "SELECT id,status,sandbox_reference,max_amount,released_at,created_at FROM bid_commitments WHERE auction_id=$1 AND user_id=$2",
+      [a.id, req.user.id],
+    );
+    const old = previous.rows[0];
+    const active =
+      old &&
+      old.status === "SUCCESS" &&
+      old.max_amount !== null &&
+      old.released_at === null &&
+      validUuid(old.sandbox_reference);
+    const samePayment =
+      active && old.sandbox_reference.toLowerCase() === paymentId.toLowerCase();
+
+    // هنا نحسب أقل مبلغ مسموح للمزايدة حسب آخر سعر
+    const bids = await c.query(
+      "SELECT 1 FROM bids WHERE auction_id=$1 LIMIT 1",
+      [a.id],
+    );
+    const minimumCents = bids.rowCount
+      ? toCents(current.current_price) + toCents(current.minimum_increment)
+      : toCents(current.starting_price);
+
+    // هنا إذا نفس الحجز محفوظ من قبل نفحصه بدون رفع الحد المطلوب عليه
+    let result = checkPayment(payment, {
+      auctionId: a.id,
+      userId: req.user.id,
+      minimumCents: samePayment ? 1 : minimumCents,
+    });
+
+    // هنا نرفض العملية اللي تخص حساب أو مزاد ثاني بدون إلغاء حجزها
+    if (result === "PAYMENT_MISMATCH") {
+      await c.query("ROLLBACK");
+      return err(
+        res,
+        403,
+        result,
+        "Payment does not belong to this auction and user",
+      );
+    }
+    // هنا نجيب الوقت بعد القفل ونحسب صلاحية الحجز من وقت إنشاء العملية
+    const clock = await c.query("SELECT clock_timestamp() AS current_time");
+    const now = new Date(clock.rows[0].current_time).getTime();
+    const endTime = new Date(current.end_time).getTime();
+    const paymentTime = new Date(payment.created_at).getTime();
+    // هنا نستخدم ١٣ يوم للحجز ونترك هامش يوم قبل مدة ١٤ يوم
+    const holdEnd = paymentTime + 13 * 24 * 60 * 60 * 1000;
+    if (result === "OK") {
+      if (current.status === "CLOSED" || endTime <= now)
+        result = "AUCTION_NOT_ACTIVE";
+      else if (
+        !Number.isFinite(paymentTime) ||
+        paymentTime > now ||
+        holdEnd <= now
+      )
+        result = "HOLD_EXPIRED";
+      else if (endTime > holdEnd) result = "AUCTION_TOO_LONG_FOR_HOLD";
+      else if (payment.amount > 99999999999999) result = "COMMITMENT_TOO_LARGE";
+      else if (active && !samePayment) result = "COMMITMENT_ALREADY_EXISTS";
+    }
+    if (result !== "OK") {
+      await c.query("ROLLBACK");
+      // هنا نحفظ رفض العملية بدون تغيير التزام ناجح سابق
+      if (result === "COMMITMENT_DECLINED") {
+        await c.query(
+          "INSERT INTO bid_commitments(auction_id,user_id,status,sandbox_reference) VALUES($1,$2,'FAILED',$3) " +
+            "ON CONFLICT(auction_id,user_id) DO UPDATE SET status='FAILED',sandbox_reference=EXCLUDED.sandbox_reference,max_amount=NULL,released_at=NULL,created_at=now() " +
+            "WHERE bid_commitments.status <> 'SUCCESS'",
+          [a.id, req.user.id, paymentId.toLowerCase()],
+        );
+      }
+      // هنا نفك الحجز الجديد المرفوض ونحافظ على الحجز المسجل من قبل
+      if (payment.status === "authorized" && !samePayment) {
+        const released = await voidPayment(paymentId).catch(() => null);
+        if (released?.status !== 200 || released.body?.status !== "voided")
+          return err(
+            res,
+            503,
+            "HOLD_RELEASE_FAILED",
+            "Commitment was rejected; hold release could not be confirmed",
+          );
+      }
+      // هنا نرجع سبب رفض العملية
+      return err(res, 409, result, "Payment cannot be used as a commitment");
+    }
+    // هنا نرجع الحجز الموجود إذا المستخدم أرسل نفس رقم العملية مرة ثانية
+    if (samePayment) {
+      await c.query("COMMIT");
+      return res.status(201).json({ data: old });
+    }
+
+    // هنا نحول المبلغ من هللات إلى ريال ونحفظ الالتزام الناجح
+    const maxAmount = (payment.amount / 100).toFixed(2);
+    const saved = await c.query(
+      "INSERT INTO bid_commitments(auction_id,user_id,status,sandbox_reference,max_amount) VALUES($1,$2,'SUCCESS',$3,$4) " +
+        "ON CONFLICT(auction_id,user_id) DO UPDATE SET status='SUCCESS',sandbox_reference=EXCLUDED.sandbox_reference,max_amount=EXCLUDED.max_amount,released_at=NULL,created_at=now() " +
+        "RETURNING id,status,sandbox_reference,max_amount,released_at,created_at",
+      [a.id, req.user.id, paymentId.toLowerCase(), maxAmount],
+    );
+    await c.query("COMMIT");
+    res.status(201).json({ data: saved.rows[0] });
+  } catch (e) {
+    // هنا نتراجع إذا صار خطأ ونمرره لمعالج الأخطاء الموجود
+    if (c) await c.query("ROLLBACK").catch(() => {});
+    if (e.code === "23505")
+      return err(res, 409, "PAYMENT_ALREADY_USED", "Payment already used");
+    next(e);
+  } finally {
+    // هنا نرجع اتصال قاعدة البيانات بعد ما نخلص
+    c?.release();
   }
 }
 app.get("/health", (_req, res) => res.json({ data: { status: "ok" } }));
@@ -1194,23 +1482,8 @@ api.get("/auctions/:id", async (req, res, next) => {
     next(e);
   }
 });
-app.post("/auctions/:id/commitment", auth, async (req, res, next) => {
-  try {
-    const a = await auction(req.params.id);
-    if (!a || !(await accessible(a, req.user)))
-      return err(res, 404, "NOT_FOUND", "Auction not found");
-    if (a.seller_id === req.user.id)
-      return err(res, 403, "OWNER", "Cannot commit to own auction");
-    return err(
-      res,
-      503,
-      "BANK_SANDBOX_UNAVAILABLE",
-      "Official sandbox provider and operation have not been verified; no commitment approved",
-    );
-  } catch (e) {
-    next(e);
-  }
-});
+// هنا نستخدم نفس الدالة لمسار الالتزام الموجود
+app.post("/auctions/:id/commitment", auth, createCommitment);
 api.post(
   // المشارك يدخل برمز المزاد فقط.
   "/auctions/access",
@@ -1271,24 +1544,12 @@ api.post(
     }
   },
 );
-api.post("/auctions/:id/commitment", auth, async (req, res, next) => {
-  try {
-    const a = await auction(req.params.id);
-    if (!a || !(await accessible(a, req.user)))
-      return err(res, 404, "NOT_FOUND", "Auction not found");
-    if (a.seller_id === req.user.id)
-      return err(res, 403, "OWNER", "Cannot commit to own auction");
-    if (a.status === "CLOSED" || new Date(a.end_time) <= new Date())
-      return err(res, 409, "AUCTION_NOT_ACTIVE", "Auction ended");
-    await startCommitment({ auctionId: a.id, userId: req.user.id });
-  } catch (e) {
-    next(e);
-  }
-});
+// هنا نستخدم دالة فحص حجز ميسر لمسار الالتزام
+api.post("/auctions/:id/commitment", auth, createCommitment);
 app.get("/auctions/:id/commitment", auth, async (req, res, next) => {
   try {
     const r = await query(
-      "SELECT id,status,sandbox_reference,created_at FROM bid_commitments WHERE auction_id=$1 AND user_id=$2",
+      "SELECT id,status,sandbox_reference,max_amount,released_at,created_at FROM bid_commitments WHERE auction_id=$1 AND user_id=$2",
       [req.params.id, req.user.id],
     );
     if (!r.rowCount) return err(res, 404, "NOT_FOUND", "No commitment");
@@ -1361,20 +1622,96 @@ app.post("/auctions/:id/bids", auth, async (req, res, next) => {
       );
     }
     // BE-14 | نفحص الالتزام البنكي فقط إذا فعّلنا الإعداد.
-    // حاليًا الفحص اختياري عشان نكمل تجربة المزايدة واختبارات BE-04.
-    //عدلت هذا الشرط عشان يقبل يكمل
     if (process.env.REQUIRE_BANK_COMMITMENT === "true") {
+      // هنا نجيب حجز ميسر الناجح اللي ما انلغى
       const commitment = await c.query(
-        "SELECT 1 FROM bid_commitments WHERE auction_id=$1 AND user_id=$2 AND status='SUCCESS'",
+        "SELECT max_amount,sandbox_reference FROM bid_commitments WHERE auction_id=$1 AND user_id=$2 AND status='SUCCESS' AND max_amount IS NOT NULL AND released_at IS NULL",
         [a.id, req.user.id],
       );
-      if (!commitment.rowCount) {
+      // هنا نرفض إذا ما فيه حجز أو رقم عمليته مو صحيح
+      if (
+        !commitment.rowCount ||
+        !validUuid(commitment.rows[0].sandbox_reference)
+      ) {
         await c.query("ROLLBACK");
         return err(
           res,
           403,
           "COMMITMENT_REQUIRED",
           "Verified commitment required",
+        );
+      }
+      const hold = commitment.rows[0];
+      // هنا نرفض العرض إذا تجاوز المبلغ المحجوز
+      if (toCents(amount) > toCents(hold.max_amount)) {
+        await c.query("ROLLBACK");
+        return err(
+          res,
+          409,
+          "BID_ABOVE_COMMITMENT",
+          "Bid is above your commitment limit",
+        );
+      }
+      // هنا نوقف الطلب إذا مفتاح ميسر التجريبي مو جاهز
+      if (!moyasarReady()) {
+        await c.query("ROLLBACK");
+        return err(
+          res,
+          503,
+          "BANK_SANDBOX_UNAVAILABLE",
+          "Moyasar test key is not configured",
+        );
+      }
+      // هنا نسأل ميسر عن حالة الحجز وقت المزايدة
+      const found = await getPayment(hold.sandbox_reference).catch(() => null);
+      if (!found || (found.status !== 200 && found.status !== 404)) {
+        await c.query("ROLLBACK");
+        return err(
+          res,
+          503,
+          "BANK_SANDBOX_UNAVAILABLE",
+          "Could not fetch the Moyasar payment",
+        );
+      }
+      const payment = found.body;
+      const result = checkPayment(payment, {
+        auctionId: a.id,
+        userId: req.user.id,
+        minimumCents: toCents(amount),
+      });
+      // هنا نتأكد أن الحجز ما زال صالح وبياناته تطابق الالتزام المحفوظ
+      if (
+        found.status === 404 ||
+        result !== "OK" ||
+        String(payment.id).toLowerCase() !==
+          hold.sandbox_reference.toLowerCase() ||
+        payment.amount !== toCents(hold.max_amount)
+      ) {
+        await c.query("ROLLBACK");
+        return err(
+          res,
+          403,
+          "COMMITMENT_REQUIRED",
+          "Active Moyasar commitment required",
+        );
+      }
+      // هنا نفحص تاريخ الحجز ونتأكد أن صلاحيته تغطي نهاية المزاد
+      const time = await c.query("SELECT clock_timestamp() AS current_time");
+      const currentTime = new Date(time.rows[0].current_time).getTime();
+      const paymentTime = new Date(payment.created_at).getTime();
+      const holdEnd = paymentTime + 13 * 24 * 60 * 60 * 1000;
+      if (
+        !Number.isFinite(paymentTime) ||
+        paymentTime > currentTime ||
+        holdEnd <= currentTime ||
+        new Date(a.end_time).getTime() > holdEnd
+      ) {
+        await c.query("ROLLBACK");
+        return err(
+          res,
+          403,
+          "COMMITMENT_REQUIRED",
+          "Commitment does not cover the auction period",
         );
       }
     }
@@ -1478,17 +1815,101 @@ api.post("/auctions/:id/bids", auth, async (req, res, next) => {
     }
     // BE-14 | نفحص الالتزام البنكي فقط إذا فعّلنا الإعداد.
     if (process.env.REQUIRE_BANK_COMMITMENT === "true") {
+      // هنا نجيب حجز ميسر الناجح اللي ما انلغى
       const commitment = await c.query(
-        "SELECT 1 FROM bid_commitments WHERE auction_id=$1 AND user_id=$2 AND status='SUCCESS'",
+        "SELECT max_amount,sandbox_reference FROM bid_commitments WHERE auction_id=$1 AND user_id=$2 AND status='SUCCESS' AND max_amount IS NOT NULL AND released_at IS NULL",
         [a.id, req.user.id],
       );
-      if (!commitment.rowCount) {
+
+      // هنا نرفض إذا ما فيه حجز أو رقم عمليته مو صحيح
+      if (
+        !commitment.rowCount ||
+        !validUuid(commitment.rows[0].sandbox_reference)
+      ) {
         await c.query("ROLLBACK");
         return err(
           res,
           403,
           "COMMITMENT_REQUIRED",
           "Verified commitment required",
+        );
+      }
+      const hold = commitment.rows[0];
+
+      // هنا نرفض العرض إذا تجاوز المبلغ المحجوز
+      if (toCents(amount) > toCents(hold.max_amount)) {
+        await c.query("ROLLBACK");
+        return err(
+          res,
+          409,
+          "BID_ABOVE_COMMITMENT",
+          "Bid is above your commitment limit",
+        );
+      }
+
+      // هنا نوقف الطلب إذا مفتاح ميسر التجريبي مو جاهز
+      if (!moyasarReady()) {
+        await c.query("ROLLBACK");
+        return err(
+          res,
+          503,
+          "BANK_SANDBOX_UNAVAILABLE",
+          "Moyasar test key is not configured",
+        );
+      }
+
+      // هنا نسأل ميسر عن حالة الحجز وقت المزايدة
+      const found = await getPayment(hold.sandbox_reference).catch(() => null);
+      if (!found || (found.status !== 200 && found.status !== 404)) {
+        await c.query("ROLLBACK");
+        return err(
+          res,
+          503,
+          "BANK_SANDBOX_UNAVAILABLE",
+          "Could not fetch the Moyasar payment",
+        );
+      }
+      const payment = found.body;
+      const result = checkPayment(payment, {
+        auctionId: a.id,
+        userId: req.user.id,
+        minimumCents: toCents(amount),
+      });
+
+      // هنا نتأكد أن الحجز ما زال صالح وبياناته تطابق الالتزام المحفوظ
+      if (
+        found.status === 404 ||
+        result !== "OK" ||
+        String(payment.id).toLowerCase() !==
+          hold.sandbox_reference.toLowerCase() ||
+        payment.amount !== toCents(hold.max_amount)
+      ) {
+        await c.query("ROLLBACK");
+        return err(
+          res,
+          403,
+          "COMMITMENT_REQUIRED",
+          "Active Moyasar commitment required",
+        );
+      }
+
+      // هنا نفحص تاريخ الحجز ونتأكد أن صلاحيته تغطي نهاية المزاد
+      const time = await c.query("SELECT clock_timestamp() AS current_time");
+      const currentTime = new Date(time.rows[0].current_time).getTime();
+      const paymentTime = new Date(payment.created_at).getTime();
+      const holdEnd = paymentTime + 13 * 24 * 60 * 60 * 1000;
+      if (
+        !Number.isFinite(paymentTime) ||
+        paymentTime > currentTime ||
+        holdEnd <= currentTime ||
+        new Date(a.end_time).getTime() > holdEnd
+      ) {
+        await c.query("ROLLBACK");
+        return err(
+          res,
+          403,
+          "COMMITMENT_REQUIRED",
+          "Commitment does not cover the auction period",
         );
       }
     }
