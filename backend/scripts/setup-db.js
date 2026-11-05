@@ -11,6 +11,7 @@ try {
     "migrations/001_schema.sql",
     "migrations/002_private_auction_code_lookup.sql",
     "migrations/003_email_verification.sql",
+    "migrations/004_moyasar.sql",
     "seeds/001_categories.sql",
   ]) {
     await client.query(
