@@ -1,8 +1,0 @@
-2026-10-26 — React states with simulated responses
-PASS auctions: loading, empty and network error are distinct
-PASS my listings: loading, empty and network error are distinct
-PASS admin: loading, empty and network error are distinct
-PASS categories: loading, empty and network error are distinct
-PASS account: Arabic network error, logout waiting, duplicate click blocked, error recovery and success
-PASS details: loading changes to Arabic network error
-Not browser E2E.
