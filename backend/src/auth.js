@@ -29,7 +29,7 @@ function signingKey() {
 }
 
 // هنا نصدر توكن الحساب بعد نجاح تسجيل الدخول
-export function newToken(user) {
+export function newToken(user, expiresAt) {
   // نحفظ في التوكن هل الحساب أدمن
   return new SignJWT({ is_admin: user.role === "ADMIN" })
     // نحدد طريقة توقيع التوكن
@@ -39,7 +39,7 @@ export function newToken(user) {
     // نعطي كل جلسة معرف مختلف
     .setJti(randomUUID())
     // نخلي مدة التوكن نفس مدة الجلسة
-    .setExpirationTime("7d")
+    .setExpirationTime(expiresAt)
     // نوقع التوكن بمفتاح الباكند
     .sign(signingKey());
 }

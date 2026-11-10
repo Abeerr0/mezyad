@@ -498,7 +498,7 @@ accounts.post("/register", async (req, res, next) => {
 });
 // هنا api تسجيل الدخول
 // نتأكد من الايميل وكلمة المرور وإن الايميل مؤكد
-// نحفظ الجلسة ونرجع التوكن وبيانات الحساب للواجهة
+// نحفظ الجلسة ونرجع توكن مدته ساعة مع بيانات الحساب
 accounts.post("/login", async (req, res, next) => {
   try {
     // ياخذ بيانات الطلب وإذا ما وصلت بيانات يستخدم كائن فارغ.
@@ -564,12 +564,14 @@ accounts.post("/login", async (req, res, next) => {
     }
     // هنا نأخذ بيانات الحساب بعد ما تحققنا من تسجيل الدخول
     const u = r.rows[0];
-    // هنا ننشئ توكن موقع للحساب اللي سجل دخوله
-    const token = await newToken(u);
+    // هنا نحسب وقت انتهاء الجلسة بعد ساعة من تسجيل الدخول
+    const expiresAt = Math.floor(Date.now() / 1000) + 60 * 60;
+    // هنا ننشئ التوكن بنفس وقت انتهاء الجلسة
+    const token = await newToken(u, expiresAt);
     // نخزن بصمة الجلسة بدل الرمز نفسه.
     await query(
-      "INSERT INTO user_sessions(user_id,token_hash,expires_at) VALUES($1,$2,now()+interval '7 days')",
-      [u.id, hashToken(token)],
+      "INSERT INTO user_sessions(user_id,token_hash,expires_at) VALUES($1,$2,$3)",
+      [u.id, hashToken(token), new Date(expiresAt * 1000)],
     );
     res.json({
       data: {
