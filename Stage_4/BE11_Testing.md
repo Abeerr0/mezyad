@@ -6,6 +6,8 @@
 
 **Task date:** 25 October 2026
 
+**Retest date:** 10 November 2026
+
 **Testing method:** Manual testing using the terminal, curl, and PostgreSQL queries.
 
 ## Goal
@@ -34,17 +36,13 @@ This table summarizes the tested cases, their expected results, and the actual r
 
 ## Database Tables Setup
 
-During the initial local setup, after starting PostgreSQL in Docker, I ran the project's schema file using this command:
+I prepared the temporary PostgreSQL database using the backend setup command.
 
 ```bash
-docker compose exec -T db psql -U postgres -d mezyad -v ON_ERROR_STOP=1 < database/migrations/001_schema.sql
+npm run db:setup
 ```
 
-The command passed the SQL instructions from the file to the `mezyad` database. The output displayed `CREATE TABLE` messages, and the project tables were created, including `users`, `items`, and `auctions`.
-
-This step prepared the tables needed to store account, listing, and auction data, allowing the backend to save and read data during testing.
-
-The table definitions came from the SQL file, which I applied to the local database.
+The command completed and reported that the schema and categories were ready.
 
 ## Auction Table Used
 
@@ -56,51 +54,13 @@ During testing, I added a public auction and a private auction through the API. 
 
 ## Testing Method
 
-I tested the route manually using curl commands in the VS Code terminal.
+I tested the route using curl commands in the VS Code terminal.
 
-PostgreSQL was running in Docker, and the backend was running locally on port `3000`. I kept the backend running and used another terminal to send requests to:
-
-```text
-http://localhost:3000/auctions
-```
-
-I used the user account `test@example.com` and the admin account `admin@example.com`.
-
-I copied each account's token from `data.token` in its login response and placed it after `Bearer` in requests for that account.
-
-I sent valid and invalid data, then compared the HTTP status and response body with the expected result for each case. When a request was expected to be rejected, receiving the correct rejection counted as a passed test.
-
-I also ran the following JavaScript syntax check:
-
-```bash
-node --check backend/src/app.js
-```
-
-It finished without displaying errors.
+I compared each HTTP status and response with the expected result. For protected requests, I took the JWT from `data.token` in the login response and placed it after `Bearer`.
 
 ## Test Data
 
-I used listings prepared during the earlier tests:
-
-- `Test Car`: an approved listing owned by the user account.
-- `Test Car 2`: a rejected listing owned by the admin account.
-- `Approved Car`: an approved listing owned by the admin account.
-
-I used the admin account when testing its listings because it owned them.
-
-Before testing ownership, I checked the ID, owner, and status of `Approved Car`:
-
-```bash
-docker compose exec db psql -U postgres -d mezyad -c "SELECT id, title, seller_id, status FROM items WHERE title = 'Approved Car';"
-```
-
-The query returned one row with this listing ID:
-
-```text
-963b65ce-246f-483c-bebf-c760a82532ff
-```
-
-Its status was `APPROVED`, and it belonged to the admin account.
+I used the owner of an approved listing, the owner of a rejected listing, and a separate owner for the ownership check. The valid auction requests used a 1,000 SAR starting price, a 100 SAR minimum increase, and future start and end times.
 
 ## Test Cases and Commands
 
@@ -109,234 +69,144 @@ Its status was `APPROVED`, and it belonged to the admin account.
 I sent an auction creation request without a token to check that auction creation required a valid session.
 
 ```bash
-curl -i -X POST http://localhost:3000/auctions \
+curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
   -H 'Content-Type: application/json' \
-  -d '{}'
+  -d '{"itemId":"5b1fb21d-8ecc-4a74-92a0-878c02dca04c","visibility":"PUBLIC","startingPrice":1000,"minimumIncrement":100,"startTime":"2026-11-10T19:27:36.849Z","endTime":"2026-11-10T20:27:36.851Z"}'
 ```
 
-**Result:** The backend returned `401 Unauthorized` with the error code `UNAUTHORIZED` and the message `Sign in required`.
+**Result:** The backend returned `401 UNAUTHORIZED`.
 
 ### Test 2 — Empty Body With a Valid Token
 
 I sent an empty JSON object with a valid user token to check that missing auction data was rejected.
 
 ```bash
-curl -i -X POST http://localhost:3000/auctions \
-  -H 'Authorization: Bearer (I placed the user token here)' \
+curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
+  -H 'Authorization: Bearer <SELLER_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{}'
 ```
 
-**Result:** The backend returned `400 Bad Request` with `INVALID_INPUT` and the message `Invalid auction parameters`.
+**Result:** The backend returned `400 INVALID_INPUT`.
 
 ### Test 3 — Create a Public Auction
 
 I sent valid auction data for the approved `Test Car` listing using its owner's token.
 
 ```bash
-curl -i -X POST http://localhost:3000/auctions \
-  -H 'Authorization: Bearer (I placed the user token here)' \
+curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
+  -H 'Authorization: Bearer <SELLER_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{
-    "itemId":"4d5dc010-0fa4-48bd-bdff-810e1cc4703b",
-    "visibility":"PUBLIC",
-    "startingPrice":1000,
-    "minimumIncrement":100,
-    "startTime":"2026-11-01T10:00:00Z",
-    "endTime":"2026-11-02T10:00:00Z"
-  }'
+  -d '{"itemId":"5b1fb21d-8ecc-4a74-92a0-878c02dca04c","visibility":"PUBLIC","startingPrice":1000,"minimumIncrement":100,"startTime":"2026-11-10T19:27:36.849Z","endTime":"2026-11-10T20:27:36.851Z"}'
 ```
 
-**Result:** The backend returned `201 Created`. The response showed:
-
-- Visibility: `PUBLIC`.
-- Starting price and current price: `1000.00`.
-- Minimum increment: `100.00`.
-- Status: `SCHEDULED`.
-- The start and end times submitted in the request.
-
-The response did not include `accessCode`.
+**Result:** The backend returned `201`. The response showed `visibility=PUBLIC status=SCHEDULED`.
 
 ### Test 4 — Duplicate Auction
 
 I repeated the auction creation request for the same listing to check that another auction could not be created for it.
 
 ```bash
-curl -i -X POST http://localhost:3000/auctions \
-  -H 'Authorization: Bearer (I placed the user token here)' \
+curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
+  -H 'Authorization: Bearer <SELLER_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{
-    "itemId":"4d5dc010-0fa4-48bd-bdff-810e1cc4703b",
-    "visibility":"PUBLIC",
-    "startingPrice":1000,
-    "minimumIncrement":100,
-    "startTime":"2026-11-01T10:00:00Z",
-    "endTime":"2026-11-02T10:00:00Z"
-  }'
+  -d '{"itemId":"5b1fb21d-8ecc-4a74-92a0-878c02dca04c","visibility":"PUBLIC","startingPrice":1000,"minimumIncrement":100,"startTime":"2026-11-10T19:27:36.849Z","endTime":"2026-11-10T20:27:36.851Z"}'
 ```
 
-**Result:** The backend returned `409 Conflict` with `DUPLICATE_AUCTION` and this message:
-
-```text
-Item already has auction
-```
+**Result:** The backend returned `409 DUPLICATE_AUCTION`.
 
 ### Test 5 — Starting Price of Zero
 
 I changed the starting price to `0` and kept the other input valid.
 
 ```bash
-curl -i -X POST http://localhost:3000/auctions \
-  -H 'Authorization: Bearer (I placed the user token here)' \
+curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
+  -H 'Authorization: Bearer <SELLER_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{
-    "itemId":"4d5dc010-0fa4-48bd-bdff-810e1cc4703b",
-    "visibility":"PUBLIC",
-    "startingPrice":0,
-    "minimumIncrement":100,
-    "startTime":"2026-11-01T10:00:00Z",
-    "endTime":"2026-11-02T10:00:00Z"
-  }'
+  -d '{"itemId":"5b1fb21d-8ecc-4a74-92a0-878c02dca04c","visibility":"PUBLIC","startingPrice":0,"minimumIncrement":100,"startTime":"2026-11-10T19:27:36.849Z","endTime":"2026-11-10T20:27:36.851Z"}'
 ```
 
-**Result:** The backend returned `400 Bad Request` with `INVALID_INPUT`. A starting price of zero was rejected.
+**Result:** The backend returned `400 INVALID_INPUT`.
 
 ### Test 6 — Minimum Increment of Zero
 
 I used a valid starting price and changed the minimum increment to `0`.
 
 ```bash
-curl -i -X POST http://localhost:3000/auctions \
-  -H 'Authorization: Bearer (I placed the user token here)' \
+curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
+  -H 'Authorization: Bearer <SELLER_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{
-    "itemId":"4d5dc010-0fa4-48bd-bdff-810e1cc4703b",
-    "visibility":"PUBLIC",
-    "startingPrice":1000,
-    "minimumIncrement":0,
-    "startTime":"2026-11-01T10:00:00Z",
-    "endTime":"2026-11-02T10:00:00Z"
-  }'
+  -d '{"itemId":"5b1fb21d-8ecc-4a74-92a0-878c02dca04c","visibility":"PUBLIC","startingPrice":1000,"minimumIncrement":0,"startTime":"2026-11-10T19:27:36.849Z","endTime":"2026-11-10T20:27:36.851Z"}'
 ```
 
-**Result:** The backend returned `400 Bad Request` with `INVALID_INPUT`. A minimum increment of zero was rejected.
+**Result:** The backend returned `400 INVALID_INPUT`.
 
 ### Test 7 — End Time Before Start Time
 
 I set the end time before the start time to check that the incorrect date order was rejected.
 
 ```bash
-curl -i -X POST http://localhost:3000/auctions \
-  -H 'Authorization: Bearer (I placed the user token here)' \
+curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
+  -H 'Authorization: Bearer <SELLER_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{
-    "itemId":"4d5dc010-0fa4-48bd-bdff-810e1cc4703b",
-    "visibility":"PUBLIC",
-    "startingPrice":1000,
-    "minimumIncrement":100,
-    "startTime":"2026-11-01T10:00:00Z",
-    "endTime":"2026-11-01T09:00:00Z"
-  }'
+  -d '{"itemId":"5b1fb21d-8ecc-4a74-92a0-878c02dca04c","visibility":"PUBLIC","startingPrice":1000,"minimumIncrement":100,"startTime":"2026-11-10T19:27:36.849Z","endTime":"2026-11-10T18:57:36.989Z"}'
 ```
 
-**Result:** The backend returned `400 Bad Request` with `INVALID_INPUT`.
+**Result:** The backend returned `400 INVALID_INPUT`.
 
 ### Test 8 — Another Account's Listing
 
 I tried to create an auction for `Approved Car` using the regular user's token. The listing was approved, but it belonged to the admin account.
 
 ```bash
-curl -i -X POST http://localhost:3000/auctions \
-  -H 'Authorization: Bearer (I placed the user token here)' \
+curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
+  -H 'Authorization: Bearer <SELLER_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{
-    "itemId":"963b65ce-246f-483c-bebf-c760a82532ff",
-    "visibility":"PUBLIC",
-    "startingPrice":1000,
-    "minimumIncrement":100,
-    "startTime":"2026-11-01T10:00:00Z",
-    "endTime":"2026-11-02T10:00:00Z"
-  }'
+  -d '{"itemId":"f246f53d-9bdb-4df1-8728-92da13f7bd4a","visibility":"PUBLIC","startingPrice":1000,"minimumIncrement":100,"startTime":"2026-11-10T19:27:36.849Z","endTime":"2026-11-10T20:27:36.851Z"}'
 ```
 
-**Result:** The backend returned `403 Forbidden` with `NOT_APPROVED` and this message:
-
-```text
-Only approved owned items can be auctioned
-```
-
-The request was rejected because the account sending it did not own the listing.
+**Result:** The backend returned `403 NOT_APPROVED`.
 
 ### Test 9 — Rejected Listing Using Its Owner's Account
 
 I tried to create an auction for `Test Car 2` using the admin token. This account owned the listing, but its status was `REJECTED`.
 
 ```bash
-curl -i -X POST http://localhost:3000/auctions \
-  -H 'Authorization: Bearer (I placed the admin token here)' \
+curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
+  -H 'Authorization: Bearer <BIDDER_2_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{
-    "itemId":"24a8b097-4ef2-4b17-b362-572fcf496539",
-    "visibility":"PUBLIC",
-    "startingPrice":1000,
-    "minimumIncrement":100,
-    "startTime":"2026-11-01T10:00:00Z",
-    "endTime":"2026-11-02T10:00:00Z"
-  }'
+  -d '{"itemId":"15561c6e-6da2-4ee4-9056-ebef2ce1f960","visibility":"PUBLIC","startingPrice":1000,"minimumIncrement":100,"startTime":"2026-11-10T19:27:36.849Z","endTime":"2026-11-10T20:27:36.851Z"}'
 ```
 
-**Result:** The backend returned `403 Forbidden` with `NOT_APPROVED` and this message:
-
-```text
-Only approved owned items can be auctioned
-```
-
-The request was rejected because the listing was not approved, even though its owner sent the request.
+**Result:** The backend returned `403 NOT_APPROVED`.
 
 ### Test 10 — Create a Private Auction
 
 I created a private auction for the approved `Approved Car` listing using its owner's token.
 
 ```bash
-curl -i -X POST http://localhost:3000/auctions \
-  -H 'Authorization: Bearer (I placed the admin token here)' \
+curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
+  -H 'Authorization: Bearer <SELLER_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{
-    "itemId":"963b65ce-246f-483c-bebf-c760a82532ff",
-    "visibility":"PRIVATE",
-    "startingPrice":1000,
-    "minimumIncrement":100,
-    "startTime":"2026-11-01T10:00:00Z",
-    "endTime":"2026-11-02T10:00:00Z"
-  }'
+  -d '{"itemId":"adb89561-ad3b-4e3a-a96a-ad4d0f871c82","visibility":"PRIVATE","startingPrice":1000,"minimumIncrement":100,"startTime":"2026-11-10T19:27:36.849Z","endTime":"2026-11-10T20:27:36.851Z"}'
 ```
 
-**Result:** The backend returned `201 Created`. The auction had visibility `PRIVATE` and status `SCHEDULED`. The response included an access code in `accessCode`.
-
-Both the starting price and current price were `1000.00`, and the minimum increment was `100.00`.
-
-The new auction ID was:
-
-```text
-90efaa52-d751-4ad6-8ad5-7cd676e55335
-```
+**Result:** The backend returned `201`. The response showed `visibility=PRIVATE code length=24`.
 
 ### Test 11 — Check the Stored Access Code Hash
 
 I read the auction's visibility and access code hash from the `auctions` table to check the stored data after private auction creation.
 
-```bash
-docker compose exec -T db psql -U postgres -d mezyad -c "SELECT visibility, access_code_hash FROM auctions WHERE id = '90efaa52-d751-4ad6-8ad5-7cd676e55335';"
+I used the following query in the temporary database.
+
+```sql
+SELECT visibility, access_code_hash
+FROM auctions
+WHERE id = '<PRIVATE_AUCTION_ID>';
 ```
 
-**Result:** The query returned one row with visibility `PRIVATE`. The `access_code_hash` field contained a bcrypt hash beginning with `$2a$12$`. Its value was different from the original access code returned when the auction was created.
+**Result:** PostgreSQL returned visibility `PRIVATE` and a bcrypt hash.
 
 ## Testing Result
 
-All eleven documented test cases matched the expected results.
-
-Public and private auctions were created successfully for approved listings using their owners' accounts.
-
-Invalid input, rejected listings, and attempts to use another account's listing were rejected.
-
-Duplicate auctions for the same listing were prevented. Private auction creation returned an access code, and its hash was stored in the database.
+All 11 cases matched their expected results.
