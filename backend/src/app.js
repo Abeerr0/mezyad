@@ -27,6 +27,16 @@ app.use(
 app.use(express.json({ limit: "100kb" }));
 const err = (res, status, code, message) =>
   res.status(status).json({ error: { code, message } });
+// هنا نحدد العمليات اللي يقدر يسويها اليوزر فقط
+function userOnly(req, res, next) {
+  // نستخدم دور الحساب اللي رجع من الجلسة
+  if (req.user.role !== "USER") {
+    // نوقف الطلب لأن العملية لليوزر فقط
+    return err(res, 403, "FORBIDDEN", "User only");
+  }
+  // نكمل الطلب بعد ما تأكدنا من الدور
+  return next();
+}
 const validUuid = (x) =>
   typeof x === "string" &&
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x);
@@ -796,6 +806,12 @@ api.param("id", (req, res, next, id) =>
 listings.param("id", (req, res, next, id) =>
   validUuid(id) ? next() : err(res, 400, "INVALID_ID", "Invalid ID"),
 );
+// هنا api إنشاء إعلان
+// نتأكد إن الحساب يوزر قبل رفع الصور وحفظ الإعلان بانتظار المراجعة
+api.post("/items", auth, userOnly);
+// هنا api تعديل إعلان مرفوض
+// نتأكد إن الحساب يوزر قبل ما يكمل الطلب لتعديل الإعلان وإرساله للمراجعة
+api.patch("/items/:id", auth, userOnly);
 // هنا نربط api الإعلانات
 // من هنا تروح طلبات عرض الإعلانات وإنشائها وتعديلها لمساراتها
 // مسار لطلب قائمة الإعلانات في الباك إن
@@ -869,7 +885,8 @@ api.post("/admin/items/:id/review", auth, admin, async (req, res, next) => {
 });
 // هنا api إنشاء مزاد من إعلان معتمد
 // نحدد نوع المزاد وسعره ووقته ونرجع رمز دخول إذا كان خاص
-api.post("/auctions", auth, async (req, res, next) => {
+// هنا نسمح لليوزر فقط ينشئ مزاد
+api.post("/auctions", auth, userOnly, async (req, res, next) => {
   try {
     const {
       //  وراح نستخدمه بعدين للبحث عن مزاد / نأخذ معرف الإعلان الذي سننشئ له المزاد.
@@ -1107,6 +1124,8 @@ api.post(
   // المشارك يدخل برمز المزاد فقط.
   "/auctions/access",
   auth,
+  // هنا نسمح لليوزر فقط يدخل المزاد الخاص كمشارك
+  userOnly,
   attemptLimit({
     // نحسب محاولات إدخال الرمز لكل مشارك حسب حسابه.
     key: (req) => req.user.id,
@@ -1186,7 +1205,8 @@ api.get("/auctions/:id/commitment", auth, async (req, res, next) => {
 });
 // هنا api إضافة مزايدة
 // نتحقق من دخول المزاد والمبلغ قبل حفظ المزايدة
-api.post("/auctions/:id/bids", auth, async (req, res, next) => {
+// هنا نسمح لليوزر فقط يرسل مزايدة
+api.post("/auctions/:id/bids", auth, userOnly, async (req, res, next) => {
   const { amount, requestId } = req.body || {};
   if (!validMoney(amount) || !validUuid(requestId) || !validUuid(req.params.id))
     return err(

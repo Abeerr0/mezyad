@@ -24,6 +24,8 @@ export function newToken() {
 }
 // دالة للتحقق من جلسة المستخدم قبل السماح بإكمال الطلب.
 export async function auth(req, res, next) {
+  // نستخدم نتيجة التحقق إذا فحصنا الجلسة في نفس الطلب
+  if (req.user && req.token) return next();
   //نفذ خطوات التحقق واذا حدث خطا اثنا التنفيذ نروح لcatch
     try {
     // نقرأ Authorization، وإذا لم يوجد نستخدم نصًا فارغًا.
