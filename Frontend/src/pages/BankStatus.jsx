@@ -23,7 +23,7 @@ export default function BankStatus({ market, id }) {
     >
       <SignInGate market={market}>
         <AuctionState state={state}>
-          <AuctionNav id={id} current="commitment" />
+          <AuctionNav id={id} current="commitment" role={market.workspace.user?.role} />
           <div className="bank-status-card paper-card">
             <div className="bank-emblem">
               <Icon

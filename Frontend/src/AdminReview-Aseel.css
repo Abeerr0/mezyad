@@ -88,7 +88,7 @@
 .admin-review-aseel .review-card,
 .admin-review-aseel .review-detail {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 200px;
+  grid-template-columns: minmax(0, 1fr) min(240px, 35%);
   gap: 22px;
   align-items: center;
   background: #fffdf7;
@@ -97,6 +97,12 @@
   border-radius: 23px;
   margin: 18px 0;
   box-shadow: 0 7px 24px #30342209;
+}
+.admin-review-aseel .listing-info {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .admin-review-aseel .listing-info p {
   font-size: 13px;
@@ -110,14 +116,18 @@
     sans-serif;
 }
 .admin-review-aseel .review-images {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
 .admin-review-aseel .listing-photo {
   width: 100%;
-  height: 165px;
-  object-fit: cover;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
   border-radius: 16px;
 }
 .admin-review-aseel .review-card > button,
@@ -200,7 +210,14 @@
     grid-template-columns: 1fr;
   }
   .admin-review-aseel .review-images {
+    grid-column: 1;
     grid-row: 1;
+    width: 100%;
+    max-width: 240px;
+    justify-self: center;
+  }
+  .admin-review-aseel .listing-info {
+    grid-row: 2;
   }
   .admin-review-aseel .admin-auctions {
     grid-template-columns: 1fr;
@@ -229,4 +246,17 @@
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+.account-layout.account-page-admin {
+  padding-top: 165px;
+  padding-bottom: 48px;
+}
+
+
+@media (max-width: 700px) {
+  .account-layout.account-page-admin {
+    padding-top: 140px;
+    padding-bottom: 32px;
+  }
 }

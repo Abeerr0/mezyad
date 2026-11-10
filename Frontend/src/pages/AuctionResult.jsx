@@ -28,7 +28,7 @@ export default function AuctionResult({ market, id }) {
       <AuctionState state={state}>
         {a && (
           <>
-            <AuctionNav id={id} current="auction-result" />
+            <AuctionNav id={id} current="auction-result" role={market.workspace.user?.role} />
             <section
               className={"result-paper " + (r?.isWinner ? "is-winner" : "")}
             >

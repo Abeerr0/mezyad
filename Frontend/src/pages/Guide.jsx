@@ -3,7 +3,7 @@ import { Auctioneer, Icon } from "../components";
 import { guideSteps } from "../data";
 
 // تم التعديل من عبير: نفس الحساب يقدر يبيع ويزايد ونشرح كل رحله بتبويب مستقل.
-export default function Guide({ onFeature }) {
+export default function Guide({ onFeature, isAdmin }) {
   const [role, setRole] = useState("bidder");
   return (
     <div className="guide-page">
@@ -144,7 +144,7 @@ export default function Guide({ onFeature }) {
             <a href="#/auctions" className="button dark">
               استكشف المزادات <Icon />
             </a>
-          ) : (
+          ) : !isAdmin && (
             <button onClick={() => onFeature("sell")} className="button dark">
               ابدأ عرض أصلك <Icon />
             </button>

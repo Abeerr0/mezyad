@@ -81,6 +81,8 @@ export default function App() {
   // تم التعديل من عبير: الموقع يفتح ببياناته الحقيقيه؛ ملف PREVIEW وحده مخصص للتجربه.
   const demo = location.pathname.endsWith("/PREVIEW.html");
   const workspace = useWorkspace(demo);
+  const isAdmin = workspace.user?.role === "ADMIN";
+  const adminBlocked = isAdmin && ["create-listing", "edit-listing", "create-auction", "listings", "bid", "commitment", "payment"].includes(route.page);
   const market = useMarket(workspace);
   const [catalog, setCatalog] = useState({
     auctions: [],
@@ -205,6 +207,7 @@ export default function App() {
       return;
     }
     if (type === "sell") {
+      if (isAdmin) return;
       location.hash = workspace.user
         ? "/create-listing"
         : "/login?next=%2Fcreate-listing";
@@ -233,6 +236,7 @@ export default function App() {
       }
     : workspace;
   const common = {
+    isAdmin,
     ...catalog,
     auctions: demo
       ? catalog.auctions.map((a) => ({
@@ -313,7 +317,7 @@ export default function App() {
                   : "تسجيل الدخول"}
               </span>
             </button>
-            {![
+            {!isAdmin && ![
               "listings",
               "create-listing",
               "edit-listing",
@@ -342,6 +346,12 @@ export default function App() {
         <div
           key={route.page + "-" + demo + "-" + (route.params.get("id") || "")}
         >
+          {adminBlocked ? (
+            <section className="container state-panel">
+              <p role="alert">حساب الإدارة مخصص للتصفح والمراجعة، ولا يمكنه إنشاء إعلان أو مزاد أو تقديم مزايدة.</p>
+              <a className="button dark" href="#/admin">لوحة الإدارة</a>
+            </section>
+          ) : <>
           {/* تم التعديل من عبير: نربط صفحات المنافسه والمتابعه بنفس حساب المستخدم. */}
           {route.page === "admin" && (
             <AdminDashboardAseel workspace={workspace} />
@@ -393,12 +403,13 @@ export default function App() {
           {route.page === "create-auction" && (
             <CreateAuction workspace={workspace} params={route.params} />
           )}
+          </>}
         </div>
         {route.page === "home" && <Home {...common} />}
         {route.page === "auctions" && (
           <Browse {...common} category={category} status={status} />
         )}
-        {route.page === "guide" && <Guide onFeature={onFeature} />}
+        {route.page === "guide" && <Guide onFeature={onFeature} isAdmin={isAdmin} />}
         {route.page === "help" && (
           <Help topic={route.params.get("topic") || ""} />
         )}

@@ -10,6 +10,7 @@ export default function Home({
   retry,
   onOpen,
   onFeature,
+  isAdmin,
 }) {
   const featured = auctions.filter((a) => a.status === "ACTIVE").slice(0, 3);
   return (
@@ -42,9 +43,9 @@ export default function Home({
               <a className="button gold" href="#/auctions">
                 استكشف المزادات <Icon />
               </a>
-              <button className="hero-sell" onClick={() => onFeature("sell")}>
+              {!isAdmin && <button className="hero-sell" onClick={() => onFeature("sell")}>
                 عندك أصل مميز؟ <span>اعرضه هنا</span>
-              </button>
+              </button>}
             </div>
             <div className="hero-note">
               <span>MEZYAD</span>

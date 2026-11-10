@@ -28,7 +28,7 @@ export default function AuctionDetails({ market, id }) {
       <AuctionState state={state}>
         {a && (
           <>
-            <AuctionNav id={id} current="auction" />
+            <AuctionNav id={id} current="auction" role={market.workspace.user?.role} />
             <AuctionSummary auction={a} />
             <div className="auction-detail-grid">
               <div>
@@ -127,7 +127,7 @@ export default function AuctionDetails({ market, id }) {
                   >
                     شوف النتيجة <Icon />
                   </a>
-                ) : owner ? (
+                ) : market.workspace.user?.role === "ADMIN" ? null : owner ? (
                   <p className="inline-notice">
                     هذا مزادك تابع العروض؛ المالك ما يزايد على أصله
                   </p>

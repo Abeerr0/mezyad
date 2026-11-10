@@ -30,7 +30,7 @@ export default function BidHistory({ market, id }) {
         <AuctionState state={state}>
           {state.auction && (
             <>
-              <AuctionNav id={id} current="bid-history" />
+              <AuctionNav id={id} current="bid-history" role={market.workspace.user?.role} />
               <AuctionSummary auction={state.auction} />
               <section className="paper-card history-paper">
                 <div className="section-heading">

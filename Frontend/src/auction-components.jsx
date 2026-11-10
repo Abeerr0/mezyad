@@ -78,7 +78,7 @@ export function SignInGate({ market, children }) {
     </div>
   );
 }
-export function AuctionNav({ id, current }) {
+export function AuctionNav({ id, current, role }) {
   return (
     <nav className="auction-tabs" aria-label={"صفحات المزاد"}>
       {[
@@ -87,7 +87,7 @@ export function AuctionNav({ id, current }) {
         ["bid", "قدّم عرضك"],
         ["bid-history", "سجل العروض"],
         ["auction-result", "النتيجة"],
-      ].map(([page, label]) => (
+      ].filter(([page]) => role !== "ADMIN" || !["commitment", "bid"].includes(page)).map(([page, label]) => (
         <a
           key={page}
           href={auctionLink(page, id)}

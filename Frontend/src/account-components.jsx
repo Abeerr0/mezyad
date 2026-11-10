@@ -110,7 +110,7 @@ export function AccountLayout({
         <p className="breadcrumb">
           <a href="#/">الرئيسية</a>
           <span>/</span>
-          <a href="#/activity">حسابي</a>
+          <a href={workspace.user.role === "ADMIN" ? "#/profile" : "#/activity"}>حسابي</a>
           <span>/</span>
           {title}
         </p>
