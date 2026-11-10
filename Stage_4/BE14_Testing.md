@@ -3,6 +3,7 @@
 **Team member:** Ghadi
 **Task code:** BE-14
 **Testing dates:** 4–5 November 2026
+**Retest date:** 10 November 2026
 **Testing method:** Manual testing using the terminal, curl, PostgreSQL through Docker, and Moyasar test mode.
 
 ## Goal
@@ -26,52 +27,42 @@ Test verification of a Moyasar hold before accepting a bid, check that invalid c
 
 ## Testing Method
 
-I tested the bank commitment manually using `curl` commands in the VS Code terminal.
+I tested the bank commitment using `curl` commands in the VS Code terminal.
 
-PostgreSQL was running through Docker, and the backend was running locally on port `3000`. I enabled `REQUIRE_BANK_COMMITMENT=true` and used Moyasar test keys.
+I used Moyasar Sandbox test cards for approval and insufficient funds. The holds used 500, 1,000, and 2,000 SAR as applicable. I completed the Sandbox authentication page and checked the status through Moyasar and the saved commitment through the backend.
 
-Before testing the cases, I checked that `/health` returned `200 OK` with `status: ok`. I also checked the connection to Moyasar using the test secret key, and the request returned `HTTP 200`.
+I compared each HTTP status and response with the expected result. For protected requests, I took the JWT from `data.token` in the login response and placed it after `Bearer`.
 
-I created a test item and auction to test the bank commitment using Moyasar.
-
-I created Moyasar payments from the terminal using the test cards published in Moyasar’s documentation. I changed the amount, auction ID, and user ID to match each case.
-
-I used `manual: true` to request a hold without capturing the amount. When Moyasar returned `initiated`, I opened the URL in `source.transaction_url` and completed the test authentication page in the browser.
-
-I used `http://localhost:3000/health` as a temporary return URL after authentication. I did not use the return URL alone as proof that a commitment was accepted. I sent the payment ID to the backend, which checked its details with Moyasar.
-
-For each case, I compared the HTTP status, error code, and saved data with the expected result.
-
-Tokens, keys, and login details are omitted from this report. Placeholders such as `<BIDDER_1_TOKEN>` represent the actual session tokens used during testing.
+I checked the backend health at `/api/v1/health` and the connection to Moyasar before running the cases. Both checks returned `200 OK`.
 
 ### Payment Creation Request
 
-I used the following command to request a SAR 2,000 test hold from Moyasar. I then completed authentication using the URL returned by Moyasar and sent the payment ID to the Mezyad backend to verify the payment and register the commitment. I used the same request structure for the other cases, changing the amount, card, or auction and user details.
+I requested a 2,000 SAR Sandbox hold using `manual: true`. I completed test authentication with the URL returned by Moyasar and sent the payment ID to Mezyad to verify the commitment.
+
 ```bash
-curl -i --max-time 30 -X POST https://api.moyasar.com/v1/payments \
-  -u "$moyasar_public_key:" \
-  -H "Content-Type: application/json" \
+curl -i -X POST 'https://api.moyasar.com/v1/payments' \
+  -u '<MOYASAR_TEST_PUBLISHABLE_KEY>:' \
+  -H 'Content-Type: application/json' \
   -d '{
+    "given_id": "<PAYMENT_UUID>",
     "amount": 200000,
     "currency": "SAR",
-    "callback_url": "http://localhost:3000/health",
-    "metadata": {
-      "auction_id": "8c22af77-7022-4cd0-8de5-9f4b02db79a1",
-      "user_id": "90ac0e14-2879-4690-a878-a1be3adfcd38"
-    },
+    "description": "Mezyad QA sandbox authorization",
+    "callback_url": "http://127.0.0.1:51980/api/v1/health",
+    "metadata": {"auction_id": "<AUCTION_ID>", "user_id": "<USER_ID>"},
     "source": {
       "type": "creditcard",
-      "name": "Email Test",
-      "number": "4201320111111010",
+      "name": "Mezyad Test",
+      "number": "<OFFICIAL_TEST_CARD>",
       "month": 12,
       "year": 2030,
-      "cvc": "123",
+      "cvc": "<TEST_CVC>",
       "manual": true
     }
   }'
 ```
 
-Moyasar amounts are sent in halalas, so `200000` represents SAR 2,000.
+Moyasar amounts are sent in halalas, so `200000` represents 2,000 SAR.
 
 | Purpose | Amount in halalas | Test card number |
 |---|---:|---|
@@ -88,292 +79,188 @@ Moyasar amounts are sent in halalas, so `200000` represents SAR 2,000.
 I sent `invalid` instead of a valid payment ID to check input validation.
 
 ```bash
-curl -i -X POST http://localhost:3000/auctions/00000000-0000-4000-8000-000000000001/commitment \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <BIDDER_1_TOKEN>" \
+curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-b7f81ecd8238/commitment' \
+  -H 'Authorization: Bearer <BIDDER_1_JWT>' \
+  -H 'Content-Type: application/json' \
   -d '{"paymentId":"invalid"}'
 ```
 
-**Result:** The backend rejected the request and returned `400 Bad Request` with the error code `INVALID_INPUT`.
+**Result:** The backend returned `400 INVALID_INPUT`.
 
 ### Test 2 — Missing Moyasar Key
 
 I started a temporary backend instance on port `3001` without a Moyasar key to test the response when the key was unavailable.
 
 ```bash
-MOYASAR_SECRET_KEY= PORT=3001 npm --prefix backend run dev
+curl -i -X POST 'http://127.0.0.1:51996/api/v1/auctions/c6532792-938d-4bc1-b554-b7f81ecd8238/commitment' \
+  -H 'Authorization: Bearer <BIDDER_1_JWT>' \
+  -H 'Content-Type: application/json' \
+  -d '{"paymentId":"7ae3fcde-739f-4e3e-87fb-0df42331a970"}'
 ```
 
-I then sent the commitment request:
-
-```bash
-curl -i -X POST http://localhost:3001/auctions/cb7a57cf-0d6d-4bd1-8ede-194d00a0d1b0/commitment \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <BIDDER_1_TOKEN>" \
-  -d '{"paymentId":"00000000-0000-4000-8000-000000000001"}'
-```
-
-**Result:** The backend returned `503 Service Unavailable` with the error code `BANK_SANDBOX_UNAVAILABLE` and the message `Moyasar test key is not configured`.
-
-I stopped the temporary instance after this test and continued testing on port `3000`.
+**Result:** The backend returned `503 BANK_SANDBOX_UNAVAILABLE`.
 
 ### Test 3 — Bid Without a Verified Commitment
 
 Before saving a successful commitment for the first bidder in the test auction, I submitted a bid of SAR 1,000.
 
 ```bash
-curl -i -X POST http://localhost:3000/auctions/8c22af77-7022-4cd0-8de5-9f4b02db79a1/bids \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <BIDDER_1_TOKEN>" \
-  -d '{
-    "amount": 1000,
-    "requestId": "7083722b-6b64-4ca7-87a1-e22f0361ac38"
-  }'
+curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-b7f81ecd8238/bids' \
+  -H 'Authorization: Bearer <BIDDER_1_JWT>' \
+  -H 'Content-Type: application/json' \
+  -d '{"amount":1000,"requestId":"36f0edf0-7055-46c7-8c5b-446eac5efea6"}'
 ```
 
-**Result:** The backend rejected the bid and returned `403 Forbidden` with the error code `COMMITMENT_REQUIRED`.
+**Result:** The backend returned `403 COMMITMENT_REQUIRED`.
 
 ### Test 4 — Insufficient Funds
 
 I created a SAR 1,000 payment using the test card `4201320000311101`, which simulates insufficient funds. After authentication, the returned result showed `failed` with the message `INSUFFICIENT FUNDS`.
 
-I submitted the payment ID to the backend:
+Moyasar returned `HTTP 200` with status `failed` after test authentication and message `INSUFFICIENT FUNDS`.
 
 ```bash
-curl -i -X POST http://localhost:3000/auctions/8c22af77-7022-4cd0-8de5-9f4b02db79a1/commitment \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <BIDDER_1_TOKEN>" \
-  -d '{"paymentId":"880deafd-69b6-40e3-acf0-2578b728cf87"}'
+curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-b7f81ecd8238/commitment' \
+  -H 'Authorization: Bearer <BIDDER_1_JWT>' \
+  -H 'Content-Type: application/json' \
+  -d '{"paymentId":"16ecbf01-cba4-451d-8d9d-2b3d736cd8a5"}'
 ```
 
-**Result:** The backend returned `409 Conflict` with the error code `COMMITMENT_DECLINED`.
+**Result:** The backend returned `409 COMMITMENT_DECLINED`.
 
-I checked the database record:
-
-```bash
-docker compose exec -T db psql -U postgres -d mezyad -c "
-SELECT status, sandbox_reference
-FROM bid_commitments
-WHERE auction_id = '8c22af77-7022-4cd0-8de5-9f4b02db79a1'
-  AND user_id = '90ac0e14-2879-4690-a878-a1be3adfcd38';"
-```
-
-The saved status was `FAILED`, and the payment reference was `880deafd-69b6-40e3-acf0-2578b728cf87`.
+**Result:** PostgreSQL returned `FAILED`.
 
 ### Test 5 — Hold Below the Required Minimum
 
 I created an authorized hold of SAR 500 in Moyasar, while the auction’s starting price was SAR 1,000.
 
-```bash
-curl -i -X POST http://localhost:3000/auctions/8c22af77-7022-4cd0-8de5-9f4b02db79a1/commitment \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <BIDDER_1_TOKEN>" \
-  -d '{"paymentId":"7ce6d7da-800d-48be-8c86-3c02961a8c94"}'
-```
-
-**Result:** The backend rejected the commitment and returned `409 Conflict` with the error code `COMMITMENT_TOO_LOW`.
-
-I fetched the payment from Moyasar:
+Moyasar returned `HTTP 200` with status `authorized` after test authentication and message `APPROVED`.
 
 ```bash
-curl -i --max-time 10 \
-  -u "$moyasar_test_key:" \
-  https://api.moyasar.com/v1/payments/7ce6d7da-800d-48be-8c86-3c02961a8c94
+curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-b7f81ecd8238/commitment' \
+  -H 'Authorization: Bearer <BIDDER_1_JWT>' \
+  -H 'Content-Type: application/json' \
+  -d '{"paymentId":"78bcd694-098c-4ade-96b5-1bc8269bbd7f"}'
 ```
 
-Moyasar returned `200 OK` with payment status `voided`, confirming that the hold was released after the commitment was rejected.
+**Result:** The backend returned `409 COMMITMENT_TOO_LOW`.
+
+**Result:** The backend returned `voided`. Verification: `HTTP 200 voided APPROVED`.
 
 ### Test 6 — Accept a Valid Hold
 
 I created a SAR 2,000 hold using the approved test card and linked it to the auction and the first bidder. After authentication, I submitted the payment ID to the backend.
 
+Moyasar returned `HTTP 200` with status `authorized` after test authentication and message `APPROVED`.
+
 ```bash
-curl -i -X POST http://localhost:3000/auctions/8c22af77-7022-4cd0-8de5-9f4b02db79a1/commitment \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <BIDDER_1_TOKEN>" \
-  -d '{"paymentId":"ee7cf3cd-8978-4d3f-8296-e3c3313709a7"}'
+curl -i -X POST 'http://127.0.0.1:53664/api/v1/auctions/63f82caa-99c5-4c34-96ac-55a2d05f7641/commitment' \
+  -H 'Authorization: Bearer <BIDDER_1_JWT>' \
+  -H 'Content-Type: application/json' \
+  -d '{"paymentId":"35d5077c-0a74-4e97-82a6-8985c738a603"}'
 ```
 
-**Result:** The backend accepted the commitment and returned `201 Created`. The response included:
+**Result:** The backend returned `201`. The response showed `status=SUCCESS max_amount=2000.00`.
 
 ```json
 {
-  "status": "SUCCESS",
-  "sandbox_reference": "ee7cf3cd-8978-4d3f-8296-e3c3313709a7",
-  "max_amount": "2000.00",
-  "released_at": null
+  "data": {
+    "id": "3b4b8cf1-4aec-4188-a6f9-63e44f24dc50",
+    "status": "SUCCESS",
+    "sandbox_reference": "35d5077c-0a74-4e97-82a6-8985c738a603",
+    "max_amount": "2000.00",
+    "released_at": null,
+    "created_at": "2026-11-10T19:27:45.958Z"
+  }
 }
 ```
 
-I checked the saved data:
-
-```bash
-docker compose exec -T db psql -U postgres -d mezyad -c "
-SELECT status, max_amount, sandbox_reference, released_at
-FROM bid_commitments
-WHERE auction_id = '8c22af77-7022-4cd0-8de5-9f4b02db79a1'
-  AND user_id = '90ac0e14-2879-4690-a878-a1be3adfcd38';"
-```
-
-The database matched the response: status `SUCCESS`, amount `2000.00`, the same payment reference, and a null `released_at`.
+**Result:** PostgreSQL returned `SUCCESS/2000.00`.
 
 ### Test 7 — Bid Above and Within the Held Amount
 
 I submitted a bid of SAR 2,100, which exceeded the SAR 2,000 hold.
 
 ```bash
-curl -i -X POST http://localhost:3000/auctions/8c22af77-7022-4cd0-8de5-9f4b02db79a1/bids \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <BIDDER_1_TOKEN>" \
-  -d '{
-    "amount": 2100,
-    "requestId": "c435e6af-6b5b-4c48-9359-7ce5a4a6a634"
-  }'
+curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-b7f81ecd8238/bids' \
+  -H 'Authorization: Bearer <BIDDER_1_JWT>' \
+  -H 'Content-Type: application/json' \
+  -d '{"amount":2100,"requestId":"bf4f6bc3-4e03-40e1-9e18-6d9a1d9f25b2"}'
 ```
 
-**Result:** The backend rejected the bid and returned `409 Conflict` with the error code `BID_ABOVE_COMMITMENT`.
-
-I then submitted a bid of SAR 1,000, which was within the held amount and matched the starting price.
+**Result:** The backend returned `409 BID_ABOVE_COMMITMENT`.
 
 ```bash
-curl -i -X POST http://localhost:3000/auctions/8c22af77-7022-4cd0-8de5-9f4b02db79a1/bids \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <BIDDER_1_TOKEN>" \
-  -d '{
-    "amount": 1000,
-    "requestId": "4a0e6049-297c-4e45-b5f5-289f9010dd8e"
-  }'
+curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-b7f81ecd8238/bids' \
+  -H 'Authorization: Bearer <BIDDER_1_JWT>' \
+  -H 'Content-Type: application/json' \
+  -d '{"amount":1000,"requestId":"abdc43ac-0e3d-4fb0-bdf0-f0c60b2dc5f2"}'
 ```
 
-**Result:** The backend accepted the bid and returned `201 Created` with `amount: 1000` and `currentPrice: 1000`.
+**Result:** The backend returned `201`. The response showed `amount=1000`.
 
 ### Test 8 — Payment Belonging to Another Account
 
-I used another account’s session token with the first bidder’s payment ID to test user matching.
+I used another account’s JWT with the first bidder’s payment ID to test user matching.
 
 ```bash
-curl -i -X POST http://localhost:3000/auctions/8c22af77-7022-4cd0-8de5-9f4b02db79a1/commitment \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <OTHER_ACCOUNT_TOKEN>" \
-  -d '{"paymentId":"ee7cf3cd-8978-4d3f-8296-e3c3313709a7"}'
+curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-b7f81ecd8238/commitment' \
+  -H 'Authorization: Bearer <BIDDER_2_JWT>' \
+  -H 'Content-Type: application/json' \
+  -d '{"paymentId":"b12a0b23-e0cd-4355-8896-10e84009832f"}'
 ```
 
-**Result:** The backend rejected the request and returned `403 Forbidden` with the error code `PAYMENT_MISMATCH`.
+**Result:** The backend returned `403 PAYMENT_MISMATCH`.
 
 ### Test 9 — Commitment for an Ended Auction
 
-I created a SAR 1,000 hold linked to the ended auction `cb7a57cf-0d6d-4bd1-8ede-194d00a0d1b0`.
-
-After authentication, I submitted the commitment request:
+Moyasar returned `HTTP 200` with status `authorized` after test authentication and message `APPROVED`.
 
 ```bash
-curl -i -X POST http://localhost:3000/auctions/cb7a57cf-0d6d-4bd1-8ede-194d00a0d1b0/commitment \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <BIDDER_1_TOKEN>" \
-  -d '{"paymentId":"a2694e30-e7af-498d-85f3-6d25cf4b6c26"}'
+curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/13281121-eaaf-43c9-afb8-86af5847b6e5/commitment' \
+  -H 'Authorization: Bearer <BIDDER_1_JWT>' \
+  -H 'Content-Type: application/json' \
+  -d '{"paymentId":"54d266a6-944c-4714-afd5-17748fe89343"}'
 ```
 
-**Result:** The backend returned `409 Conflict` with the error code `AUCTION_NOT_ACTIVE`.
+**Result:** The backend returned `409 AUCTION_NOT_ACTIVE`.
 
-I checked the payment with Moyasar:
-
-```bash
-curl -i --max-time 10 \
-  -u "$moyasar_test_key:" \
-  https://api.moyasar.com/v1/payments/a2694e30-e7af-498d-85f3-6d25cf4b6c26
-```
-
-The payment status was `voided`, confirming that the hold was released after the commitment for the ended auction was rejected.
+**Result:** The backend returned `voided`. Verification: `HTTP 200 voided APPROVED`.
 
 ### Test 10 — Close the Auction and Release the Losing Bidder’s Hold
 
-I prepared a valid SAR 2,000 hold for the second bidder, using their ID `ab3bc7d6-0333-4112-8bb1-5d5b07a084ab` in the payment metadata.
-
-I registered the commitment:
+Moyasar returned `HTTP 200` with status `authorized` after test authentication and message `APPROVED`.
 
 ```bash
-curl -i -X POST http://localhost:3000/auctions/8c22af77-7022-4cd0-8de5-9f4b02db79a1/commitment \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <BIDDER_2_TOKEN>" \
-  -d '{"paymentId":"bb44b616-505a-4547-8ac1-d4ccd6a25232"}'
+curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-b7f81ecd8238/commitment' \
+  -H 'Authorization: Bearer <BIDDER_2_JWT>' \
+  -H 'Content-Type: application/json' \
+  -d '{"paymentId":"47f6e1f6-3c93-4684-ba81-70a2c5c927c6"}'
 ```
 
-The backend returned `201 Created` with status `SUCCESS` and amount `2000.00`.
-
-I then submitted a SAR 1,100 bid from the second bidder, making it higher than the first bidder’s SAR 1,000 bid.
+**Result:** The backend returned `201`.
 
 ```bash
-curl -i -X POST http://localhost:3000/auctions/8c22af77-7022-4cd0-8de5-9f4b02db79a1/bids \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <BIDDER_2_TOKEN>" \
-  -d '{
-    "amount": 1100,
-    "requestId": "df92290c-6b6e-414a-a1e7-392da0b36a63"
-  }'
+curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-b7f81ecd8238/bids' \
+  -H 'Authorization: Bearer <BIDDER_2_JWT>' \
+  -H 'Content-Type: application/json' \
+  -d '{"amount":1100,"requestId":"9e15e277-3d90-4398-88eb-a1a02dafa232"}'
 ```
 
-The backend returned `201 Created` with `currentPrice: 1100`.
-
-To test closing without waiting, I changed the test auction’s end time to the past:
+**Result:** The backend returned `201`.
 
 ```bash
-docker compose exec -T db psql -U postgres -d mezyad -v ON_ERROR_STOP=1 -c "
-UPDATE auctions
-SET end_time = now() - interval '1 minute'
-WHERE id = '8c22af77-7022-4cd0-8de5-9f4b02db79a1'
-RETURNING id, end_time;"
+curl -i -X GET 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-b7f81ecd8238' \
+  -H 'Authorization: Bearer <BIDDER_2_JWT>'
 ```
 
-I then used `curl` in the terminal to send a `GET` request to the auction details endpoint in the Mezyad backend on port `3000`. This endpoint checks the auction’s end time. Since the end time was now in the past, the backend closed the auction and recorded the winner.
+**Result:** The backend returned `200`. The response showed `status=CLOSED winning_amount=1100.00 isWinner=true`.
 
-```bash
-curl -i http://localhost:3000/auctions/8c22af77-7022-4cd0-8de5-9f4b02db79a1 \
-  -H "Authorization: Bearer <BIDDER_2_TOKEN>"
-```
-
-**Result:** The backend returned `200 OK`, and the auction status was `CLOSED`. The winning amount was `1100.00`, and `isWinner: true` was returned for the second bidder.
-
-I fetched both payments from Moyasar:
-
-```bash
-curl -i --max-time 10 \
-  -u "$moyasar_test_key:" \
-  https://api.moyasar.com/v1/payments/ee7cf3cd-8978-4d3f-8296-e3c3313709a7
-```
-
-```bash
-curl -i --max-time 10 \
-  -u "$moyasar_test_key:" \
-  https://api.moyasar.com/v1/payments/bb44b616-505a-4547-8ac1-d4ccd6a25232
-```
-
-I then checked the database:
-
-```bash
-docker compose exec -T db psql -U postgres -d mezyad -c "
-SELECT sandbox_reference, released_at
-FROM bid_commitments
-WHERE auction_id = '8c22af77-7022-4cd0-8de5-9f4b02db79a1';"
-```
-
-| Bidder | Moyasar payment status | Database `released_at` |
-|---|---|---|
-| First bidder — losing bidder | `voided` | `2026-11-04 22:24:55.57046+00` |
-| Second bidder — winner | `authorized` | `NULL` |
-
-The results confirmed that the losing bidder’s hold was released and its release time was saved, while the winner’s hold remained authorized.
+**Result:** The backend returned `voided/authorized`. Verification: `PostgreSQL released loser=true winner still held=true`.
 
 ## Testing Result
 
-All ten documented test cases matched the expected results.
-
-The backend accepted a valid commitment and rejected invalid input, a declined payment, an insufficient hold amount, another account’s payment, and a commitment for an ended auction.
-
-It also rejected a bid without a verified commitment and a bid above the held amount, while accepting a bid that met the tested conditions.
-
-After the auction closed, the losing bidder’s hold was voided in Moyasar and its release time was saved in the database. The winner’s hold remained `authorized`.
-
-Testing used Moyasar test mode and test cards. Capturing the winner’s payment was not performed as part of these tests.
+All 10 cases matched their expected results. The Sandbox run completed 20 checks. The losing bidder's hold was released at closure, and the winning hold stayed authorized.
 
 ## References
 
