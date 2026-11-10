@@ -3,6 +3,7 @@
 **Team member:** Ghadi Alzhrani  
 **Week:** 4  
 **Report date:** October 31, 2026  
+**Retest date:** 10 November 2026  
 **Testing method:** Manual API testing with `curl` in the terminal.
 
 ## Goal
@@ -18,7 +19,9 @@ I tested whether the backend grants access to a private auction when a bidder se
 
 ## Testing Method and Existing Data
 
-I used the same bidder account for both tests. First, I sent the code I received when I created the private auction. Then, I sent an incorrect code.
+I used a private auction's generated access code with one bidder and a different code with the other bidder.
+
+I compared each HTTP status and response with the expected result. For protected requests, I took the JWT from `data.token` in the login response and placed it after `Bearer`.
 
 ## Test Cases and Commands
 
@@ -27,29 +30,27 @@ I used the same bidder account for both tests. First, I sent the code I received
 I sent the private auction’s access code from the bidder’s account.
 
 ```bash
-curl -sS -w '\nHTTP %{http_code}\n' \
-  'http://localhost:3000/api/v1/auctions/access' \
-  -H "Authorization: Bearer $BIDDER_TOKEN" \
+curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions/access' \
+  -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
-  -d "{\"accessCode\":\"$MAIN_CODE\"}"
+  -d '{"accessCode":"<PRIVATE_AUCTION_CODE>"}'
 ```
 
-**Result:** The backend returned `HTTP 200` with `accessGranted: true`, confirming that the bidder could access the auction.
+**Result:** The backend returned `200`. The response showed `accessGranted=true`.
 
 ### Test 2 – Send an incorrect access code
 
 I sent a code made up of 24 zeros. I chose a code with the correct length to check whether the backend would still reject it.
 
 ```bash
-curl -sS -w '\nHTTP %{http_code}\n' \
-  'http://localhost:3000/api/v1/auctions/access' \
-  -H "Authorization: Bearer $BIDDER_TOKEN" \
+curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions/access' \
+  -H 'Authorization: Bearer <BIDDER_2_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"accessCode":"000000000000000000000000"}'
 ```
 
-**Result:** The backend rejected the code and returned `403 INVALID_CODE` with the message `Invalid access code`.
+**Result:** The backend returned `403 INVALID_CODE`.
 
 ## Testing Result
 
-Both tests passed. The backend granted access with the correct code and rejected the incorrect code.
+All 2 cases matched their expected results.
