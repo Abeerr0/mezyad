@@ -1,5 +1,7 @@
-// نتورد اداه نود عشان ننشئ بصمه التوكن وانشاء بيانات عشوائيه
-import { createHash, randomBytes } from "node:crypto";
+// نستخدم معرف عشوائي لكل جلسة ونحسب بصمة التوكن
+import { createHash, randomUUID } from "node:crypto";
+// نستخدم مكتبة التوكن عشان نصدره ونتحقق منه
+import { errors, SignJWT, jwtVerify } from "jose";
 //نستورد داله query من ملف db.js عشان نقدر نسوي استعلامات على قاعده البيانات
 import { query } from "./db.js";
 //  باستخدام SHA-256 دالة تحسب بصمة التوكن .
@@ -13,14 +15,77 @@ export function hashToken(token) {
   // نرجع البصمة إلى المكان الذي استدعى الدالة.
   return tokenHash;
 }
-// دالة لإنشاء توكن جديد.
-export function newToken() {
-  // نولد بيانات عشوائية بحجم 32 بايت.
-  const randomValue = randomBytes(32);
-  // نحول البيانات العشوائية إلى نص.
-  const token = randomValue.toString("hex");
-  // نرجع التوكن إلى المكان الذي استدعى الدالة.
-  return token;
+// هنا نقرأ مفتاح التوقيع من إعدادات الباكند
+function signingKey() {
+  // نأخذ المفتاح من إعدادات التشغيل
+  const secret = process.env.JWT_SECRET;
+  // نوقف التوقيع إذا المفتاح ناقص أو قصير
+  if (!secret || Buffer.byteLength(secret) < 32) {
+    // نوضح أن الخطأ من إعدادات تشغيل الباكند
+    throw new Error("Set JWT_SECRET to a secret at least 32 bytes long");
+  }
+  // نحول المفتاح إلى بيانات تستخدمها مكتبة التوقيع
+  return new TextEncoder().encode(secret);
+}
+
+// هنا نصدر توكن الحساب بعد نجاح تسجيل الدخول
+export function newToken(user) {
+  // نحفظ في التوكن هل الحساب أدمن
+  return new SignJWT({ is_admin: user.role === "ADMIN" })
+    // نحدد طريقة توقيع التوكن
+    .setProtectedHeader({ alg: "HS256" })
+    // نحفظ معرف الحساب
+    .setSubject(user.id)
+    // نعطي كل جلسة معرف مختلف
+    .setJti(randomUUID())
+    // نخلي مدة التوكن نفس مدة الجلسة
+    .setExpirationTime("7d")
+    // نوقع التوكن بمفتاح الباكند
+    .sign(signingKey());
+}
+
+// هنا نتحقق من التوكن والجلسة قبل إرجاع بيانات الحساب
+export async function sessionUser(token) {
+  // نجهز مفتاح التوقيع قبل ما نتحقق من التوكن
+  const key = signingKey();
+  // نحفظ معرف الحساب بعد ما نتأكد من التوقيع
+  let userId;
+  try {
+    // نتحقق من التوقيع ووقت انتهاء التوكن
+    const { payload } = await jwtVerify(token, key, {
+      // نقبل طريقة التوقيع اللي استخدمناها عند تسجيل الدخول
+      algorithms: ["HS256"],
+      // نطلب وجود معرف الحساب ووقت الانتهاء
+      requiredClaims: ["sub", "exp"],
+    });
+    // نأخذ معرف الحساب اللي داخل التوكن الموقع
+    userId = payload.sub;
+  } catch (error) {
+    // نرجع بدون حساب إذا التوكن غير صالح
+    if (error instanceof errors.JOSEError) return null;
+    // نمرر أي خطأ ثاني لمعالج أخطاء الباكند
+    throw error;
+  }
+
+  // نبحث عن جلسة تطابق بصمة التوكن ولم ينتهِ وقتها.
+  // نربط الجلسة بالمستخدم للحصول على بياناته ودوره.
+  const result = await query(
+    `
+    -- نختار معرف المستخدم واسمه وإيميله ودوره من جدول المستخدمين.هذا الجزء بلغة sql
+      SELECT u.id, u.name, u.email, u.role
+      -- نحدد جدول الجلسات كمصدر للبحث، ونسميه اختصارًا s.
+      FROM user_sessions s
+      -- نربط جدول الجلسات بجدول المستخدمين باستخدام معرف المستخدم.
+      JOIN users u ON u.id = s.user_id
+   -- نبحث عن جلسة تطابق بصمة التوكن ويكون وقت انتهائها بعد الوقت الحالي ١ يعني لازم تساوي القيمه الاولى اللي نرسلها مع الاستعلام وهي بقمه التوكن القادم في الطلب.
+      WHERE s.token_hash = $1 AND s.expires_at > now()
+        AND u.id::text = $2
+    `,
+    // نمرر بصمة التوكن بدلًا من $1 في الاستعلام .
+    [hashToken(token), userId],
+  );
+  // نرجع بيانات الحساب إذا الجلسة لسا صالحة
+  return result.rows[0] ?? null;
 }
 // دالة للتحقق من جلسة المستخدم قبل السماح بإكمال الطلب.
 export async function auth(req, res, next) {
@@ -43,24 +108,10 @@ export async function auth(req, res, next) {
     }
     // نأخذ التوكن من نتيجة المطابقة.
     const token = tokenMatch[1];
-    // نبحث عن جلسة تطابق بصمة التوكن ولم ينتهِ وقتها.
-    // نربط الجلسة بالمستخدم للحصول على بياناته ودوره.
-    const result = await query(
-      `
-      -- نختار معرف المستخدم واسمه وإيميله ودوره من جدول المستخدمين.هذا الجزء بلغة sql
-        SELECT u.id, u.name, u.email, u.role
-        -- نحدد جدول الجلسات كمصدر للبحث، ونسميه اختصارًا s.
-        FROM user_sessions s
-        -- نربط جدول الجلسات بجدول المستخدمين باستخدام معرف المستخدم.
-        JOIN users u ON u.id = s.user_id
-     -- نبحث عن جلسة تطابق بصمة التوكن ويكون وقت انتهائها بعد الوقت الحالي ١ يعني لازم تساوي القيمه الاولى اللي نرسلها مع الاستعلام وهي بقمه التوكن القادم في الطلب.
-        WHERE s.token_hash = $1 AND s.expires_at > now()
-      `,
-      // نمرر بصمة التوكن بدلًا من $1 في الاستعلام .
-      [hashToken(token)]
-    );
-//  والصفر هنا تعني ان الاستعلام مارجع اي صف يطابق بصمه التوكن إذا لم يرجع الاستعلام أي نتيجة، نرفض الطلب لعدم وجود جلسة صالحة.
-    if (result.rows.length === 0) {
+    // نتحقق من التوكن ونجيب بيانات الحساب من الجلسة
+    const user = await sessionUser(token);
+    // نرفض الطلب إذا ما رجع لنا حساب بجلسة صالحة
+    if (!user) {
         // نرسل خطأ 401 مع رسالة انتهاء الجلسة.
       return res.status(401).json({
         error: {
@@ -72,7 +123,7 @@ export async function auth(req, res, next) {
       });
     }
     // نضع بيانات المستخدم داخل الطلب ليستفيد منها الكود التالي.
-    req.user = result.rows[0];
+    req.user = user;
     // نضع التوكن داخل الطلب لاستخدامه عند الحاجة، مثل تسجيل الخروج.
     req.token = token;
     // نسمح للطلب بالانتقال إلى الدالة التالية.

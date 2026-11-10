@@ -3,7 +3,8 @@ import cors from "cors";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "node:crypto";
 import { query, pool } from "./db.js";
-import { auth, admin, hashToken, newToken } from "./auth.js";
+// نستخدم نفس فحص التوكن للمسارات المحمية وتفاصيل المزاد
+import { auth, admin, hashToken, newToken, sessionUser } from "./auth.js";
 import { validMoney, toCents } from "./money.js";
 import { listings, withImages, withListingImages } from "./listings.js";
 import { imageLink, serveImage } from "./uploads.js";
@@ -561,8 +562,10 @@ accounts.post("/login", async (req, res, next) => {
       );
       // نهاية فحص تأكيد الايميل
     }
-    const token = newToken(),
-      u = r.rows[0];
+    // هنا نأخذ بيانات الحساب بعد ما تحققنا من تسجيل الدخول
+    const u = r.rows[0];
+    // هنا ننشئ توكن موقع للحساب اللي سجل دخوله
+    const token = await newToken(u);
     // نخزن بصمة الجلسة بدل الرمز نفسه.
     await query(
       "INSERT INTO user_sessions(user_id,token_hash,expires_at) VALUES($1,$2,now()+interval '7 days')",
@@ -1074,15 +1077,10 @@ api.get("/auctions/:id", async (req, res, next) => {
       return err(res, 400, "INVALID_ID", "Invalid ID");
     const a = await auction(req.params.id);
     if (!a) return err(res, 404, "NOT_FOUND", "Auction not found");
+    // هنا نأخذ التوكن إذا كان الزائر سجل دخوله
     const token = req.headers.authorization?.match(/^Bearer (\S+)$/)?.[1];
-    let user = null;
-    if (token) {
-      const r = await query(
-        "SELECT u.id,u.role FROM user_sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now()",
-        [hashToken(token)],
-      );
-      user = r.rows[0];
-    }
+    // هنا نستخدم نفس فحص الجلسة عشان نعرف مين يقدر يشوف تفاصيل المزاد
+    const user = token ? await sessionUser(token) : null;
     if (!(await accessible(a, user)))
       return err(res, 404, "NOT_FOUND", "Auction not found");
     await closeIfEnded(a.id);
