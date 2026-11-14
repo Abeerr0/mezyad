@@ -6,36 +6,15 @@ import nodemailer from "nodemailer";
 import bcrypt from "bcryptjs";
 // نستورد دالة تنفيذ استعلامات قاعدة البيانات
 import { query } from "./db.js";
+// نستورد دالة readFile عشان نقرأ صورة الشعار
+import { readFile } from "node:fs/promises";
 // نحفظ هنا اداة الارسال ونبدأها فاضيه
 let transporter = null;
-// داله نستخدمها من الملفات الثانيه لتوليد رمز التحقق
-export function newEmailCode() {
-  // نولد رقم من صفر الى ٩٩٩٩٩٩
-  const number = randomInt(0, 1000000);
-  // نحوله لنص من ٦ خانات ونكمله باصفار من اليسار اذا احتجنا
-  return String(number).padStart(6, "0");
-  // نهاية دالة توليد الرمز
-}
-// داله تستقبل ايميل المستخدم والرمز وترسل الرساله
-export async function sendVerificationCode(email, code) {
-  // نبدأ فحص الايميل
-  if (
-    // نرفض اذا الايميل مو نص
-    typeof email !== "string" ||
-    // نرفض اذا صيغة الايميل غير صحيحه
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-    // اذا تحقق اي سبب للرفض ندخل هنا
-  ) {
-    // نوقف الداله بخطا يوضح ان الايميل غير صالح
-    throw new Error("Invalid email");
-    // نهاية فحص الايميل
-  }
-  // نرفض اذا الرمز مو نص من ٦ ارقام
-  if (typeof code !== "string" || !/^\d{6}$/.test(code)) {
-    // نوقف الداله اذا صيغة الرمز غلط
-    throw new Error("Invalid verification code");
-    // نهاية فحص الرمز
-  }
+// داله getEmailSender تجهز اداة ارسال الايميل وترجعها
+// نخلي كود تجهيز الارسال في مكان واحد عشان نعدله مره وحده لكل الرسائل
+// وما نحتاج نكرر التعديل داخل كل داله
+//ارسال الايميل يبدا من هنا
+function getEmailSender() {
   // نبدأ فحص اعدادات خدمة البريد
   if (
     // نرفض اذا عنوان خادم البريد مو موجود
@@ -86,8 +65,47 @@ export async function sendVerificationCode(email, code) {
     });
     // نهاية شرط تجهيز الاداة اول مره
   }
+  // نرجع اداة الارسال لاستخدامها في ارسال البريد
+  return transporter;
+}
+// داله newEmailCode تولد رمز تحقق عشوائي من ست ارقام
+// نستخدمها عشان نجهز رمز تاكيد ايميل المستخدم
+export function newEmailCode() {
+  // نولد رقم من صفر الى ٩٩٩٩٩٩
+  const number = randomInt(0, 1000000);
+  // نحوله لنص من ٦ خانات ونكمله باصفار من اليسار اذا احتجنا
+  return String(number).padStart(6, "0");
+  // نهاية دالة توليد الرمز
+}
+// داله sendVerificationCode ترسل رمز التحقق لايميل المستخدم
+// نستخدمها عشان يوصل الرمز للمستخدم ويكتبه في شاشة التحقق
+export async function sendVerificationCode(email, code) {
+  // نبدأ فحص الايميل
+  if (
+    // نرفض اذا الايميل مو نص
+    typeof email !== "string" ||
+    // نرفض اذا صيغة الايميل غير صحيحه
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    // اذا تحقق اي سبب للرفض ندخل هنا
+  ) {
+    // نوقف الداله بخطا يوضح ان الايميل غير صالح
+    throw new Error("Invalid email");
+    // نهاية فحص الايميل
+  }
+  // نرفض اذا الرمز مو نص من ٦ ارقام
+  if (typeof code !== "string" || !/^\d{6}$/.test(code)) {
+    // نوقف الداله اذا صيغة الرمز غلط
+    throw new Error("Invalid verification code");
+    // نهاية فحص الرمز
+  }
+  // نجهز اداة ارسال البريد او نستخدم الاداة الموجوده
+  const mailer = getEmailSender();
+  // نقرأ صورة شعار مزياد من المجلد الخاص بالايميلات
+  const logo = await readFile(
+    new URL("../mezyad-logo-for-emails/mezyad-logo.png", import.meta.url)
+  );
   // نرسل الرساله ونحفظ رد خادم البريد
-  const result = await transporter.sendMail({
+  const result = await mailer.sendMail({
     // ناخذ عنوان المرسل ونستخدم حساب الارسال اذا ما تحدد
     from: process.env.MAIL_FROM || process.env.SMTP_USER,
     // نرسل الرساله الى ايميل المستخدم
@@ -102,6 +120,77 @@ export async function sendVerificationCode(email, code) {
       code +
       // نضيف مدة الصلاحيه والتنبيه في سطور جديده
       "\nالرمز صالح لمدة 10 دقائق.\nإذا لم تسجل في مزياد، تجاهل الرسالة.",
+    // هنا تصميم رسالة HTML فيها رمز التحقق المرسل للايميل وقت انشاء الحساب
+    html: `
+      <div
+        dir="rtl"
+        lang="ar"
+        style="font-family: Tahoma, Arial, sans-serif; color: #292d25; max-width: 560px; margin: auto; padding: 24px;"
+      >
+        <!-- نعرض شعار مزياد ونضيف خط فاصل تحته -->
+        <div style="padding-bottom: 16px; border-bottom: 1px solid #deddd3;">
+          <img
+            src="cid:mezyad-logo"
+            alt="مزياد"
+            width="225"
+            style="display: block; max-width: 100%; height: auto;"
+          >
+        </div>
+
+        <!-- نوضح نوع الرساله -->
+        <p style="color: #a17b43; font-size: 12px; margin-top: 24px;">
+          تأكيد البريد الإلكتروني
+        </p>
+
+        <!-- نكتب عنوان الرساله -->
+        <h2>حياك في مزياد</h2>
+
+        <!-- نوضح للمستخدم وين يكتب الرمز -->
+        <p style="line-height: 2;">
+          باقي خطوة لتأكيد بريدك
+          اكتب الرمز التالي في شاشة التحقق عشان تكمل تسجيل حسابك
+        </p>
+
+        <!-- نعرض رمز التحقق الخاص بالمستخدم -->
+        <p
+          dir="ltr"
+          style="font-size: 32px; letter-spacing: 6px; text-align: center;"
+        >
+          ${code}
+        </p>
+
+        <!-- نوضح مدة صلاحية الرمز -->
+        <p style="text-align: center;">
+          صالح لمدة ١٠ دقائق
+        </p>
+
+        <!-- نوضح للمستخدم متى يتجاهل الرساله -->
+        <p style="line-height: 2;">
+          إذا ما أنشأت حسابًا في مزياد تقدر تتجاهل الرسالة
+        </p>
+
+        <!-- نضيف خط فاصل وتنبيه عن رمز التحقق -->
+        <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #deddd3;">
+          <p style="font-size: 12px; color: #686b60;">
+            رمز التحقق خاص بك ولا تشاركه مع أي شخص
+          </p>
+        </div>
+      </div>
+    `,
+
+    // نرفق صورة الشعار عشان تظهر داخل الرساله
+    attachments: [
+      {
+        // اسم ملف الشعار
+        filename: "mezyad-logo.png",
+
+        // بيانات الصوره اللي قريناها
+        content: logo,
+
+        // نربط الصوره بالاسم الموجود داخل التصميم
+        cid: "mezyad-logo",
+      },
+    ],
     // نهاية ارسال الرساله وحفظ الرد
   });
   // نتاكد ان خادم البريد قبل المستلم
@@ -112,7 +201,8 @@ export async function sendVerificationCode(email, code) {
   }
   // نهاية دالة ارسال الرمز
 }
-// داله تجهز الرمز وتحفظ بصمته وتحاول ترسله للمستخدم
+// داله saveAndSendCode تولد رمز التحقق وتحفظ بصمته وتحاول ترسله للمستخدم
+// نستخدمها عشان نربط الرمز بحساب المستخدم ونحدد وقت انتهائه
 export async function saveAndSendCode(user) {
   // نولد رمز تحقق جديد
   const code = newEmailCode();
