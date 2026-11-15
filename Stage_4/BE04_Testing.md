@@ -3,7 +3,7 @@
 **Team member:** Ghadi Alzhrani  
 **Week:** 4  
 **Report date:** October 31, 2026  
-**Retest date:** 10 November 2026  
+**Retest date:** 15 November 2026  
 **Testing method:** Manual API testing with `curl` in the terminal.
 
 ## Goal
@@ -39,7 +39,7 @@ I compared each HTTP status and response with the expected result. For protected
 I used the auction owner’s account to submit a bid of `1000` SAR on their own auction.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:52197/api/v1/auctions/2c75da98-2c1b-495d-bac4-b1fee9cdf77b/bids' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/d8b26c56-7bf4-475c-8a5c-47a5c526c442/bids' \
   -H 'Authorization: Bearer <SELLER_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"amount":1000,"requestId":"3e99f673-3900-4300-b38c-141bd2421fd8"}'
@@ -52,7 +52,7 @@ curl -i -X POST 'http://127.0.0.1:52197/api/v1/auctions/2c75da98-2c1b-495d-bac4-
 I submitted a bid of `1100` SAR from a signed-in account that did not have access to this private auction.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:52197/api/v1/auctions/2c75da98-2c1b-495d-bac4-b1fee9cdf77b/bids' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/d8b26c56-7bf4-475c-8a5c-47a5c526c442/bids' \
   -H 'Authorization: Bearer <BIDDER_2_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"amount":1100,"requestId":"19d5dd79-91c4-40b5-b403-699b8f9822d8"}'
@@ -65,7 +65,7 @@ curl -i -X POST 'http://127.0.0.1:52197/api/v1/auctions/2c75da98-2c1b-495d-bac4-
 I prepared a test bid with a known request ID. I then sent a bid request using the same ID to check whether a second bid would be recorded.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:52197/api/v1/auctions/2c75da98-2c1b-495d-bac4-b1fee9cdf77b/bids' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/a5cd4331-975c-4eff-995a-cc9628656bdb/bids' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"amount":1000,"requestId":"2257abff-2bed-4af3-b15a-3083532c78d6"}'
@@ -80,7 +80,7 @@ curl -i -X POST 'http://127.0.0.1:52197/api/v1/auctions/2c75da98-2c1b-495d-bac4-
 I sent a bid of `1100` SAR and left out `requestId`. This ID identifies a bid attempt so the backend can recognize the same request if it is sent again.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:52197/api/v1/auctions/2c75da98-2c1b-495d-bac4-b1fee9cdf77b/bids' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/d8b26c56-7bf4-475c-8a5c-47a5c526c442/bids' \
   -H 'Authorization: Bearer <BIDDER_2_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"amount":1100}'
@@ -97,16 +97,16 @@ Moyasar returned `HTTP 200` with status `authorized` after test authentication a
 I registered the Sandbox hold for this auction before submitting the bid.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51963/api/v1/auctions/beabfdcd-e89c-4f04-9602-21cd12789a7e/commitment' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/a5cd4331-975c-4eff-995a-cc9628656bdb/commitment' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{"paymentId":"f1c38765-3670-409f-b321-4f20655459d3"}'
+  -d '{"paymentId":"20261115-0004-4000-8000-000000000005"}'
 ```
 
 **Result:** The backend returned `201`. The response showed `status=SUCCESS max_amount=2000.00`.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51963/api/v1/auctions/beabfdcd-e89c-4f04-9602-21cd12789a7e/bids' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/a5cd4331-975c-4eff-995a-cc9628656bdb/bids' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"amount":1100,"requestId":"6c98abb1-1927-4a9f-998f-f50b84b0b2f6"}'
@@ -123,16 +123,16 @@ Moyasar returned `HTTP 200` with status `authorized` after test authentication a
 I registered the Sandbox hold for this auction before submitting the bid.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51963/api/v1/auctions/aa28cb45-b299-445c-93dc-a87e83fafa6f/commitment' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/20261115-0004-4000-a000-000000000006/commitment' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{"paymentId":"f021bb3d-737e-455b-94dc-679eac5dc660"}'
+  -d '{"paymentId":"20261115-0004-4000-8000-000000000006"}'
 ```
 
 **Result:** The backend returned `201`. The response showed `status=SUCCESS max_amount=2000.00`.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51963/api/v1/auctions/aa28cb45-b299-445c-93dc-a87e83fafa6f/bids' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/20261115-0004-4000-a000-000000000006/bids' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"amount":1100,"requestId":"fed1a863-5622-4da0-a623-e42481656259"}'
@@ -147,16 +147,16 @@ Moyasar returned `HTTP 200` with status `authorized` after test authentication a
 I registered the Sandbox hold for this auction before submitting the bid.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51963/api/v1/auctions/ac58638f-18d8-4e73-8c8d-d833c1d919e2/commitment' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/d8b26c56-7bf4-475c-8a5c-47a5c526c442/commitment' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{"paymentId":"ba2857c0-a5ed-46e4-b2bb-0743b195a7b3"}'
+  -d '{"paymentId":"20261115-0004-4000-8000-000000000007"}'
 ```
 
 **Result:** The backend returned `201`. The response showed `status=SUCCESS max_amount=2000.00`.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51963/api/v1/auctions/ac58638f-18d8-4e73-8c8d-d833c1d919e2/bids' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/d8b26c56-7bf4-475c-8a5c-47a5c526c442/bids' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"amount":900,"requestId":"4fa5a676-521c-488c-844e-4409671cb560"}'
@@ -169,7 +169,7 @@ curl -i -X POST 'http://127.0.0.1:51963/api/v1/auctions/ac58638f-18d8-4e73-8c8d-
 I used a bidder account with access to the private auction and submitted a bid of `1000` SAR, which matched the starting price.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51963/api/v1/auctions/ac58638f-18d8-4e73-8c8d-d833c1d919e2/bids' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/d8b26c56-7bf4-475c-8a5c-47a5c526c442/bids' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"amount":1000,"requestId":"fc37c70a-44ed-4f73-8ff4-45ea749e614d"}'
@@ -180,7 +180,7 @@ curl -i -X POST 'http://127.0.0.1:51963/api/v1/auctions/ac58638f-18d8-4e73-8c8d-
 ### Test 9 – Increase over the previous bid is too small
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51963/api/v1/auctions/ac58638f-18d8-4e73-8c8d-d833c1d919e2/bids' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/d8b26c56-7bf4-475c-8a5c-47a5c526c442/bids' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"amount":1050,"requestId":"4de8f4c9-6428-471a-953e-0e65122b5aad"}'
