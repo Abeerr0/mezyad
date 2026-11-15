@@ -6,13 +6,13 @@
 
 **Task deadline:** 21 October 2026
 
-**Retest date:** 10 November 2026
+**Retest date:** 15 November 2026
 
 **Testing method:** Manual testing using the terminal and curl.
 
 ## Goal
 
-Check that the pending advertisement list is available only to admins and returns advertisements waiting for review with their stored image records.
+Check that the admin's pending advertisement list returns advertisements waiting for review with their stored image records.
 
 Also check that the normal advertisement list returns only the current user's own advertisements.
 
@@ -21,7 +21,7 @@ Also check that the normal advertisement list returns only the current user's ow
 | Test | Expected result | Actual result | Status |
 | --- | --- | --- | --- |
 | Request the list without a token | Reject the request | `401 Unauthorized` | Passed |
-| Request the list as a regular user | Reject access | `200 OK` | Did not match |
+| Request the list as a regular user | Return only that user's advertisements | `200 OK`, only `Test Car` and its two image records | Passed |
 | Admin requests an empty list | Return an empty list | `200 OK` and `{"data":[]}` | Passed |
 | Return a pending advertisement without images | Return the advertisement with an empty image list | `Test Car` appeared with `"images":[]` | Passed |
 | Return an advertisement with two image records | Return both records with the advertisement | Both records appeared inside `images` | Passed |
@@ -43,7 +43,7 @@ I compared each HTTP status and response with the expected result. For protected
 I requested the pending advertisements without sending a token:
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/items?status=PENDING_REVIEW'
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/items?status=PENDING_REVIEW'
 ```
 
 **Result:** The backend returned `401 UNAUTHORIZED`.
@@ -53,18 +53,18 @@ curl -i -X GET 'http://127.0.0.1:51969/api/v1/items?status=PENDING_REVIEW'
 I sent the request using the regular user's token:
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/items?status=PENDING_REVIEW' \
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/items?status=PENDING_REVIEW' \
   -H 'Authorization: Bearer <SELLER_JWT>'
 ```
 
-**Result:** The backend returned `200 OK`. This differs from the original expected response of `403 Forbidden`.
+**Result:** The backend returned `200 OK`. Only the user's own advertisement, `Test Car`, appeared with its two image records. The other account's advertisements were excluded, so the test passed.
 
 ### 3. Admin Requests an Empty List
 
 Before adding test advertisements, I requested the list using the admin token:
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/items?status=PENDING_REVIEW' \
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/items?status=PENDING_REVIEW' \
   -H 'Authorization: Bearer <ADMIN_JWT>'
 ```
 
@@ -79,16 +79,16 @@ curl -i -X GET 'http://127.0.0.1:51969/api/v1/items?status=PENDING_REVIEW' \
 I used the existing `POST /items` creation route to add a test advertisement.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/items' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/items' \
   -H 'Authorization: Bearer <SELLER_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{"title":"Test Car","description":"Car for testing","categoryId":"08a549df-f4b1-4894-82fe-bd143fc8fce3","categoryFields":{}}'
+  -d '{"title":"Test Car","description":"Car for testing","categoryId":"217fc62a-ddf7-4a89-a557-c11c04363412","categoryFields":{}}'
 ```
 
 **Result:** The backend returned `201`. The response showed `status=PENDING_REVIEW`.
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/items?status=PENDING_REVIEW' \
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/items?status=PENDING_REVIEW' \
   -H 'Authorization: Bearer <ADMIN_JWT>'
 ```
 
@@ -102,12 +102,12 @@ I used the following query in the temporary database.
 
 ```sql
 INSERT INTO item_images (item_id, image_url) VALUES
-  ('<TEST_CAR_ID>', 'https://example.com/car1.jpg'),
-  ('<TEST_CAR_ID>', 'https://example.com/car2.jpg');
+  ('6e3eabf0-d9a8-432b-8849-40c2efa6a901', 'https://example.com/car1.jpg'),
+  ('6e3eabf0-d9a8-432b-8849-40c2efa6a901', 'https://example.com/car2.jpg');
 ```
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/items?status=PENDING_REVIEW' \
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/items?status=PENDING_REVIEW' \
   -H 'Authorization: Bearer <ADMIN_JWT>'
 ```
 
@@ -118,7 +118,7 @@ curl -i -X GET 'http://127.0.0.1:51969/api/v1/items?status=PENDING_REVIEW' \
 I prepared three listings for the other account with the statuses `PENDING_REVIEW`, `APPROVED`, and `REJECTED` before requesting the admin list.
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/items?status=PENDING_REVIEW' \
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/items?status=PENDING_REVIEW' \
   -H 'Authorization: Bearer <ADMIN_JWT>'
 ```
 
@@ -129,7 +129,7 @@ curl -i -X GET 'http://127.0.0.1:51969/api/v1/items?status=PENDING_REVIEW' \
 I requested `/api/v1/items` without the status filter, using the regular user's token:
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/items' \
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/items' \
   -H 'Authorization: Bearer <SELLER_JWT>'
 ```
 
@@ -137,4 +137,4 @@ curl -i -X GET 'http://127.0.0.1:51969/api/v1/items' \
 
 ## Final Result
 
-Six of the seven original cases matched their expected results. In Test 2, the original expected result was `403 Forbidden`, and the actual response was `200 OK`. Test 7 confirmed that the regular user received only their own advertisement and its images. The admin received pending advertisements from both accounts.
+All 7 cases matched their expected results. Tests 2 and 7 confirmed that the regular user received only their own advertisement and its images. The admin received pending advertisements from both accounts.
