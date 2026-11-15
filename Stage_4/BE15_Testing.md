@@ -47,7 +47,7 @@ I tested the routes using curl commands in the VS Code terminal.
 
 I compared each HTTP status and response with the expected result. For protected requests, I took the JWT from `data.token` in the login response and placed it after `Bearer`.
 
-I used `seller@mezyad.test`, `bidder1@mezyad.test` and `bidder2@mezyad.test`. The auctions used a 1,000 SAR starting price and a 100 SAR minimum increase. Before bidding, I verified each 2,000 SAR Moyasar Sandbox authorization through the backend commitment route.
+I used `ghadi0alzhrani@gmail.com`, `bidder1mezyad@gmail.com` and `bidder2mezyad@gmail.com`. The auctions used a 1,000 SAR starting price and a 100 SAR minimum increase. Before bidding, I verified each 2,000 SAR Moyasar Sandbox authorization through the backend commitment route.
 
 I used PostgreSQL queries to control the auction end time and check the saved results.
 
@@ -58,7 +58,7 @@ I used PostgreSQL queries to control the auction end time and check the saved re
 I requested an auction before its end time.
 
 ```bash
-curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/b58893be-9ea9-4426-8bb7-e7efa41ccb1d' \
+curl -i --path-as-is -X GET 'http://127.0.0.1:49692/api/v1/auctions/20261115-0015-4000-a000-000000000001' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>'
 ```
 
@@ -67,19 +67,19 @@ curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/b58893be-9ea
 ```json
 {
   "data": {
-    "id": "b58893be-9ea9-4426-8bb7-e7efa41ccb1d",
-    "item_id": "e600491e-ad7d-49c3-940f-2bf913c98777",
+    "id": "20261115-0015-4000-a000-000000000001",
+    "item_id": "20261115-0015-4000-b000-000000000001",
     "visibility": "PUBLIC",
     "starting_price": "1000.00",
     "current_price": "1000.00",
     "minimum_increment": "100.00",
-    "start_time": "2026-11-13T15:57:32.881Z",
-    "end_time": "2026-11-13T17:57:32.831Z",
+    "start_time": "2026-11-15T07:21:39.342Z",
+    "end_time": "2026-11-15T13:31:39.342Z",
     "status": "ACTIVE",
-    "seller_id": "1674ef2c-77d5-4417-9d90-81a314006274",
+    "seller_id": "f9703b91-1d3a-4acb-8bc8-45591a55bdc1",
     "title": "Test Car",
     "description": "Car for testing",
-    "category_id": "824a35d4-b0ff-498f-88f4-f47fde0fff16",
+    "category_id": "217fc62a-ddf7-4a89-a557-c11c04363412",
     "category_fields": {},
     "category_name": "Rare Vehicles",
     "images": [],
@@ -99,7 +99,7 @@ curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/b58893be-9ea
 I submitted a 1,000 SAR bid from the first bidder.
 
 ```bash
-curl -i --path-as-is -X POST 'http://127.0.0.1:59311/api/v1/auctions/b58893be-9ea9-4426-8bb7-e7efa41ccb1d/bids' \
+curl -i --path-as-is -X POST 'http://127.0.0.1:49692/api/v1/auctions/20261115-0015-4000-a000-000000000001/bids' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"amount":1000,"requestId":"bb62623b-3329-480f-8a98-2034fbed6ed9"}'
@@ -110,7 +110,7 @@ curl -i --path-as-is -X POST 'http://127.0.0.1:59311/api/v1/auctions/b58893be-9e
 ```json
 {
   "data": {
-    "bidId": "d4ddb43e-a043-4966-8289-67fa105e8eef",
+    "bidId": "02c81bfd-e597-45a0-a695-60e834627bb1",
     "amount": 1000,
     "currentPrice": 1000
   }
@@ -122,7 +122,7 @@ curl -i --path-as-is -X POST 'http://127.0.0.1:59311/api/v1/auctions/b58893be-9e
 I submitted a 1,100 SAR bid from the second bidder.
 
 ```bash
-curl -i --path-as-is -X POST 'http://127.0.0.1:59311/api/v1/auctions/b58893be-9ea9-4426-8bb7-e7efa41ccb1d/bids' \
+curl -i --path-as-is -X POST 'http://127.0.0.1:49692/api/v1/auctions/20261115-0015-4000-a000-000000000001/bids' \
   -H 'Authorization: Bearer <BIDDER_2_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"amount":1100,"requestId":"a6e2cb15-a4eb-4db6-a2af-a77fc2aae74c"}'
@@ -133,7 +133,7 @@ curl -i --path-as-is -X POST 'http://127.0.0.1:59311/api/v1/auctions/b58893be-9e
 ```json
 {
   "data": {
-    "bidId": "e3de775d-c2d8-4e28-b80a-cb1cd81a4f11",
+    "bidId": "6d183bd6-ea7d-4dc1-85d1-138ee4474296",
     "amount": 1100,
     "currentPrice": 1100
   }
@@ -145,11 +145,11 @@ curl -i --path-as-is -X POST 'http://127.0.0.1:59311/api/v1/auctions/b58893be-9e
 I set the auction end time in the past and submitted another bid before requesting its details.
 
 ```sql
-UPDATE auctions SET end_time=clock_timestamp()-interval '1 millisecond' WHERE id='b58893be-9ea9-4426-8bb7-e7efa41ccb1d';
+UPDATE auctions SET end_time=clock_timestamp()-interval '1 millisecond' WHERE id='20261115-0015-4000-a000-000000000001';
 ```
 
 ```bash
-curl -i --path-as-is -X POST 'http://127.0.0.1:59311/api/v1/auctions/b58893be-9ea9-4426-8bb7-e7efa41ccb1d/bids' \
+curl -i --path-as-is -X POST 'http://127.0.0.1:49692/api/v1/auctions/20261115-0015-4000-a000-000000000001/bids' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"amount":1200,"requestId":"54ffc918-daeb-49d8-98e8-cdd1552c2128"}'
@@ -171,7 +171,7 @@ curl -i --path-as-is -X POST 'http://127.0.0.1:59311/api/v1/auctions/b58893be-9e
 I read the stored price, bid count and result count after the late bid was rejected.
 
 ```sql
-SELECT a.status,a.current_price,(SELECT count(*)::int FROM bids WHERE auction_id=a.id) AS bids,(SELECT count(*)::int FROM auction_results WHERE auction_id=a.id) AS results FROM auctions a WHERE a.id='b58893be-9ea9-4426-8bb7-e7efa41ccb1d';
+SELECT a.status,a.current_price,(SELECT count(*)::int FROM bids WHERE auction_id=a.id) AS bids,(SELECT count(*)::int FROM auction_results WHERE auction_id=a.id) AS results FROM auctions a WHERE a.id='20261115-0015-4000-a000-000000000001';
 ```
 
 **Result:** PostgreSQL returned:
@@ -195,7 +195,7 @@ All six requests returned `200` with the following response.
 
 ```bash
 for attempt in 1 2 3 4 5 6; do
-curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/b58893be-9ea9-4426-8bb7-e7efa41ccb1d' \
+curl -i --path-as-is -X GET 'http://127.0.0.1:49692/api/v1/auctions/20261115-0015-4000-a000-000000000001' \
   -H 'Authorization: Bearer <BIDDER_2_JWT>' &
 done
 wait
@@ -206,32 +206,32 @@ wait
 ```json
 {
   "data": {
-    "id": "b58893be-9ea9-4426-8bb7-e7efa41ccb1d",
-    "item_id": "e600491e-ad7d-49c3-940f-2bf913c98777",
+    "id": "20261115-0015-4000-a000-000000000001",
+    "item_id": "20261115-0015-4000-b000-000000000001",
     "visibility": "PUBLIC",
     "starting_price": "1000.00",
     "current_price": "1100.00",
     "minimum_increment": "100.00",
-    "start_time": "2026-11-13T15:57:32.881Z",
-    "end_time": "2026-11-13T16:58:47.902Z",
+    "start_time": "2026-11-15T07:21:39.342Z",
+    "end_time": "2026-11-15T07:41:36.924Z",
     "status": "CLOSED",
-    "seller_id": "1674ef2c-77d5-4417-9d90-81a314006274",
+    "seller_id": "f9703b91-1d3a-4acb-8bc8-45591a55bdc1",
     "title": "Test Car",
     "description": "Car for testing",
-    "category_id": "824a35d4-b0ff-498f-88f4-f47fde0fff16",
+    "category_id": "217fc62a-ddf7-4a89-a557-c11c04363412",
     "category_fields": {},
     "category_name": "Rare Vehicles",
     "images": [],
     "result": {
-      "winner_bid_id": "e3de775d-c2d8-4e28-b80a-cb1cd81a4f11",
-      "closed_at": "2026-11-13T16:58:50.698Z",
+      "winner_bid_id": "6d183bd6-ea7d-4dc1-85d1-138ee4474296",
+      "closed_at": "2026-11-15T07:42:05.801Z",
       "winning_amount": "1100.00",
       "isWinner": true
     },
     "participation": {
       "bidCount": 1,
       "highestBid": "1100.00",
-      "latestBidId": "e3de775d-c2d8-4e28-b80a-cb1cd81a4f11",
+      "latestBidId": "6d183bd6-ea7d-4dc1-85d1-138ee4474296",
       "hasBid": true
     }
   }
@@ -243,7 +243,7 @@ wait
 I counted the saved result rows after the concurrent requests.
 
 ```sql
-SELECT a.status,a.current_price,(SELECT count(*)::int FROM bids WHERE auction_id=a.id) AS bids,(SELECT count(*)::int FROM auction_results WHERE auction_id=a.id) AS results FROM auctions a WHERE a.id='b58893be-9ea9-4426-8bb7-e7efa41ccb1d';
+SELECT a.status,a.current_price,(SELECT count(*)::int FROM bids WHERE auction_id=a.id) AS bids,(SELECT count(*)::int FROM auction_results WHERE auction_id=a.id) AS results FROM auctions a WHERE a.id='20261115-0015-4000-a000-000000000001';
 ```
 
 **Result:** PostgreSQL returned:
@@ -264,7 +264,7 @@ SELECT a.status,a.current_price,(SELECT count(*)::int FROM bids WHERE auction_id
 I requested the closed auction again and compared its result with the previous response.
 
 ```bash
-curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/b58893be-9ea9-4426-8bb7-e7efa41ccb1d' \
+curl -i --path-as-is -X GET 'http://127.0.0.1:49692/api/v1/auctions/20261115-0015-4000-a000-000000000001' \
   -H 'Authorization: Bearer <BIDDER_2_JWT>'
 ```
 
@@ -273,32 +273,32 @@ curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/b58893be-9ea
 ```json
 {
   "data": {
-    "id": "b58893be-9ea9-4426-8bb7-e7efa41ccb1d",
-    "item_id": "e600491e-ad7d-49c3-940f-2bf913c98777",
+    "id": "20261115-0015-4000-a000-000000000001",
+    "item_id": "20261115-0015-4000-b000-000000000001",
     "visibility": "PUBLIC",
     "starting_price": "1000.00",
     "current_price": "1100.00",
     "minimum_increment": "100.00",
-    "start_time": "2026-11-13T15:57:32.881Z",
-    "end_time": "2026-11-13T16:58:47.902Z",
+    "start_time": "2026-11-15T07:21:39.342Z",
+    "end_time": "2026-11-15T07:41:36.924Z",
     "status": "CLOSED",
-    "seller_id": "1674ef2c-77d5-4417-9d90-81a314006274",
+    "seller_id": "f9703b91-1d3a-4acb-8bc8-45591a55bdc1",
     "title": "Test Car",
     "description": "Car for testing",
-    "category_id": "824a35d4-b0ff-498f-88f4-f47fde0fff16",
+    "category_id": "217fc62a-ddf7-4a89-a557-c11c04363412",
     "category_fields": {},
     "category_name": "Rare Vehicles",
     "images": [],
     "result": {
-      "winner_bid_id": "e3de775d-c2d8-4e28-b80a-cb1cd81a4f11",
-      "closed_at": "2026-11-13T16:58:50.698Z",
+      "winner_bid_id": "6d183bd6-ea7d-4dc1-85d1-138ee4474296",
+      "closed_at": "2026-11-15T07:42:05.801Z",
       "winning_amount": "1100.00",
       "isWinner": true
     },
     "participation": {
       "bidCount": 1,
       "highestBid": "1100.00",
-      "latestBidId": "e3de775d-c2d8-4e28-b80a-cb1cd81a4f11",
+      "latestBidId": "6d183bd6-ea7d-4dc1-85d1-138ee4474296",
       "hasBid": true
     }
   }
@@ -310,7 +310,7 @@ curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/b58893be-9ea
 I requested the same closed auction using the winning account and the losing account.
 
 ```bash
-curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/b58893be-9ea9-4426-8bb7-e7efa41ccb1d' \
+curl -i --path-as-is -X GET 'http://127.0.0.1:49692/api/v1/auctions/20261115-0015-4000-a000-000000000001' \
   -H 'Authorization: Bearer <BIDDER_2_JWT>'
 ```
 
@@ -319,32 +319,32 @@ curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/b58893be-9ea
 ```json
 {
   "data": {
-    "id": "b58893be-9ea9-4426-8bb7-e7efa41ccb1d",
-    "item_id": "e600491e-ad7d-49c3-940f-2bf913c98777",
+    "id": "20261115-0015-4000-a000-000000000001",
+    "item_id": "20261115-0015-4000-b000-000000000001",
     "visibility": "PUBLIC",
     "starting_price": "1000.00",
     "current_price": "1100.00",
     "minimum_increment": "100.00",
-    "start_time": "2026-11-13T15:57:32.881Z",
-    "end_time": "2026-11-13T16:58:47.902Z",
+    "start_time": "2026-11-15T07:21:39.342Z",
+    "end_time": "2026-11-15T07:41:36.924Z",
     "status": "CLOSED",
-    "seller_id": "1674ef2c-77d5-4417-9d90-81a314006274",
+    "seller_id": "f9703b91-1d3a-4acb-8bc8-45591a55bdc1",
     "title": "Test Car",
     "description": "Car for testing",
-    "category_id": "824a35d4-b0ff-498f-88f4-f47fde0fff16",
+    "category_id": "217fc62a-ddf7-4a89-a557-c11c04363412",
     "category_fields": {},
     "category_name": "Rare Vehicles",
     "images": [],
     "result": {
-      "winner_bid_id": "e3de775d-c2d8-4e28-b80a-cb1cd81a4f11",
-      "closed_at": "2026-11-13T16:58:50.698Z",
+      "winner_bid_id": "6d183bd6-ea7d-4dc1-85d1-138ee4474296",
+      "closed_at": "2026-11-15T07:42:05.801Z",
       "winning_amount": "1100.00",
       "isWinner": true
     },
     "participation": {
       "bidCount": 1,
       "highestBid": "1100.00",
-      "latestBidId": "e3de775d-c2d8-4e28-b80a-cb1cd81a4f11",
+      "latestBidId": "6d183bd6-ea7d-4dc1-85d1-138ee4474296",
       "hasBid": true
     }
   }
@@ -352,7 +352,7 @@ curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/b58893be-9ea
 ```
 
 ```bash
-curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/b58893be-9ea9-4426-8bb7-e7efa41ccb1d' \
+curl -i --path-as-is -X GET 'http://127.0.0.1:49692/api/v1/auctions/20261115-0015-4000-a000-000000000001' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>'
 ```
 
@@ -361,32 +361,32 @@ curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/b58893be-9ea
 ```json
 {
   "data": {
-    "id": "b58893be-9ea9-4426-8bb7-e7efa41ccb1d",
-    "item_id": "e600491e-ad7d-49c3-940f-2bf913c98777",
+    "id": "20261115-0015-4000-a000-000000000001",
+    "item_id": "20261115-0015-4000-b000-000000000001",
     "visibility": "PUBLIC",
     "starting_price": "1000.00",
     "current_price": "1100.00",
     "minimum_increment": "100.00",
-    "start_time": "2026-11-13T15:57:32.881Z",
-    "end_time": "2026-11-13T16:58:47.902Z",
+    "start_time": "2026-11-15T07:21:39.342Z",
+    "end_time": "2026-11-15T07:41:36.924Z",
     "status": "CLOSED",
-    "seller_id": "1674ef2c-77d5-4417-9d90-81a314006274",
+    "seller_id": "f9703b91-1d3a-4acb-8bc8-45591a55bdc1",
     "title": "Test Car",
     "description": "Car for testing",
-    "category_id": "824a35d4-b0ff-498f-88f4-f47fde0fff16",
+    "category_id": "217fc62a-ddf7-4a89-a557-c11c04363412",
     "category_fields": {},
     "category_name": "Rare Vehicles",
     "images": [],
     "result": {
-      "winner_bid_id": "e3de775d-c2d8-4e28-b80a-cb1cd81a4f11",
-      "closed_at": "2026-11-13T16:58:50.698Z",
+      "winner_bid_id": "6d183bd6-ea7d-4dc1-85d1-138ee4474296",
+      "closed_at": "2026-11-15T07:42:05.801Z",
       "winning_amount": "1100.00",
       "isWinner": false
     },
     "participation": {
       "bidCount": 1,
       "highestBid": "1000.00",
-      "latestBidId": "d4ddb43e-a043-4966-8289-67fa105e8eef",
+      "latestBidId": "02c81bfd-e597-45a0-a695-60e834627bb1",
       "hasBid": true
     }
   }
@@ -398,7 +398,7 @@ curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/b58893be-9ea
 I submitted another bid using the winning account after the auction had closed.
 
 ```bash
-curl -i --path-as-is -X POST 'http://127.0.0.1:59311/api/v1/auctions/b58893be-9ea9-4426-8bb7-e7efa41ccb1d/bids' \
+curl -i --path-as-is -X POST 'http://127.0.0.1:49692/api/v1/auctions/20261115-0015-4000-a000-000000000001/bids' \
   -H 'Authorization: Bearer <BIDDER_2_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"amount":1200,"requestId":"2e1f6c8c-9f9e-4496-a144-aea7226e3e8d"}'
@@ -420,15 +420,15 @@ curl -i --path-as-is -X POST 'http://127.0.0.1:59311/api/v1/auctions/b58893be-9e
 I read both payments from Moyasar after closure to check the losing and winning holds.
 
 ```bash
-curl -i -X GET 'https://api.moyasar.com/v1/payments/48e2440a-8490-4805-a109-d7e1562adb67' \
-  -u '<MOYASAR_TEST_SECRET_KEY>:'
+curl -i -X GET 'https://api.moyasar.com/v1/payments/20261115-0015-4000-8000-000000000001' \
+  -u "$MOYASAR_SECRET_KEY:"
 ```
 
 **Result:** Moyasar returned `200` with status `voided`.
 
 ```json
 {
-  "id": "48e2440a-8490-4805-a109-d7e1562adb67",
+  "id": "20261115-0015-4000-8000-000000000001",
   "status": "voided",
   "amount": 200000,
   "fee": 0,
@@ -437,20 +437,20 @@ curl -i -X GET 'https://api.moyasar.com/v1/payments/48e2440a-8490-4805-a109-d7e1
   "refunded_at": null,
   "captured": 0,
   "captured_at": null,
-  "voided_at": "2026-11-13T16:58:51.083Z",
-  "description": "Mezyad closure sandbox test",
+  "voided_at": "2026-11-15T07:42:06.084Z",
+  "description": "Mezyad QA sandbox authorization",
   "amount_format": "2,000.00 SAR",
   "fee_format": "0.00 SAR",
   "refunded_format": "0.00 SAR",
   "captured_format": "0.00 SAR",
   "invoice_id": null,
-  "ip": "151.254.55.88",
-  "callback_url": "http://127.0.0.1:59311/api/v1/health",
-  "created_at": "2026-11-13T16:57:38.005Z",
-  "updated_at": "2026-11-13T16:58:51.083Z",
+  "ip": "188.53.195.198",
+  "callback_url": "http://127.0.0.1:49692/api/v1/health",
+  "created_at": "2026-11-15T07:32:21.644Z",
+  "updated_at": "2026-11-15T07:42:06.085Z",
   "metadata": {
-    "user_id": "e03a7c55-64a3-448c-a0ef-03f5fbabe876",
-    "auction_id": "b58893be-9ea9-4426-8bb7-e7efa41ccb1d"
+    "user_id": "37037b2a-2ea5-4a6d-9d54-d9df3bf7ac14",
+    "auction_id": "20261115-0015-4000-a000-000000000001"
   },
   "source": {
     "type": "creditcard",
@@ -458,13 +458,13 @@ curl -i -X GET 'https://api.moyasar.com/v1/payments/48e2440a-8490-4805-a109-d7e1
     "parent_scheme": "visa",
     "name": "Mezyad Test",
     "number": "4201-32XX-XXXX-1010",
-    "gateway_id": "moyasar_cc_4PR16kG6iy6utMPWLfxLDSz",
-    "reference_number": "992631772049",
-    "token": "HIDDEN",
+    "gateway_id": "moyasar_cc_d83SWYLrd3agQeFmHf83Czd",
+    "reference_number": "992631918474",
+    "token": null,
     "message": "APPROVED",
-    "transaction_url": "HIDDEN",
+    "transaction_url": null,
     "response_code": "00",
-    "authorization_code": "005459",
+    "authorization_code": "007221",
     "issuer_name": "MOYASAR PAY SANDBOX",
     "issuer_country": "SA",
     "issuer_card_type": "credit",
@@ -475,15 +475,15 @@ curl -i -X GET 'https://api.moyasar.com/v1/payments/48e2440a-8490-4805-a109-d7e1
 ```
 
 ```bash
-curl -i -X GET 'https://api.moyasar.com/v1/payments/82349597-f69a-4208-851f-67a9c6ee5c48' \
-  -u '<MOYASAR_TEST_SECRET_KEY>:'
+curl -i -X GET 'https://api.moyasar.com/v1/payments/20261115-0015-4000-8000-000000000002' \
+  -u "$MOYASAR_SECRET_KEY:"
 ```
 
 **Result:** Moyasar returned `200` with status `authorized`.
 
 ```json
 {
-  "id": "82349597-f69a-4208-851f-67a9c6ee5c48",
+  "id": "20261115-0015-4000-8000-000000000002",
   "status": "authorized",
   "amount": 200000,
   "fee": 0,
@@ -493,19 +493,19 @@ curl -i -X GET 'https://api.moyasar.com/v1/payments/82349597-f69a-4208-851f-67a9
   "captured": 0,
   "captured_at": null,
   "voided_at": null,
-  "description": "Mezyad closure sandbox test",
+  "description": "Mezyad QA sandbox authorization",
   "amount_format": "2,000.00 SAR",
   "fee_format": "0.00 SAR",
   "refunded_format": "0.00 SAR",
   "captured_format": "0.00 SAR",
   "invoice_id": null,
-  "ip": "151.254.55.88",
-  "callback_url": "http://127.0.0.1:59311/api/v1/health",
-  "created_at": "2026-11-13T16:57:41.209Z",
-  "updated_at": "2026-11-13T16:58:00.019Z",
+  "ip": "188.53.195.198",
+  "callback_url": "http://127.0.0.1:49692/api/v1/health",
+  "created_at": "2026-11-15T07:38:24.528Z",
+  "updated_at": "2026-11-15T07:39:45.062Z",
   "metadata": {
-    "user_id": "400d65d5-b234-426a-89af-51c6fb6d6828",
-    "auction_id": "b58893be-9ea9-4426-8bb7-e7efa41ccb1d"
+    "user_id": "87465e0a-2bf6-42a1-b887-eeed64f62f23",
+    "auction_id": "20261115-0015-4000-a000-000000000001"
   },
   "source": {
     "type": "creditcard",
@@ -513,13 +513,13 @@ curl -i -X GET 'https://api.moyasar.com/v1/payments/82349597-f69a-4208-851f-67a9
     "parent_scheme": "visa",
     "name": "Mezyad Test",
     "number": "4201-32XX-XXXX-1010",
-    "gateway_id": "moyasar_cc_Jpfr5PvkUMrXncA5L7i5Gyh",
-    "reference_number": "992631777894",
-    "token": "HIDDEN",
+    "gateway_id": "moyasar_cc_uha2vuv8XyQ3aBUuALzpLQq",
+    "reference_number": "992631940202",
+    "token": null,
     "message": "APPROVED",
-    "transaction_url": "HIDDEN",
+    "transaction_url": null,
     "response_code": "00",
-    "authorization_code": "005714",
+    "authorization_code": "003473",
     "issuer_name": "MOYASAR PAY SANDBOX",
     "issuer_country": "SA",
     "issuer_card_type": "credit",
@@ -534,11 +534,11 @@ curl -i -X GET 'https://api.moyasar.com/v1/payments/82349597-f69a-4208-851f-67a9
 I ended an auction that had no bids and requested its details.
 
 ```sql
-UPDATE auctions SET end_time=clock_timestamp()-interval '1 millisecond' WHERE id='086af26e-e663-492b-895a-79a6d79f78a3';
+UPDATE auctions SET end_time=clock_timestamp()-interval '1 millisecond' WHERE id='20261115-0015-4000-a000-000000000012';
 ```
 
 ```bash
-curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/086af26e-e663-492b-895a-79a6d79f78a3'
+curl -i --path-as-is -X GET 'http://127.0.0.1:49692/api/v1/auctions/20261115-0015-4000-a000-000000000012'
 ```
 
 **Result:** The backend returned `200`.
@@ -546,25 +546,25 @@ curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/086af26e-e66
 ```json
 {
   "data": {
-    "id": "086af26e-e663-492b-895a-79a6d79f78a3",
-    "item_id": "781617d6-5c09-4c41-8641-555211020976",
+    "id": "20261115-0015-4000-a000-000000000012",
+    "item_id": "20261115-0015-4000-b000-000000000012",
     "visibility": "PUBLIC",
     "starting_price": "1000.00",
     "current_price": "1000.00",
     "minimum_increment": "100.00",
-    "start_time": "2026-11-13T15:57:33.169Z",
-    "end_time": "2026-11-13T16:58:59.572Z",
+    "start_time": "2026-11-15T07:21:39.342Z",
+    "end_time": "2026-11-15T07:52:45.921Z",
     "status": "CLOSED",
-    "seller_id": "1674ef2c-77d5-4417-9d90-81a314006274",
+    "seller_id": "f9703b91-1d3a-4acb-8bc8-45591a55bdc1",
     "title": "Test Car 2",
     "description": "Car for testing",
-    "category_id": "824a35d4-b0ff-498f-88f4-f47fde0fff16",
+    "category_id": "217fc62a-ddf7-4a89-a557-c11c04363412",
     "category_fields": {},
     "category_name": "Rare Vehicles",
     "images": [],
     "result": {
       "winner_bid_id": null,
-      "closed_at": "2026-11-13T16:58:59.602Z",
+      "closed_at": "2026-11-15T07:52:46.067Z",
       "winning_amount": null,
       "isWinner": null
     },
@@ -578,7 +578,7 @@ curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/086af26e-e66
 I checked the stored result count for the auction without bids.
 
 ```sql
-SELECT a.status,a.current_price,(SELECT count(*)::int FROM bids WHERE auction_id=a.id) AS bids,(SELECT count(*)::int FROM auction_results WHERE auction_id=a.id) AS results FROM auctions a WHERE a.id='086af26e-e663-492b-895a-79a6d79f78a3';
+SELECT a.status,a.current_price,(SELECT count(*)::int FROM bids WHERE auction_id=a.id) AS bids,(SELECT count(*)::int FROM auction_results WHERE auction_id=a.id) AS results FROM auctions a WHERE a.id='20261115-0015-4000-a000-000000000012';
 ```
 
 **Result:** PostgreSQL returned:
@@ -599,12 +599,12 @@ SELECT a.status,a.current_price,(SELECT count(*)::int FROM bids WHERE auction_id
 I used a test database trigger to reject the result insert, then checked whether the closure transaction rolled back.
 
 ```sql
-CREATE FUNCTION test_fail_close() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.auction_id='d55afc63-cc82-413f-beba-e61d92bcb73c'::uuid THEN RAISE EXCEPTION 'PRIVATE_TEST_DATABASE_DETAIL'; END IF; RETURN NEW; END $$; CREATE TRIGGER test_fail_close BEFORE INSERT ON auction_results FOR EACH ROW EXECUTE FUNCTION test_fail_close();
-UPDATE auctions SET end_time=clock_timestamp()-interval '1 millisecond' WHERE id='d55afc63-cc82-413f-beba-e61d92bcb73c';
+CREATE FUNCTION test_fail_close() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.auction_id='20261115-0015-4000-a000-000000000014'::uuid THEN RAISE EXCEPTION 'PRIVATE_TEST_DATABASE_DETAIL'; END IF; RETURN NEW; END $$; CREATE TRIGGER test_fail_close BEFORE INSERT ON auction_results FOR EACH ROW EXECUTE FUNCTION test_fail_close();
+UPDATE auctions SET end_time=clock_timestamp()-interval '1 millisecond' WHERE id='20261115-0015-4000-a000-000000000014';
 ```
 
 ```bash
-curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/d55afc63-cc82-413f-beba-e61d92bcb73c'
+curl -i --path-as-is -X GET 'http://127.0.0.1:49692/api/v1/auctions/20261115-0015-4000-a000-000000000014'
 ```
 
 **Result:** The backend returned `500 INTERNAL_ERROR`.
@@ -619,7 +619,7 @@ curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/d55afc63-cc8
 ```
 
 ```sql
-SELECT a.status,a.current_price,(SELECT count(*)::int FROM bids WHERE auction_id=a.id) AS bids,(SELECT count(*)::int FROM auction_results WHERE auction_id=a.id) AS results FROM auctions a WHERE a.id='d55afc63-cc82-413f-beba-e61d92bcb73c';
+SELECT a.status,a.current_price,(SELECT count(*)::int FROM bids WHERE auction_id=a.id) AS bids,(SELECT count(*)::int FROM auction_results WHERE auction_id=a.id) AS results FROM auctions a WHERE a.id='20261115-0015-4000-a000-000000000014';
 ```
 
 **Result:** PostgreSQL returned:
@@ -644,7 +644,7 @@ DROP TRIGGER test_fail_close ON auction_results; DROP FUNCTION test_fail_close()
 ```
 
 ```bash
-curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/d55afc63-cc82-413f-beba-e61d92bcb73c'
+curl -i --path-as-is -X GET 'http://127.0.0.1:49692/api/v1/auctions/20261115-0015-4000-a000-000000000014'
 ```
 
 **Result:** The backend returned `200`.
@@ -652,25 +652,25 @@ curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/d55afc63-cc8
 ```json
 {
   "data": {
-    "id": "d55afc63-cc82-413f-beba-e61d92bcb73c",
-    "item_id": "04053977-9831-457f-8e33-2424756e6f6a",
+    "id": "20261115-0015-4000-a000-000000000014",
+    "item_id": "20261115-0015-4000-b000-000000000014",
     "visibility": "PUBLIC",
     "starting_price": "1000.00",
     "current_price": "1000.00",
     "minimum_increment": "100.00",
-    "start_time": "2026-11-13T15:57:33.185Z",
-    "end_time": "2026-11-13T16:58:59.622Z",
+    "start_time": "2026-11-15T07:21:39.342Z",
+    "end_time": "2026-11-15T07:53:55.987Z",
     "status": "CLOSED",
-    "seller_id": "1674ef2c-77d5-4417-9d90-81a314006274",
+    "seller_id": "f9703b91-1d3a-4acb-8bc8-45591a55bdc1",
     "title": "Rejected Car",
     "description": "Car for testing",
-    "category_id": "824a35d4-b0ff-498f-88f4-f47fde0fff16",
+    "category_id": "217fc62a-ddf7-4a89-a557-c11c04363412",
     "category_fields": {},
     "category_name": "Rare Vehicles",
     "images": [],
     "result": {
       "winner_bid_id": null,
-      "closed_at": "2026-11-13T16:58:59.654Z",
+      "closed_at": "2026-11-15T07:54:43.911Z",
       "winning_amount": null,
       "isWinner": null
     },
@@ -680,7 +680,7 @@ curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/d55afc63-cc8
 ```
 
 ```sql
-SELECT a.status,a.current_price,(SELECT count(*)::int FROM bids WHERE auction_id=a.id) AS bids,(SELECT count(*)::int FROM auction_results WHERE auction_id=a.id) AS results FROM auctions a WHERE a.id='d55afc63-cc82-413f-beba-e61d92bcb73c';
+SELECT a.status,a.current_price,(SELECT count(*)::int FROM bids WHERE auction_id=a.id) AS bids,(SELECT count(*)::int FROM auction_results WHERE auction_id=a.id) AS results FROM auctions a WHERE a.id='20261115-0015-4000-a000-000000000014';
 ```
 
 **Result:** PostgreSQL returned:
@@ -701,7 +701,7 @@ SELECT a.status,a.current_price,(SELECT count(*)::int FROM bids WHERE auction_id
 I submitted a 1,000 SAR bid from the first account after it entered the private auction code.
 
 ```bash
-curl -i --path-as-is -X POST 'http://127.0.0.1:59311/api/v1/auctions/5691be7d-f25d-4bd8-9246-c1d48a3ef8ef/bids' \
+curl -i --path-as-is -X POST 'http://127.0.0.1:49692/api/v1/auctions/f06d80a9-7d13-4b17-af87-360e3b4d98d9/bids' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"amount":1000,"requestId":"81c2b99a-3b35-497c-b6b9-664d622b8201"}'
@@ -712,7 +712,7 @@ curl -i --path-as-is -X POST 'http://127.0.0.1:59311/api/v1/auctions/5691be7d-f2
 ```json
 {
   "data": {
-    "bidId": "51b8432f-5a87-4680-816f-ea95ee70074c",
+    "bidId": "b03eba05-2472-4dc5-b7c0-7bdff33202e8",
     "amount": 1000,
     "currentPrice": 1000
   }
@@ -724,7 +724,7 @@ curl -i --path-as-is -X POST 'http://127.0.0.1:59311/api/v1/auctions/5691be7d-f2
 I submitted a 1,100 SAR bid from the second account in the same private auction.
 
 ```bash
-curl -i --path-as-is -X POST 'http://127.0.0.1:59311/api/v1/auctions/5691be7d-f25d-4bd8-9246-c1d48a3ef8ef/bids' \
+curl -i --path-as-is -X POST 'http://127.0.0.1:49692/api/v1/auctions/f06d80a9-7d13-4b17-af87-360e3b4d98d9/bids' \
   -H 'Authorization: Bearer <BIDDER_2_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"amount":1100,"requestId":"518dc997-544e-4fa1-81c3-fe9772db5363"}'
@@ -735,7 +735,7 @@ curl -i --path-as-is -X POST 'http://127.0.0.1:59311/api/v1/auctions/5691be7d-f2
 ```json
 {
   "data": {
-    "bidId": "aa03f28a-7dfa-405d-a626-03cec4b93f7e",
+    "bidId": "6f69e91c-d9a9-49bb-bb64-475a022318bc",
     "amount": 1100,
     "currentPrice": 1100
   }
@@ -747,11 +747,11 @@ curl -i --path-as-is -X POST 'http://127.0.0.1:59311/api/v1/auctions/5691be7d-f2
 I ended the private auction and requested its details using both bidder accounts.
 
 ```sql
-UPDATE auctions SET end_time=clock_timestamp()-interval '1 millisecond' WHERE id='5691be7d-f25d-4bd8-9246-c1d48a3ef8ef';
+UPDATE auctions SET end_time=clock_timestamp()-interval '1 millisecond' WHERE id='f06d80a9-7d13-4b17-af87-360e3b4d98d9';
 ```
 
 ```bash
-curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/5691be7d-f25d-4bd8-9246-c1d48a3ef8ef' \
+curl -i --path-as-is -X GET 'http://127.0.0.1:49692/api/v1/auctions/f06d80a9-7d13-4b17-af87-360e3b4d98d9' \
   -H 'Authorization: Bearer <BIDDER_2_JWT>'
 ```
 
@@ -760,32 +760,32 @@ curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/5691be7d-f25
 ```json
 {
   "data": {
-    "id": "5691be7d-f25d-4bd8-9246-c1d48a3ef8ef",
-    "item_id": "ffb8e65b-b964-4292-a57a-ca2edbd8fb1f",
+    "id": "f06d80a9-7d13-4b17-af87-360e3b4d98d9",
+    "item_id": "20261115-0015-4000-b000-000000000016",
     "visibility": "PRIVATE",
     "starting_price": "1000.00",
     "current_price": "1100.00",
     "minimum_increment": "100.00",
-    "start_time": "2026-11-13T15:57:33.153Z",
-    "end_time": "2026-11-13T16:59:05.453Z",
+    "start_time": "2026-11-15T07:55:13.001Z",
+    "end_time": "2026-11-15T08:20:09.581Z",
     "status": "CLOSED",
-    "seller_id": "1674ef2c-77d5-4417-9d90-81a314006274",
+    "seller_id": "f9703b91-1d3a-4acb-8bc8-45591a55bdc1",
     "title": "Private Car",
     "description": "Car for testing",
-    "category_id": "824a35d4-b0ff-498f-88f4-f47fde0fff16",
+    "category_id": "217fc62a-ddf7-4a89-a557-c11c04363412",
     "category_fields": {},
     "category_name": "Rare Vehicles",
     "images": [],
     "result": {
-      "winner_bid_id": "aa03f28a-7dfa-405d-a626-03cec4b93f7e",
-      "closed_at": "2026-11-13T16:59:05.483Z",
+      "winner_bid_id": "6f69e91c-d9a9-49bb-bb64-475a022318bc",
+      "closed_at": "2026-11-15T08:20:09.783Z",
       "winning_amount": "1100.00",
       "isWinner": true
     },
     "participation": {
       "bidCount": 1,
       "highestBid": "1100.00",
-      "latestBidId": "aa03f28a-7dfa-405d-a626-03cec4b93f7e",
+      "latestBidId": "6f69e91c-d9a9-49bb-bb64-475a022318bc",
       "hasBid": true
     }
   }
@@ -793,7 +793,7 @@ curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/5691be7d-f25
 ```
 
 ```bash
-curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/5691be7d-f25d-4bd8-9246-c1d48a3ef8ef' \
+curl -i --path-as-is -X GET 'http://127.0.0.1:49692/api/v1/auctions/f06d80a9-7d13-4b17-af87-360e3b4d98d9' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>'
 ```
 
@@ -802,32 +802,32 @@ curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/5691be7d-f25
 ```json
 {
   "data": {
-    "id": "5691be7d-f25d-4bd8-9246-c1d48a3ef8ef",
-    "item_id": "ffb8e65b-b964-4292-a57a-ca2edbd8fb1f",
+    "id": "f06d80a9-7d13-4b17-af87-360e3b4d98d9",
+    "item_id": "20261115-0015-4000-b000-000000000016",
     "visibility": "PRIVATE",
     "starting_price": "1000.00",
     "current_price": "1100.00",
     "minimum_increment": "100.00",
-    "start_time": "2026-11-13T15:57:33.153Z",
-    "end_time": "2026-11-13T16:59:05.453Z",
+    "start_time": "2026-11-15T07:55:13.001Z",
+    "end_time": "2026-11-15T08:20:09.581Z",
     "status": "CLOSED",
-    "seller_id": "1674ef2c-77d5-4417-9d90-81a314006274",
+    "seller_id": "f9703b91-1d3a-4acb-8bc8-45591a55bdc1",
     "title": "Private Car",
     "description": "Car for testing",
-    "category_id": "824a35d4-b0ff-498f-88f4-f47fde0fff16",
+    "category_id": "217fc62a-ddf7-4a89-a557-c11c04363412",
     "category_fields": {},
     "category_name": "Rare Vehicles",
     "images": [],
     "result": {
-      "winner_bid_id": "aa03f28a-7dfa-405d-a626-03cec4b93f7e",
-      "closed_at": "2026-11-13T16:59:05.483Z",
+      "winner_bid_id": "6f69e91c-d9a9-49bb-bb64-475a022318bc",
+      "closed_at": "2026-11-15T08:20:09.783Z",
       "winning_amount": "1100.00",
       "isWinner": false
     },
     "participation": {
       "bidCount": 1,
       "highestBid": "1000.00",
-      "latestBidId": "51b8432f-5a87-4680-816f-ea95ee70074c",
+      "latestBidId": "b03eba05-2472-4dc5-b7c0-7bdff33202e8",
       "hasBid": true
     }
   }
@@ -839,7 +839,7 @@ curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/5691be7d-f25
 I checked that the private auction had one saved result.
 
 ```sql
-SELECT a.status,a.current_price,(SELECT count(*)::int FROM bids WHERE auction_id=a.id) AS bids,(SELECT count(*)::int FROM auction_results WHERE auction_id=a.id) AS results FROM auctions a WHERE a.id='5691be7d-f25d-4bd8-9246-c1d48a3ef8ef';
+SELECT a.status,a.current_price,(SELECT count(*)::int FROM bids WHERE auction_id=a.id) AS bids,(SELECT count(*)::int FROM auction_results WHERE auction_id=a.id) AS results FROM auctions a WHERE a.id='f06d80a9-7d13-4b17-af87-360e3b4d98d9';
 ```
 
 **Result:** PostgreSQL returned:
@@ -860,15 +860,15 @@ SELECT a.status,a.current_price,(SELECT count(*)::int FROM bids WHERE auction_id
 I read the losing private auction payment from Moyasar after closure.
 
 ```bash
-curl -i -X GET 'https://api.moyasar.com/v1/payments/f40273b3-ad93-42c2-a02a-ac21130da107' \
-  -u '<MOYASAR_TEST_SECRET_KEY>:'
+curl -i -X GET 'https://api.moyasar.com/v1/payments/20261115-0011-4000-8000-000000000106' \
+  -u "$MOYASAR_SECRET_KEY:"
 ```
 
 **Result:** Moyasar returned `200` with status `voided`.
 
 ```json
 {
-  "id": "f40273b3-ad93-42c2-a02a-ac21130da107",
+  "id": "20261115-0011-4000-8000-000000000106",
   "status": "voided",
   "amount": 200000,
   "fee": 0,
@@ -877,20 +877,20 @@ curl -i -X GET 'https://api.moyasar.com/v1/payments/f40273b3-ad93-42c2-a02a-ac21
   "refunded_at": null,
   "captured": 0,
   "captured_at": null,
-  "voided_at": "2026-11-13T16:59:05.936Z",
-  "description": "Mezyad closure sandbox test",
+  "voided_at": "2026-11-15T08:20:10.804Z",
+  "description": "Mezyad QA sandbox authorization",
   "amount_format": "2,000.00 SAR",
   "fee_format": "0.00 SAR",
   "refunded_format": "0.00 SAR",
   "captured_format": "0.00 SAR",
   "invoice_id": null,
-  "ip": "151.254.55.88",
-  "callback_url": "http://127.0.0.1:59311/api/v1/health",
-  "created_at": "2026-11-13T16:57:44.323Z",
-  "updated_at": "2026-11-13T16:59:05.936Z",
+  "ip": "188.53.195.198",
+  "callback_url": "http://127.0.0.1:49692/api/v1/health",
+  "created_at": "2026-11-15T08:13:35.082Z",
+  "updated_at": "2026-11-15T08:20:10.804Z",
   "metadata": {
-    "user_id": "e03a7c55-64a3-448c-a0ef-03f5fbabe876",
-    "auction_id": "5691be7d-f25d-4bd8-9246-c1d48a3ef8ef"
+    "user_id": "37037b2a-2ea5-4a6d-9d54-d9df3bf7ac14",
+    "auction_id": "f06d80a9-7d13-4b17-af87-360e3b4d98d9"
   },
   "source": {
     "type": "creditcard",
@@ -898,13 +898,13 @@ curl -i -X GET 'https://api.moyasar.com/v1/payments/f40273b3-ad93-42c2-a02a-ac21
     "parent_scheme": "visa",
     "name": "Mezyad Test",
     "number": "4201-32XX-XXXX-1010",
-    "gateway_id": "moyasar_cc_QgbG64AgtvwXwgmBgegCJnq",
-    "reference_number": "992631777374",
-    "token": "HIDDEN",
+    "gateway_id": "moyasar_cc_sG9CQLQ1c7EhXgqqMHEpitp",
+    "reference_number": "992631913857",
+    "token": null,
     "message": "APPROVED",
-    "transaction_url": "HIDDEN",
+    "transaction_url": null,
     "response_code": "00",
-    "authorization_code": "006006",
+    "authorization_code": "005512",
     "issuer_name": "MOYASAR PAY SANDBOX",
     "issuer_country": "SA",
     "issuer_card_type": "credit",
@@ -920,13 +920,13 @@ I held the auction row lock in one PostgreSQL transaction.
 
 ```sql
 BEGIN;
-SELECT id FROM auctions WHERE id='183a3bbc-e542-4f61-9ffb-500a85bb17e4' FOR UPDATE;
+SELECT id FROM auctions WHERE id='20261115-0015-4000-a000-000000000021' FOR UPDATE;
 ```
 
 From another terminal, I sent the bid while that transaction remained open.
 
 ```bash
-curl -i --path-as-is -X POST 'http://127.0.0.1:59311/api/v1/auctions/183a3bbc-e542-4f61-9ffb-500a85bb17e4/bids' \
+curl -i --path-as-is -X POST 'http://127.0.0.1:49692/api/v1/auctions/20261115-0015-4000-a000-000000000021/bids' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"amount":1000,"requestId":"8837754d-ac9d-41f8-bcdb-a68cd5087392"}' &
@@ -935,11 +935,11 @@ curl -i --path-as-is -X POST 'http://127.0.0.1:59311/api/v1/auctions/183a3bbc-e5
 I set the end time in the past inside the transaction, then queued the detail request while the lock was still held.
 
 ```sql
-UPDATE auctions SET end_time=clock_timestamp()-interval '1 millisecond' WHERE id='183a3bbc-e542-4f61-9ffb-500a85bb17e4';
+UPDATE auctions SET end_time=clock_timestamp()-interval '1 millisecond' WHERE id='20261115-0015-4000-a000-000000000021';
 ```
 
 ```bash
-curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/183a3bbc-e542-4f61-9ffb-500a85bb17e4' &
+curl -i --path-as-is -X GET 'http://127.0.0.1:49692/api/v1/auctions/20261115-0015-4000-a000-000000000021' &
 ```
 
 I committed the transaction to release the row lock.
@@ -968,25 +968,25 @@ I checked the queued detail response from Test 21 after the bid was rejected.
 ```json
 {
   "data": {
-    "id": "183a3bbc-e542-4f61-9ffb-500a85bb17e4",
-    "item_id": "62baf127-9c73-4daa-b1da-7af772b98c38",
+    "id": "20261115-0015-4000-a000-000000000021",
+    "item_id": "20261115-0015-4000-b000-000000000021",
     "visibility": "PUBLIC",
     "starting_price": "1000.00",
     "current_price": "1000.00",
     "minimum_increment": "100.00",
-    "start_time": "2026-11-13T15:57:33.201Z",
-    "end_time": "2026-11-13T16:59:09.253Z",
+    "start_time": "2026-11-15T07:21:39.342Z",
+    "end_time": "2026-11-15T08:31:34.934Z",
     "status": "CLOSED",
-    "seller_id": "1674ef2c-77d5-4417-9d90-81a314006274",
+    "seller_id": "f9703b91-1d3a-4acb-8bc8-45591a55bdc1",
     "title": "Approved Car",
     "description": "Car for testing",
-    "category_id": "824a35d4-b0ff-498f-88f4-f47fde0fff16",
+    "category_id": "217fc62a-ddf7-4a89-a557-c11c04363412",
     "category_fields": {},
     "category_name": "Rare Vehicles",
     "images": [],
     "result": {
       "winner_bid_id": null,
-      "closed_at": "2026-11-13T16:59:09.278Z",
+      "closed_at": "2026-11-15T08:31:38.363Z",
       "winning_amount": null,
       "isWinner": null
     },
@@ -1000,7 +1000,7 @@ I checked the queued detail response from Test 21 after the bid was rejected.
 I checked the stored auction state after the queued bid and closure requests completed.
 
 ```sql
-SELECT a.status,a.current_price,(SELECT count(*)::int FROM bids WHERE auction_id=a.id) AS bids,(SELECT count(*)::int FROM auction_results WHERE auction_id=a.id) AS results FROM auctions a WHERE a.id='183a3bbc-e542-4f61-9ffb-500a85bb17e4';
+SELECT a.status,a.current_price,(SELECT count(*)::int FROM bids WHERE auction_id=a.id) AS bids,(SELECT count(*)::int FROM auction_results WHERE auction_id=a.id) AS results FROM auctions a WHERE a.id='20261115-0015-4000-a000-000000000021';
 ```
 
 **Result:** PostgreSQL returned:
@@ -1021,15 +1021,15 @@ SELECT a.status,a.current_price,(SELECT count(*)::int FROM bids WHERE auction_id
 I set the end time twenty seconds ahead, held advisory lock 714315 in one database connection, and created a test trigger that paused the bid update.
 
 ```sql
-UPDATE auctions SET end_time=clock_timestamp()+interval '20 seconds' WHERE id='5b92f1fa-61ef-4980-b066-9747465c05a7';
+UPDATE auctions SET end_time=clock_timestamp()+interval '20 seconds' WHERE id='20261115-0015-4000-a000-000000000024';
 SELECT pg_advisory_lock(714315);
-CREATE FUNCTION test_pause_bid() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.id='5b92f1fa-61ef-4980-b066-9747465c05a7'::uuid THEN PERFORM pg_advisory_xact_lock(714315); END IF; RETURN NEW; END $$; CREATE TRIGGER test_pause_bid BEFORE UPDATE ON auctions FOR EACH ROW EXECUTE FUNCTION test_pause_bid();
+CREATE FUNCTION test_pause_bid() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.id='20261115-0015-4000-a000-000000000024'::uuid THEN PERFORM pg_advisory_xact_lock(714315); END IF; RETURN NEW; END $$; CREATE TRIGGER test_pause_bid BEFORE UPDATE ON auctions FOR EACH ROW EXECUTE FUNCTION test_pause_bid();
 ```
 
 I sent the bid from another terminal. It passed validation before the deadline and then waited on the test trigger while holding the auction row lock.
 
 ```bash
-curl -i --path-as-is -X POST 'http://127.0.0.1:59311/api/v1/auctions/5b92f1fa-61ef-4980-b066-9747465c05a7/bids' \
+curl -i --path-as-is -X POST 'http://127.0.0.1:49692/api/v1/auctions/20261115-0015-4000-a000-000000000024/bids' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"amount":1100,"requestId":"221b6acb-7bac-46f3-a809-fca72425124b"}' &
@@ -1038,7 +1038,7 @@ curl -i --path-as-is -X POST 'http://127.0.0.1:59311/api/v1/auctions/5b92f1fa-61
 After the end time passed, I queued the detail request.
 
 ```bash
-curl -i --path-as-is -X GET 'http://127.0.0.1:59311/api/v1/auctions/5b92f1fa-61ef-4980-b066-9747465c05a7' &
+curl -i --path-as-is -X GET 'http://127.0.0.1:49692/api/v1/auctions/20261115-0015-4000-a000-000000000024' &
 ```
 
 I released the advisory lock so the accepted bid could commit before the waiting closure acquired the auction row lock.
@@ -1052,7 +1052,7 @@ SELECT pg_advisory_unlock(714315);
 ```json
 {
   "data": {
-    "bidId": "17e162ec-c5c5-45cd-9c61-ae87eb0a3381",
+    "bidId": "0c01fa1d-1129-4b39-b1e8-7755fa21e0fc",
     "amount": 1100,
     "currentPrice": 1100
   }
@@ -1068,25 +1068,25 @@ I checked the queued detail response from Test 24 after releasing the paused bid
 ```json
 {
   "data": {
-    "id": "5b92f1fa-61ef-4980-b066-9747465c05a7",
-    "item_id": "c02b7949-986c-4642-933c-d45b245de5b2",
+    "id": "20261115-0015-4000-a000-000000000024",
+    "item_id": "20261115-0015-4000-b000-000000000024",
     "visibility": "PUBLIC",
     "starting_price": "1000.00",
     "current_price": "1100.00",
     "minimum_increment": "100.00",
-    "start_time": "2026-11-13T15:57:33.227Z",
-    "end_time": "2026-11-13T16:59:29.662Z",
+    "start_time": "2026-11-15T07:21:39.342Z",
+    "end_time": "2026-11-15T08:34:00.505Z",
     "status": "CLOSED",
-    "seller_id": "1674ef2c-77d5-4417-9d90-81a314006274",
+    "seller_id": "f9703b91-1d3a-4acb-8bc8-45591a55bdc1",
     "title": "Approved Car 2",
     "description": "Car for testing",
-    "category_id": "824a35d4-b0ff-498f-88f4-f47fde0fff16",
+    "category_id": "217fc62a-ddf7-4a89-a557-c11c04363412",
     "category_fields": {},
     "category_name": "Rare Vehicles",
     "images": [],
     "result": {
-      "winner_bid_id": "17e162ec-c5c5-45cd-9c61-ae87eb0a3381",
-      "closed_at": "2026-11-13T16:59:29.725Z",
+      "winner_bid_id": "0c01fa1d-1129-4b39-b1e8-7755fa21e0fc",
+      "closed_at": "2026-11-15T08:34:07.912Z",
       "winning_amount": "1100.00",
       "isWinner": null
     },
@@ -1100,7 +1100,7 @@ I checked the queued detail response from Test 24 after releasing the paused bid
 I checked the stored price, bid count and result count after both requests completed.
 
 ```sql
-SELECT a.status,a.current_price,(SELECT count(*)::int FROM bids WHERE auction_id=a.id) AS bids,(SELECT count(*)::int FROM auction_results WHERE auction_id=a.id) AS results FROM auctions a WHERE a.id='5b92f1fa-61ef-4980-b066-9747465c05a7';
+SELECT a.status,a.current_price,(SELECT count(*)::int FROM bids WHERE auction_id=a.id) AS bids,(SELECT count(*)::int FROM auction_results WHERE auction_id=a.id) AS results FROM auctions a WHERE a.id='20261115-0015-4000-a000-000000000024';
 ```
 
 **Result:** PostgreSQL returned:
