@@ -6,7 +6,7 @@
 
 **Task deadline:** 21 October 2026
 
-**Retest date:** 10 November 2026
+**Retest date:** 15 November 2026
 
 **Testing method:** Manual testing using the terminal and curl.
 
@@ -46,7 +46,7 @@ I used pending listings for two accounts and signed in as the admin and regular 
 I sent a review request without an `Authorization` header:
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/admin/items/5b1fb21d-8ecc-4a74-92a0-878c02dca04c/review' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/admin/items/6e3eabf0-d9a8-432b-8849-40c2efa6a901/review' \
   -H 'Content-Type: application/json' \
   -d '{}'
 ```
@@ -58,7 +58,7 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/admin/items/5b1fb21d-8ecc-4a74-92
 I sent the request using a token belonging to an account with the role `USER`:
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/admin/items/5b1fb21d-8ecc-4a74-92a0-878c02dca04c/review' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/admin/items/6e3eabf0-d9a8-432b-8849-40c2efa6a901/review' \
   -H 'Authorization: Bearer <SELLER_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{}'
@@ -71,7 +71,7 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/admin/items/5b1fb21d-8ecc-4a74-92
 I used the admin token and sent `ACCEPT` instead of `APPROVED` or `REJECTED`:
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/admin/items/5b1fb21d-8ecc-4a74-92a0-878c02dca04c/review' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/admin/items/6e3eabf0-d9a8-432b-8849-40c2efa6a901/review' \
   -H 'Authorization: Bearer <ADMIN_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"decision":"ACCEPT"}'
@@ -84,7 +84,7 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/admin/items/5b1fb21d-8ecc-4a74-92
 I sent the decision `REJECTED` without the `reason` field:
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/admin/items/5b1fb21d-8ecc-4a74-92a0-878c02dca04c/review' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/admin/items/6e3eabf0-d9a8-432b-8849-40c2efa6a901/review' \
   -H 'Authorization: Bearer <ADMIN_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"decision":"REJECTED"}'
@@ -97,7 +97,7 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/admin/items/5b1fb21d-8ecc-4a74-92
 I sent a rejection reason containing three spaces:
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/admin/items/5b1fb21d-8ecc-4a74-92a0-878c02dca04c/review' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/admin/items/6e3eabf0-d9a8-432b-8849-40c2efa6a901/review' \
   -H 'Authorization: Bearer <ADMIN_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"decision":"REJECTED","reason":"   "}'
@@ -110,7 +110,7 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/admin/items/5b1fb21d-8ecc-4a74-92
 I sent an approval decision for `Test Car`:
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/admin/items/5b1fb21d-8ecc-4a74-92a0-878c02dca04c/review' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/admin/items/6e3eabf0-d9a8-432b-8849-40c2efa6a901/review' \
   -H 'Authorization: Bearer <ADMIN_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"decision":"APPROVED"}'
@@ -123,7 +123,7 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/admin/items/5b1fb21d-8ecc-4a74-92
 I attempted to reject the same advertisement after approval and provided a valid reason:
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/admin/items/5b1fb21d-8ecc-4a74-92a0-878c02dca04c/review' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/admin/items/6e3eabf0-d9a8-432b-8849-40c2efa6a901/review' \
   -H 'Authorization: Bearer <ADMIN_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"decision":"REJECTED","reason":"Missing car details"}'
@@ -136,7 +136,7 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/admin/items/5b1fb21d-8ecc-4a74-92
 I used the pending advertisement `Test Car 2` and sent the rejection reason `Missing car details`:
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/admin/items/15561c6e-6da2-4ee4-9056-ebef2ce1f960/review' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/admin/items/ffc748ed-fed5-40a2-bc5c-1242303e8c7f/review' \
   -H 'Authorization: Bearer <ADMIN_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"decision":"REJECTED","reason":"Missing car details"}'
