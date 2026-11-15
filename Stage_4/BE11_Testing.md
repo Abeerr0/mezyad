@@ -6,7 +6,7 @@
 
 **Task date:** 25 October 2026
 
-**Retest date:** 10 November 2026
+**Retest date:** 15 November 2026
 
 **Testing method:** Manual testing using the terminal, curl, and PostgreSQL queries.
 
@@ -69,9 +69,9 @@ I used the owner of an approved listing, the owner of a rejected listing, and a 
 I sent an auction creation request without a token to check that auction creation required a valid session.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions' \
   -H 'Content-Type: application/json' \
-  -d '{"itemId":"5b1fb21d-8ecc-4a74-92a0-878c02dca04c","visibility":"PUBLIC","startingPrice":1000,"minimumIncrement":100,"startTime":"2026-11-10T19:27:36.849Z","endTime":"2026-11-10T20:27:36.851Z"}'
+  -d '{"itemId":"6e3eabf0-d9a8-432b-8849-40c2efa6a901","visibility":"PUBLIC","startingPrice":1000,"minimumIncrement":100,"startTime":"2026-11-16T08:00:00.000Z","endTime":"2026-11-16T09:00:00.000Z"}'
 ```
 
 **Result:** The backend returned `401 UNAUTHORIZED`.
@@ -81,7 +81,7 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
 I sent an empty JSON object with a valid user token to check that missing auction data was rejected.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions' \
   -H 'Authorization: Bearer <SELLER_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{}'
@@ -94,10 +94,10 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
 I sent valid auction data for the approved `Test Car` listing using its owner's token.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions' \
   -H 'Authorization: Bearer <SELLER_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{"itemId":"5b1fb21d-8ecc-4a74-92a0-878c02dca04c","visibility":"PUBLIC","startingPrice":1000,"minimumIncrement":100,"startTime":"2026-11-10T19:27:36.849Z","endTime":"2026-11-10T20:27:36.851Z"}'
+  -d '{"itemId":"6e3eabf0-d9a8-432b-8849-40c2efa6a901","visibility":"PUBLIC","startingPrice":1000,"minimumIncrement":100,"startTime":"2026-11-16T08:00:00.000Z","endTime":"2026-11-16T09:00:00.000Z"}'
 ```
 
 **Result:** The backend returned `201`. The response showed `visibility=PUBLIC status=SCHEDULED`.
@@ -107,10 +107,10 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
 I repeated the auction creation request for the same listing to check that another auction could not be created for it.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions' \
   -H 'Authorization: Bearer <SELLER_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{"itemId":"5b1fb21d-8ecc-4a74-92a0-878c02dca04c","visibility":"PUBLIC","startingPrice":1000,"minimumIncrement":100,"startTime":"2026-11-10T19:27:36.849Z","endTime":"2026-11-10T20:27:36.851Z"}'
+  -d '{"itemId":"6e3eabf0-d9a8-432b-8849-40c2efa6a901","visibility":"PUBLIC","startingPrice":1000,"minimumIncrement":100,"startTime":"2026-11-16T08:00:00.000Z","endTime":"2026-11-16T09:00:00.000Z"}'
 ```
 
 **Result:** The backend returned `409 DUPLICATE_AUCTION`.
@@ -120,10 +120,10 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
 I changed the starting price to `0` and kept the other input valid.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions' \
   -H 'Authorization: Bearer <SELLER_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{"itemId":"5b1fb21d-8ecc-4a74-92a0-878c02dca04c","visibility":"PUBLIC","startingPrice":0,"minimumIncrement":100,"startTime":"2026-11-10T19:27:36.849Z","endTime":"2026-11-10T20:27:36.851Z"}'
+  -d '{"itemId":"6e3eabf0-d9a8-432b-8849-40c2efa6a901","visibility":"PUBLIC","startingPrice":0,"minimumIncrement":100,"startTime":"2026-11-16T08:00:00.000Z","endTime":"2026-11-16T09:00:00.000Z"}'
 ```
 
 **Result:** The backend returned `400 INVALID_INPUT`.
@@ -133,10 +133,10 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
 I used a valid starting price and changed the minimum increment to `0`.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions' \
   -H 'Authorization: Bearer <SELLER_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{"itemId":"5b1fb21d-8ecc-4a74-92a0-878c02dca04c","visibility":"PUBLIC","startingPrice":1000,"minimumIncrement":0,"startTime":"2026-11-10T19:27:36.849Z","endTime":"2026-11-10T20:27:36.851Z"}'
+  -d '{"itemId":"6e3eabf0-d9a8-432b-8849-40c2efa6a901","visibility":"PUBLIC","startingPrice":1000,"minimumIncrement":0,"startTime":"2026-11-16T08:00:00.000Z","endTime":"2026-11-16T09:00:00.000Z"}'
 ```
 
 **Result:** The backend returned `400 INVALID_INPUT`.
@@ -146,36 +146,36 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
 I set the end time before the start time to check that the incorrect date order was rejected.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions' \
   -H 'Authorization: Bearer <SELLER_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{"itemId":"5b1fb21d-8ecc-4a74-92a0-878c02dca04c","visibility":"PUBLIC","startingPrice":1000,"minimumIncrement":100,"startTime":"2026-11-10T19:27:36.849Z","endTime":"2026-11-10T18:57:36.989Z"}'
+  -d '{"itemId":"6e3eabf0-d9a8-432b-8849-40c2efa6a901","visibility":"PUBLIC","startingPrice":1000,"minimumIncrement":100,"startTime":"2026-11-16T08:00:00.000Z","endTime":"2026-11-16T07:30:00.000Z"}'
 ```
 
 **Result:** The backend returned `400 INVALID_INPUT`.
 
 ### Test 8 — Another Account's Listing
 
-I tried to create an auction for `Approved Car` using the regular user's token. The listing was approved, but it belonged to the admin account.
+I tried to create an auction for `Own Approved Comparison` using the regular user's token. The listing was approved, but it belonged to the first bidder's account.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions' \
   -H 'Authorization: Bearer <SELLER_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{"itemId":"f246f53d-9bdb-4df1-8728-92da13f7bd4a","visibility":"PUBLIC","startingPrice":1000,"minimumIncrement":100,"startTime":"2026-11-10T19:27:36.849Z","endTime":"2026-11-10T20:27:36.851Z"}'
+  -d '{"itemId":"24ed890a-8715-4108-a7ad-fc7379d02a7b","visibility":"PUBLIC","startingPrice":1000,"minimumIncrement":100,"startTime":"2026-11-16T08:00:00.000Z","endTime":"2026-11-16T09:00:00.000Z"}'
 ```
 
 **Result:** The backend returned `403 NOT_APPROVED`.
 
 ### Test 9 — Rejected Listing Using Its Owner's Account
 
-I tried to create an auction for `Test Car 2` using the admin token. This account owned the listing, but its status was `REJECTED`.
+I tried to create an auction for `Test Car 2` using the first bidder's token. This account owned the listing, but its status was `REJECTED`.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
-  -H 'Authorization: Bearer <BIDDER_2_JWT>' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions' \
+  -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{"itemId":"15561c6e-6da2-4ee4-9056-ebef2ce1f960","visibility":"PUBLIC","startingPrice":1000,"minimumIncrement":100,"startTime":"2026-11-10T19:27:36.849Z","endTime":"2026-11-10T20:27:36.851Z"}'
+  -d '{"itemId":"ffc748ed-fed5-40a2-bc5c-1242303e8c7f","visibility":"PUBLIC","startingPrice":1000,"minimumIncrement":100,"startTime":"2026-11-16T08:00:00.000Z","endTime":"2026-11-16T09:00:00.000Z"}'
 ```
 
 **Result:** The backend returned `403 NOT_APPROVED`.
@@ -185,10 +185,10 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
 I created a private auction for the approved `Approved Car` listing using its owner's token.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions' \
   -H 'Authorization: Bearer <SELLER_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{"itemId":"adb89561-ad3b-4e3a-a96a-ad4d0f871c82","visibility":"PRIVATE","startingPrice":1000,"minimumIncrement":100,"startTime":"2026-11-10T19:27:36.849Z","endTime":"2026-11-10T20:27:36.851Z"}'
+  -d '{"itemId":"2e47a792-8ff2-426e-8608-d3f0802ec450","visibility":"PRIVATE","startingPrice":1000,"minimumIncrement":100,"startTime":"2026-11-16T08:00:00.000Z","endTime":"2026-11-16T09:00:00.000Z"}'
 ```
 
 **Result:** The backend returned `201`. The response showed `visibility=PRIVATE code length=24`.
@@ -202,7 +202,7 @@ I used the following query in the temporary database.
 ```sql
 SELECT visibility, access_code_hash
 FROM auctions
-WHERE id = '<PRIVATE_AUCTION_ID>';
+WHERE id = 'd8b26c56-7bf4-475c-8a5c-47a5c526c442';
 ```
 
 **Result:** PostgreSQL returned visibility `PRIVATE` and a bcrypt hash.
