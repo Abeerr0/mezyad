@@ -3,7 +3,7 @@
 **Team member:** Ghadi
 **Week:** 1 — Backend
 **Task date:** 15 October 2026
-**Retest date:** 10 November 2026
+**Retest date:** 15 November 2026
 **Testing method:** Manual testing using the terminal and curl.
 
 ## Goal
@@ -27,7 +27,7 @@ Test login with valid and invalid data, check that a valid session token returns
 
 I tested login, the session, and logout using `curl` commands in the VS Code terminal.
 
-I used `seller@mezyad.test`. I took the JWT from `data.token` after successful login and used it for the user-details and logout requests. The last request reused the token after logout.
+I used `ghadi0alzhrani@gmail.com`. I took the JWT from `data.token` after successful login and used it for the user-details and logout requests. The last request reused the token after logout.
 
 I compared each HTTP status and response with the expected result. For protected requests, I took the JWT from `data.token` in the login response and placed it after `Bearer`.
 
@@ -38,9 +38,9 @@ I compared each HTTP status and response with the expected result. For protected
 I sent a login request with an empty email to check that the request was rejected.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/login' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auth/login' \
   -H 'Content-Type: application/json' \
-  -d '{"email":"","password":"<TEST_PASSWORD>"}'
+  -d '{"email":"","password":"MezyadTest2026!"}'
 ```
 
 **Result:** The backend returned `400 INVALID_INPUT`.
@@ -50,21 +50,21 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/login' \
 I sent the account email with an empty password to check that the request was rejected.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/login' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auth/login' \
   -H 'Content-Type: application/json' \
-  -d '{"email":"seller@mezyad.test","password":""}'
+  -d '{"email":"ghadi0alzhrani@gmail.com","password":""}'
 ```
 
 **Result:** The backend returned `400 INVALID_INPUT`.
 
 ### Test 3 — Incorrect Password
 
-I sent the correct account email with the incorrect password `Test54321`.
+I sent the correct account email with the incorrect password `wrong`.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/login' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auth/login' \
   -H 'Content-Type: application/json' \
-  -d '{"email":"seller@mezyad.test","password":"wrong"}'
+  -d '{"email":"ghadi0alzhrani@gmail.com","password":"wrong"}'
 ```
 
 **Result:** The backend returned `401 INVALID_CREDENTIALS`.
@@ -74,9 +74,9 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/login' \
 I sent the account email and the correct password.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/login' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auth/login' \
   -H 'Content-Type: application/json' \
-  -d '{"email":"seller@mezyad.test","password":"<TEST_PASSWORD>"}'
+  -d '{"email":"ghadi0alzhrani@gmail.com","password":"MezyadTest2026!"}'
 ```
 
 **Result:** The backend returned `200`. The response showed `JWT and user details`.
@@ -86,7 +86,7 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/login' \
 I requested user details without sending an `Authorization` header.
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/auth/me'
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/auth/me'
 ```
 
 **Result:** The backend returned `401 UNAUTHORIZED`.
@@ -94,18 +94,18 @@ curl -i -X GET 'http://127.0.0.1:51969/api/v1/auth/me'
 ### Test 6 — Request User Details With a Valid Session Token
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/auth/me' \
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/auth/me' \
   -H 'Authorization: Bearer <SELLER_JWT>'
 ```
 
-**Result:** The backend returned `200`. The response showed `email=seller@mezyad.test`.
+**Result:** The backend returned `200`. The response showed `email=ghadi0alzhrani@gmail.com`.
 
 ### Test 7 — Logout
 
 I sent a logout request using the same JWT.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/logout' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auth/logout' \
   -H 'Authorization: Bearer <SELLER_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{}'
@@ -120,7 +120,7 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/logout' \
 ### Test 8 — Use the Session Token After Logout
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/auth/me' \
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/auth/me' \
   -H 'Authorization: Bearer <SIGNED_OUT_SELLER_JWT>'
 ```
 
