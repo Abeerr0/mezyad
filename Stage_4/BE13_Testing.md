@@ -3,7 +3,7 @@
 **Team member:** Ghadi Alzhrani  
 **Week:** 4  
 **Report date:** October 31, 2026  
-**Retest date:** 10 November 2026  
+**Retest date:** 15 November 2026  
 **Testing method:** Manual API testing with `curl` in the terminal.
 
 ## Goal
@@ -30,10 +30,10 @@ I compared each HTTP status and response with the expected result. For protected
 I sent the private auction’s access code from the bidder’s account.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions/access' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/access' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{"accessCode":"<PRIVATE_AUCTION_CODE>"}'
+  -d '{"accessCode":"2cc4caea1700b3aca0cacdc5"}'
 ```
 
 **Result:** The backend returned `200`. The response showed `accessGranted=true`.
@@ -43,7 +43,7 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions/access' \
 I sent a code made up of 24 zeros. I chose a code with the correct length to check whether the backend would still reject it.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auctions/access' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/access' \
   -H 'Authorization: Bearer <BIDDER_2_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"accessCode":"000000000000000000000000"}'
