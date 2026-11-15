@@ -3,7 +3,7 @@
 **Team member:** Ghadi
 **Task code:** BE-14
 **Testing dates:** 4–5 November 2026
-**Retest date:** 10 November 2026
+**Retest date:** 15 November 2026
 **Testing method:** Manual testing using the terminal, curl, PostgreSQL through Docker, and Moyasar test mode.
 
 ## Goal
@@ -41,14 +41,14 @@ I requested a 2,000 SAR Sandbox hold using `manual: true`. I completed test auth
 
 ```bash
 curl -i -X POST 'https://api.moyasar.com/v1/payments' \
-  -u '<MOYASAR_TEST_PUBLISHABLE_KEY>:' \
+  -u "$MOYASAR_SECRET_KEY:" \
   -H 'Content-Type: application/json' \
   -d '{
     "given_id": "<PAYMENT_UUID>",
     "amount": 200000,
     "currency": "SAR",
     "description": "Mezyad QA sandbox authorization",
-    "callback_url": "http://127.0.0.1:51980/api/v1/health",
+    "callback_url": "http://127.0.0.1:49692/api/v1/health",
     "metadata": {"auction_id": "<AUCTION_ID>", "user_id": "<USER_ID>"},
     "source": {
       "type": "creditcard",
@@ -79,7 +79,7 @@ Moyasar amounts are sent in halalas, so `200000` represents 2,000 SAR.
 I sent `invalid` instead of a valid payment ID to check input validation.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-b7f81ecd8238/commitment' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/0f8d74e6-c764-4535-9f4f-f55a75a06996/commitment' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"paymentId":"invalid"}'
@@ -89,10 +89,10 @@ curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-
 
 ### Test 2 — Missing Moyasar Key
 
-I started a temporary backend instance on port `3001` without a Moyasar key to test the response when the key was unavailable.
+I started a temporary backend instance on port `53540` without a Moyasar key to test the response when the key was unavailable.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51996/api/v1/auctions/c6532792-938d-4bc1-b554-b7f81ecd8238/commitment' \
+curl -i -X POST 'http://127.0.0.1:53540/api/v1/auctions/0f8d74e6-c764-4535-9f4f-f55a75a06996/commitment' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"paymentId":"7ae3fcde-739f-4e3e-87fb-0df42331a970"}'
@@ -105,7 +105,7 @@ curl -i -X POST 'http://127.0.0.1:51996/api/v1/auctions/c6532792-938d-4bc1-b554-
 Before saving a successful commitment for the first bidder in the test auction, I submitted a bid of SAR 1,000.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-b7f81ecd8238/bids' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/0f8d74e6-c764-4535-9f4f-f55a75a06996/bids' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"amount":1000,"requestId":"36f0edf0-7055-46c7-8c5b-446eac5efea6"}'
@@ -120,10 +120,10 @@ I created a SAR 1,000 payment using the test card `4201320000311101`, which simu
 Moyasar returned `HTTP 200` with status `failed` after test authentication and message `INSUFFICIENT FUNDS`.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-b7f81ecd8238/commitment' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/0f8d74e6-c764-4535-9f4f-f55a75a06996/commitment' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{"paymentId":"16ecbf01-cba4-451d-8d9d-2b3d736cd8a5"}'
+  -d '{"paymentId":"20261115-0014-4000-8000-000000000004"}'
 ```
 
 **Result:** The backend returned `409 COMMITMENT_DECLINED`.
@@ -137,10 +137,10 @@ I created an authorized hold of SAR 500 in Moyasar, while the auction’s starti
 Moyasar returned `HTTP 200` with status `authorized` after test authentication and message `APPROVED`.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-b7f81ecd8238/commitment' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/0f8d74e6-c764-4535-9f4f-f55a75a06996/commitment' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{"paymentId":"78bcd694-098c-4ade-96b5-1bc8269bbd7f"}'
+  -d '{"paymentId":"20261115-0014-4000-8000-000000000005"}'
 ```
 
 **Result:** The backend returned `409 COMMITMENT_TOO_LOW`.
@@ -154,10 +154,10 @@ I created a SAR 2,000 hold using the approved test card and linked it to the auc
 Moyasar returned `HTTP 200` with status `authorized` after test authentication and message `APPROVED`.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:53664/api/v1/auctions/63f82caa-99c5-4c34-96ac-55a2d05f7641/commitment' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/0f8d74e6-c764-4535-9f4f-f55a75a06996/commitment' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{"paymentId":"35d5077c-0a74-4e97-82a6-8985c738a603"}'
+  -d '{"paymentId":"20261115-0014-4000-8000-000000000006"}'
 ```
 
 **Result:** The backend returned `201`. The response showed `status=SUCCESS max_amount=2000.00`.
@@ -165,12 +165,12 @@ curl -i -X POST 'http://127.0.0.1:53664/api/v1/auctions/63f82caa-99c5-4c34-96ac-
 ```json
 {
   "data": {
-    "id": "3b4b8cf1-4aec-4188-a6f9-63e44f24dc50",
+    "id": "30329eba-98b0-43bc-aab3-19ea26ca15d5",
     "status": "SUCCESS",
-    "sandbox_reference": "35d5077c-0a74-4e97-82a6-8985c738a603",
+    "sandbox_reference": "20261115-0014-4000-8000-000000000006",
     "max_amount": "2000.00",
     "released_at": null,
-    "created_at": "2026-11-10T19:27:45.958Z"
+    "created_at": "2026-11-15T06:35:00.100Z"
   }
 }
 ```
@@ -182,7 +182,7 @@ curl -i -X POST 'http://127.0.0.1:53664/api/v1/auctions/63f82caa-99c5-4c34-96ac-
 I submitted a bid of SAR 2,100, which exceeded the SAR 2,000 hold.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-b7f81ecd8238/bids' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/0f8d74e6-c764-4535-9f4f-f55a75a06996/bids' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"amount":2100,"requestId":"bf4f6bc3-4e03-40e1-9e18-6d9a1d9f25b2"}'
@@ -191,7 +191,7 @@ curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-
 **Result:** The backend returned `409 BID_ABOVE_COMMITMENT`.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-b7f81ecd8238/bids' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/0f8d74e6-c764-4535-9f4f-f55a75a06996/bids' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"amount":1000,"requestId":"abdc43ac-0e3d-4fb0-bdf0-f0c60b2dc5f2"}'
@@ -204,10 +204,10 @@ curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-
 I used another account’s JWT with the first bidder’s payment ID to test user matching.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-b7f81ecd8238/commitment' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/0f8d74e6-c764-4535-9f4f-f55a75a06996/commitment' \
   -H 'Authorization: Bearer <BIDDER_2_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{"paymentId":"b12a0b23-e0cd-4355-8896-10e84009832f"}'
+  -d '{"paymentId":"20261115-0014-4000-8000-000000000006"}'
 ```
 
 **Result:** The backend returned `403 PAYMENT_MISMATCH`.
@@ -217,10 +217,10 @@ curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-
 Moyasar returned `HTTP 200` with status `authorized` after test authentication and message `APPROVED`.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/13281121-eaaf-43c9-afb8-86af5847b6e5/commitment' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/823afd60-51b6-4d0c-9fa8-48be7453f3a0/commitment' \
   -H 'Authorization: Bearer <BIDDER_1_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{"paymentId":"54d266a6-944c-4714-afd5-17748fe89343"}'
+  -d '{"paymentId":"20261115-0014-4000-8000-000000000009"}'
 ```
 
 **Result:** The backend returned `409 AUCTION_NOT_ACTIVE`.
@@ -232,16 +232,16 @@ curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/13281121-eaaf-43c9-afb8-
 Moyasar returned `HTTP 200` with status `authorized` after test authentication and message `APPROVED`.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-b7f81ecd8238/commitment' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/0f8d74e6-c764-4535-9f4f-f55a75a06996/commitment' \
   -H 'Authorization: Bearer <BIDDER_2_JWT>' \
   -H 'Content-Type: application/json' \
-  -d '{"paymentId":"47f6e1f6-3c93-4684-ba81-70a2c5c927c6"}'
+  -d '{"paymentId":"20261115-0014-4000-8000-000000000010"}'
 ```
 
 **Result:** The backend returned `201`.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-b7f81ecd8238/bids' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auctions/0f8d74e6-c764-4535-9f4f-f55a75a06996/bids' \
   -H 'Authorization: Bearer <BIDDER_2_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{"amount":1100,"requestId":"9e15e277-3d90-4398-88eb-a1a02dafa232"}'
@@ -250,7 +250,7 @@ curl -i -X POST 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-
 **Result:** The backend returned `201`.
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51980/api/v1/auctions/c6532792-938d-4bc1-b554-b7f81ecd8238' \
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/auctions/0f8d74e6-c764-4535-9f4f-f55a75a06996' \
   -H 'Authorization: Bearer <BIDDER_2_JWT>'
 ```
 
