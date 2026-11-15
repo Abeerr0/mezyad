@@ -18,9 +18,18 @@ import {
   checkPayment,
 } from "./moyasar.js";
 import { auctionStatus, resultFor, participationFor } from "./auctions.js";
-// نستخدم دالة رمز التحقق وارساله
-//داله تحقق الايميل
-import { saveAndSendCode } from "./email.js";
+// هنا نستخدم دوال ارسال ايميلات مزياد
+import {
+  // نستخدم دالة رمز التحقق وارساله
+  //داله تحقق الايميل
+  saveAndSendCode,
+  // نستخدم داله sendWinnerEmail لارسال نتيجة المزاد للفائز
+  sendWinnerEmail,
+  // نستخدم داله sendSellerEmail لارسال نتيجة المزاد لصاحبه اذا فيه فائز
+  sendSellerEmail,
+  // نستخدم داله sendNoWinnerEmail لارسال نتيجة المزاد لصاحبه بدون فائز
+  sendNoWinnerEmail,
+} from "./email.js";
 export const app = express();
 app.use(
   cors({ origin: process.env.FRONTEND_ORIGIN || "http://localhost:5173" }),
@@ -120,6 +129,134 @@ async function closeIfEnded(id) {
     console.error("Release holds failed", e.message),
   );
 }
+// هنا نجهز معالجه اغلاق المزاد وارسال الرسائل 
+// داله sendAuctionResultEmails ترسل الرسائل الخاصه بنتيجة مزاد واحد
+// نستخدمها عشان نرسل لكل طرف رسالته ونحفظ وقت قبولها لحالها
+async function sendAuctionResultEmails(auctionData) {
+  // نفحص اذا فيه فائز ولسا ما انحفظ وقت ارسال رسالته
+  if (auctionData.winner_bid_id && !auctionData.winner_email_sent_at) {
+    // نحاول نرسل رسالة الفائز ونحفظ وقت قبولها
+    try {
+      // نرسل للفائز نتيجة المزاد وبيانات التواصل مع صاحبه
+      await sendWinnerEmail(auctionData.winner_email, auctionData);
+      // نحفظ الوقت بعد ما خادم البريد يقبل الرساله
+      await query(
+        "UPDATE auction_results SET winner_email_sent_at=now() WHERE auction_id=$1 AND winner_email_sent_at IS NULL",
+        // نحدد النتيجه باستخدام رقم المزاد
+        [auctionData.id],
+      );
+    } catch (error) {
+      // نسجل التعثر ونكمل فحص رسالة صاحب المزاد
+      console.error(
+        "Winner email processing failed",
+        auctionData.id,
+        error.message,
+      );
+    }
+  }
+  // نوقف اذا رسالة صاحب المزاد مسجل وقت ارسالها
+  if (auctionData.seller_email_sent_at) return;
+  // نحاول نرسل الرساله المناسبه لصاحب المزاد
+  try {
+    // نفحص اذا نتيجة المزاد فيها فائز
+    if (auctionData.winner_bid_id) {
+      // نرسل لصاحب المزاد النتيجه وبيانات التواصل مع الفائز
+      await sendSellerEmail(auctionData.seller_email, auctionData);
+    } else {
+      // نرسل لصاحب المزاد ان المزاد انتهى بدون فائز
+      await sendNoWinnerEmail(auctionData.seller_email, auctionData);
+    }
+    // نحفظ الوقت بعد ما خادم البريد يقبل رسالة صاحب المزاد
+    await query(
+      "UPDATE auction_results SET seller_email_sent_at=now() WHERE auction_id=$1 AND seller_email_sent_at IS NULL",
+      // نحدد النتيجه باستخدام رقم المزاد
+      [auctionData.id],
+    );
+  } catch (error) {
+    // نسجل التعثر وتبقى الرساله للمحاوله في الفحص القادم
+    console.error(
+      "Seller email processing failed",
+      auctionData.id,
+      error.message,
+    );
+  }
+}
+// هنا نتابع اذا فحص رسائل نتيجة المزاد شغال
+let auctionEmailsRunning = false;
+
+// داله processAuctionEmails تفحص المزادات المنتهيه وتجهز بيانات الرسائل
+// نستخدمها عشان نحفظ النتائج ثم نرسل الرسائل حسب كل نتيجه
+export async function processAuctionEmails() {
+  // نوقف اذا الفحص السابق ما خلص داخل نفس نسخة السيرفر
+  if (auctionEmailsRunning) return;
+  // نسجل ان الفحص بدا
+  auctionEmailsRunning = true;
+  // نحاول نكمل الفحص ونرجع حالة التشغيل في finally
+  try {
+    // نجيب المزادات اللي انتهى وقتها ولسا ما انحفظ اغلاقها
+    const endedAuctions = await query(
+      "SELECT id FROM auctions WHERE status<>'CLOSED' AND end_time<=clock_timestamp() ORDER BY end_time,id",
+    );
+    // نمر على كل مزاد منتهي
+    for (const endedAuction of endedAuctions.rows) {
+      // نحاول نحفظ اغلاق هذا المزاد ونتيجته
+      try {
+        // نستخدم دالة الاغلاق الموجوده
+        await closeIfEnded(endedAuction.id);
+      } catch (error) {
+        // نسجل تعثر هذا المزاد ونكمل باقي المزادات
+        console.error("Auction close failed", endedAuction.id, error.message);
+      }
+    }
+    // نجيب بيانات النتائج اللي باقي فيها رسائل ما انحفظ وقت ارسالها
+    const results = await query(
+      `SELECT
+         -- نجيب رقم المزاد وعنوان الاصل ورقم المزايده الفائزه
+         a.id,i.title,r.winner_bid_id,
+         -- نجيب وقت ارسال كل رساله
+         r.winner_email_sent_at,r.seller_email_sent_at,
+         -- نجيب اسم صاحب المزاد وايميله
+         seller.name AS seller_name,seller.email AS seller_email,
+         -- نجيب اسم الفائز وايميله
+         winner.name AS winner_name,winner.email AS winner_email,
+         -- نجيب المبلغ من المزايده الفائزه
+         b.amount AS winning_amount
+       -- نبدا من نتائج المزادات المحفوظه
+       FROM auction_results r
+       -- نربط النتيجه بالمزاد
+       JOIN auctions a ON a.id=r.auction_id
+       -- نربط المزاد بالاعلان عشان نعرف عنوانه وصاحبه
+       JOIN items i ON i.id=a.item_id
+       -- نجيب حساب صاحب المزاد
+       JOIN users seller ON seller.id=i.seller_id
+       -- نجيب المزايده الفائزه اذا كانت موجوده
+       LEFT JOIN bids b ON b.id=r.winner_bid_id AND b.auction_id=a.id
+       -- نجيب حساب الفائز اذا فيه مزايده فائزه
+       LEFT JOIN users winner ON winner.id=b.bidder_id
+       -- نختار المزادات المقفله فقط
+       WHERE a.status='CLOSED'
+       -- نختار النتيجه اذا باقي رسالة صاحب المزاد او رسالة الفائز
+       AND (
+         r.seller_email_sent_at IS NULL
+         OR (
+           r.winner_bid_id IS NOT NULL
+           AND r.winner_email_sent_at IS NULL
+         )
+       )
+       -- نرتب النتائج حسب وقت الاغلاق ثم رقم المزاد
+       ORDER BY r.closed_at,a.id`,
+    );
+    // نمر على كل نتيجه تحتاج ارسال رسائل
+    for (const auctionData of results.rows) {
+      // نرسل بيانات النتيجه لدالة ارسال الرسائل
+      await sendAuctionResultEmails(auctionData);
+    }
+  } finally {
+    // نسمح للفحص القادم يشتغل حتى لو حصل خطا في هذا الفحص
+    auctionEmailsRunning = false;
+  }
+}
+
 // دالة releasePayment لفك حجز المبلغ في ميسر وترجع هل نجح الإلغاء أو لا
 // هنا نطلب فك الحجز من ميسر ونرجع هل نجح أو لا
 async function releasePayment(paymentId) {

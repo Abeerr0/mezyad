@@ -12,6 +12,8 @@ try {
     "migrations/002_private_auction_code_lookup.sql",
     "migrations/003_email_verification.sql",
     "migrations/004_moyasar.sql",
+        // نقرأ ملف اضافة حقول متابعة ارسال ايميلات نتيجة المزاد
+    "migrations/005_auction_result_emails.sql",
     "seeds/001_categories.sql",
   ]) {
     await client.query(
