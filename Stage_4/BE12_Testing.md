@@ -6,7 +6,7 @@
 
 **Task date:** 25 October 2026
 
-**Retest date:** 10 November 2026
+**Retest date:** 15 November 2026
 
 **Testing method:** Manual testing using the terminal and curl.
 
@@ -44,7 +44,7 @@ The public listing `Test Car` used `https://example.com/car1.jpg` and `https://e
 I ran:
 
 ```bash
-node --check backend/src/app.js
+docker exec test-backend-ghadi-1-api node --check /app/backend/src/app.js
 ```
 
 The terminal returned to the prompt without an error message. The file syntax check passed.
@@ -54,7 +54,7 @@ The terminal returned to the prompt without an error message. The file syntax ch
 ### Test 1 — Public Auction List
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/auctions'
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/auctions'
 ```
 
 **Result:** The backend returned `200 OK`. Test Car appeared with `SCHEDULED` status and its cover image in `image_url`. The private auction did not appear in the list.
@@ -62,7 +62,7 @@ curl -i -X GET 'http://127.0.0.1:51969/api/v1/auctions'
 ### Test 2 — Public Auction Details
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/auctions/cedc7b3c-7d9d-4eb5-8d5f-658b756f7b90'
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/auctions/a5cd4331-975c-4eff-995a-cc9628656bdb'
 ```
 
 **Result:** The backend returned `200`. The response showed `status=SCHEDULED images=2`.
@@ -70,7 +70,7 @@ curl -i -X GET 'http://127.0.0.1:51969/api/v1/auctions/cedc7b3c-7d9d-4eb5-8d5f-6
 ### Test 3 — Incorrectly Formatted ID
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/auctions/abc'
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/auctions/abc'
 ```
 
 **Result:** The backend returned `400 INVALID_ID`.
@@ -78,7 +78,7 @@ curl -i -X GET 'http://127.0.0.1:51969/api/v1/auctions/abc'
 ### Test 4 — Auction Not Found
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/auctions/00000000-0000-4000-8000-000000000000'
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/auctions/00000000-0000-4000-8000-000000000000'
 ```
 
 **Result:** The backend returned `404 NOT_FOUND`.
@@ -86,7 +86,7 @@ curl -i -X GET 'http://127.0.0.1:51969/api/v1/auctions/00000000-0000-4000-8000-0
 ### Test 5 — Private Auction Without Signing In
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/auctions/8dbeaca7-14a4-4022-b672-63f11c30fb19'
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/auctions/d8b26c56-7bf4-475c-8a5c-47a5c526c442'
 ```
 
 **Result:** The backend returned `404 NOT_FOUND`.
@@ -94,7 +94,7 @@ curl -i -X GET 'http://127.0.0.1:51969/api/v1/auctions/8dbeaca7-14a4-4022-b672-6
 ### Test 6 — Private Auction Requested by Its Owner
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/auctions/8dbeaca7-14a4-4022-b672-63f11c30fb19' \
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/auctions/d8b26c56-7bf4-475c-8a5c-47a5c526c442' \
   -H 'Authorization: Bearer <SELLER_JWT>'
 ```
 
@@ -107,7 +107,7 @@ I created `Test Status Car` and a public auction in the temporary database. The 
 ### Test 7 — Active Auction in the Public List
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/auctions'
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/auctions'
 ```
 
 **Result:** The backend returned `200`. The response showed `status=ACTIVE`.
@@ -115,7 +115,7 @@ curl -i -X GET 'http://127.0.0.1:51969/api/v1/auctions'
 ### Test 8 — Active Auction Details
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/auctions/19ebe2ea-1c57-4532-ac05-c8633545220b'
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/auctions/823afd60-51b6-4d0c-9fa8-48be7453f3a0'
 ```
 
 **Result:** The backend returned `200`. The response showed `status=ACTIVE result=null`.
@@ -127,13 +127,13 @@ I moved the end time of the same test auction to one minute before the database 
 ```sql
 UPDATE auctions
 SET end_time = now() - interval '1 minute'
-WHERE id = '<STATUS_TEST_AUCTION_ID>';
+WHERE id = '823afd60-51b6-4d0c-9fa8-48be7453f3a0';
 ```
 
 ### Test 9 — Ended Auction in the Public List
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/auctions'
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/auctions'
 ```
 
 **Result:** The backend returned `200`. The response showed `status=CLOSED`.
@@ -141,7 +141,7 @@ curl -i -X GET 'http://127.0.0.1:51969/api/v1/auctions'
 ### Test 10 — Ended Auction Details
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/auctions/19ebe2ea-1c57-4532-ac05-c8633545220b'
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/auctions/823afd60-51b6-4d0c-9fa8-48be7453f3a0'
 ```
 
 **Result:** The backend returned `200`. The response showed `status=CLOSED closure timestamp saved`.
