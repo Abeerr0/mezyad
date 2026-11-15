@@ -1470,6 +1470,11 @@ api.get("/me/auctions", auth, async (req, res, next) => {
 app.use((_req, res) => err(res, 404, "NOT_FOUND", "Route not found"));
 app.use((error, req, res, next) => {
   if (res.headersSent) return next(error);
+  // هنا نتحقق من خطأ ترميز الرابط إذا كان الطلب غير صحيح
+  if (error instanceof URIError && error.status === 400) {
+    // هنا نرجع الرد الصحيح ونوقف معالجة هذا الخطأ
+    return err(res, 400, "INVALID_INPUT", "Invalid URL encoding");
+  }
   if (error.apiCode)
     return err(res, error.status || 400, error.apiCode, error.message);
   if (error.name === "MulterError")
