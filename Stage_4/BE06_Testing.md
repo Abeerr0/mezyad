@@ -3,7 +3,7 @@
 **Team member:** Ghadi
 **Week:** 1 — Backend
 **Task date:** 14 October 2026
-**Retest date:** 10 November 2026
+**Retest date:** 15 November 2026
 **Testing method:** Manual testing using the terminal and curl.
 
 ## Goal
@@ -37,9 +37,9 @@ I compared each HTTP status and response with the expected result.
 I sent a registration request with an email containing two `@` symbols to check that this invalid format was rejected.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/register' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auth/register' \
   -H 'Content-Type: application/json' \
-  -d '{"name":"Test","email":"a@@mezyad.test","password":"<TEST_PASSWORD>"}'
+  -d '{"name":"Test","email":"a@@mezyad.test","password":"MezyadTest2026!"}'
 ```
 
 **Result:** The backend returned `400 INVALID_INPUT`.
@@ -49,7 +49,7 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/register' \
 I sent a password containing 73 ASCII digits. Each digit takes one byte, so the password was 73 bytes long.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/register' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auth/register' \
   -H 'Content-Type: application/json' \
   -d '{"name":"Test","email":"limits@mezyad.test","password":"1111111111111111111111111111111111111111111111111111111111111111111111111"}'
 ```
@@ -61,7 +61,7 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/register' \
 I sent a password containing 72 ASCII digits with valid registration data and an email that was not already registered.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/register' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auth/register' \
   -H 'Content-Type: application/json' \
   -d '{"name":"Test","email":"limits@mezyad.test","password":"111111111111111111111111111111111111111111111111111111111111111111111111"}'
 ```
@@ -73,7 +73,7 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/register' \
 I sent the same request again after the account had been created to check that the same email could not be registered twice.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/register' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auth/register' \
   -H 'Content-Type: application/json' \
   -d '{"name":"Test","email":"limits@mezyad.test","password":"111111111111111111111111111111111111111111111111111111111111111111111111"}'
 ```
@@ -85,9 +85,9 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/register' \
 I sent a name containing 161 characters to check that names above the 160-character limit were rejected.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/register' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auth/register' \
   -H 'Content-Type: application/json' \
-  -d '{"name":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","email":"long-name@mezyad.test","password":"<TEST_PASSWORD>"}'
+  -d '{"name":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","email":"long-name@mezyad.test","password":"MezyadTest2026!"}'
 ```
 
 **Result:** The backend returned `400 INVALID_INPUT`.
@@ -97,9 +97,9 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/register' \
 I sent an email containing 255 characters to check that emails above the 254-character limit were rejected.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/register' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auth/register' \
   -H 'Content-Type: application/json' \
-  -d '{"name":"Test","email":"xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.dddddddddddddddddddddddddddddddddddddddddddddddddddddddd.test","password":"<TEST_PASSWORD>"}'
+  -d '{"name":"Test","email":"xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.dddddddddddddddddddddddddddddddddddddddddddddddddddddddd.test","password":"MezyadTest2026!"}'
 ```
 
 **Result:** The backend returned `400 INVALID_INPUT`.
@@ -109,9 +109,9 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/register' \
 I sent a name containing 160 characters, an email containing 254 characters, and an accepted password. I tested both limits together in one request.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/register' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auth/register' \
   -H 'Content-Type: application/json' \
-  -d '{"name":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","email":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.dddddddddddddddddddddddddddddddddddddddddddddddddddddddd.test","password":"<TEST_PASSWORD>"}'
+  -d '{"name":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","email":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.dddddddddddddddddddddddddddddddddddddddddddddddddddddddd.test","password":"MezyadTest2026!"}'
 ```
 
 **Result:** The backend returned `201`.
