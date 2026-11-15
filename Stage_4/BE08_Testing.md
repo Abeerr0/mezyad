@@ -6,7 +6,7 @@
 
 **Selected task date:** 16 October 2026.
 
-**Retest date:** 10 November 2026
+**Retest date:** 15 November 2026
 
 **Testing method:** Manual testing using the terminal and curl.
 
@@ -30,7 +30,7 @@ Check that protected routes reject requests without a valid session, accept requ
 
 I tested the routes using `curl` commands in the VS Code terminal.
 
-I used `seller@mezyad.test` as the regular user and `admin@mezyad.test` as the admin. I signed in to both accounts and used their JWTs in the relevant requests.
+I used `ghadi0alzhrani@gmail.com` as the regular user and `adminmezyad@gmail.com` as the admin. I signed in to both accounts and used their JWTs in the relevant requests.
 
 I compared each HTTP status and response with the expected result. For protected requests, I took the JWT from `data.token` in the login response and placed it after `Bearer`.
 
@@ -38,22 +38,22 @@ I compared each HTTP status and response with the expected result. For protected
 
 ### Regular User Account
 
-I used the test account `seller@mezyad.test` with the role `USER` and signed in to obtain its JWT.
+I used the test account `ghadi0alzhrani@gmail.com` with the role `USER` and signed in to obtain its JWT.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/login' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auth/login' \
   -H 'Content-Type: application/json' \
-  -d '{"email":"seller@mezyad.test","password":"<TEST_PASSWORD>"}'
+  -d '{"email":"ghadi0alzhrani@gmail.com","password":"MezyadTest2026!"}'
 ```
 
 ### Admin Account
 
-I prepared `admin@mezyad.test` with the role `ADMIN` in the temporary database and signed in to obtain its JWT.
+I prepared `adminmezyad@gmail.com` with the role `ADMIN` in the temporary database and signed in to obtain its JWT.
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/login' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auth/login' \
   -H 'Content-Type: application/json' \
-  -d '{"email":"admin@mezyad.test","password":"<TEST_PASSWORD>"}'
+  -d '{"email":"adminmezyad@gmail.com","password":"MezyadTest2026!"}'
 ```
 
 ## Test Cases and Commands
@@ -63,7 +63,7 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/login' \
 I requested user details without sending an `Authorization` header:
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/auth/me'
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/auth/me'
 ```
 
 **Result:** The backend returned `401 UNAUTHORIZED`.
@@ -73,8 +73,8 @@ curl -i -X GET 'http://127.0.0.1:51969/api/v1/auth/me'
 I sent `abc123` instead of a valid JWT:
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/auth/me' \
-  -H 'Authorization: Bearer <INVALID_JWT>'
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/auth/me' \
+  -H 'Authorization: Bearer abc123'
 ```
 
 **Result:** The backend returned `401 UNAUTHORIZED`.
@@ -84,7 +84,7 @@ curl -i -X GET 'http://127.0.0.1:51969/api/v1/auth/me' \
 I sent the regular user's token obtained from the login response:
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/auth/me' \
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/auth/me' \
   -H 'Authorization: Bearer <SELLER_JWT>'
 ```
 
@@ -95,7 +95,7 @@ curl -i -X GET 'http://127.0.0.1:51969/api/v1/auth/me' \
 I sent a request to the advertisement review route using the regular user's token:
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/admin/items/00000000-0000-4000-8000-000000000000/review' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/admin/items/00000000-0000-4000-8000-000000000000/review' \
   -H 'Authorization: Bearer <SELLER_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{}'
@@ -108,7 +108,7 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/admin/items/00000000-0000-4000-80
 I sent the same request using the admin token and kept the request body empty:
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/admin/items/00000000-0000-4000-8000-000000000000/review' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/admin/items/00000000-0000-4000-8000-000000000000/review' \
   -H 'Authorization: Bearer <ADMIN_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{}'
@@ -121,7 +121,7 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/admin/items/00000000-0000-4000-80
 I sent a logout request using the same admin token:
 
 ```bash
-curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/logout' \
+curl -i -X POST 'http://127.0.0.1:49692/api/v1/auth/logout' \
   -H 'Authorization: Bearer <ADMIN_JWT>' \
   -H 'Content-Type: application/json' \
   -d '{}'
@@ -138,7 +138,7 @@ curl -i -X POST 'http://127.0.0.1:51969/api/v1/auth/logout' \
 I requested user details using the same admin token after signing out:
 
 ```bash
-curl -i -X GET 'http://127.0.0.1:51969/api/v1/auth/me' \
+curl -i -X GET 'http://127.0.0.1:49692/api/v1/auth/me' \
   -H 'Authorization: Bearer <SIGNED_OUT_ADMIN_JWT>'
 ```
 
