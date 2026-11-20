@@ -1,6 +1,6 @@
 // تم التعديل من عبير: يجمع طلبات المزاد والعروض والالتزام والتحديث الدوري
 import { useEffect, useRef, useState } from "react";
-import { request, API } from "../../../shared/api/client.js";
+import { request } from "../../../shared/api/client.js";
 import { demoAuctions } from "../../../shared/data/site-data.js";
 
 // تم التعديل من عبير: نولد رقم طلب امن حتى لو المتصفح ما يدعم randomUUID على التشغيل المحلي.
@@ -230,7 +230,6 @@ export function useMarket(workspace) {
           {
             token,
             signal,
-            base: API.replace(/\/api\/v1$/, ""),
           },
         ),
       );
