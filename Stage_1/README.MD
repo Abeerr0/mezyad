@@ -1,14 +1,13 @@
-# Stage 1 — Team Formation and Idea Development
+# Stage 1: Team Formation and Idea Development
 
-Stage 1 covers team formation, research, brainstorming, idea evaluation, and selection of the Mezyad project.
+This stage explains how our team explored and compared project ideas before choosing Mezyad.
 
 ## Contents
 
-- Team Formation
-- Research and Brainstorming
-- Ideas Explored
+- Team Formation and Collaboration
+- Ideas We Explored
 - Idea Evaluation
-- Decision and Refinement
-- Lessons Learned
+- Selected MVP Concept: Mezyad
+- Decision
 
 [Read the Stage 1 Report](Report.MD)
