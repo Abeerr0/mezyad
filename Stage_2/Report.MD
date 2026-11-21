@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-**Mezyad — High-Value Asset Auction Platform** is an online auction platform for high-value assets, focused on controlled auction participation, bidder commitment, and reliable server-validated bidding.
+**Mezyad ** is an online auction platform for high-value assets, focused on controlled auction participation, bidder commitment, and reliable server-validated bidding.
 
 **The central problem.** High-value online auctions require clear asset information, controlled participation, a defined commitment step for bidders, dependable server-validated bidding, and a predictable closing process. For assets such as vehicles or real estate, bidders need enough detail to evaluate the asset, sellers may want to decide who can enter the auction, and every participant needs to see the same live price and the same ending. When listings are unclear, participation is uncontrolled, or the live auction state is inconsistent, the auction becomes difficult to rely on.
 
