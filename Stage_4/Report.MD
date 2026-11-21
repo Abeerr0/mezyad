@@ -1,3 +1,185 @@
+# Mezyad | Stage 4 Delivery Report
+
+**Holberton School · Portfolio Project · MVP Development and Execution**
+
+| Project information | Details |
+| --- | --- |
+| Product | Mezyad, an Arabic digital auction platform for public and invitation-only auctions |
+| Team | Abeer Al-Saiari, Ghadi Al-Zahrani, Aseel Al-Zahrani, Tala Al-Hudaibi |
+| Live MVP | [mezyad1.com](https://mezyad1.com/) |
+| Source and design baseline | [Development branch](https://github.com/Abeerr0/mezyad/tree/Development) · [Stage 3 technical report](../Stage_3/Report.MD) |
+| Stage 4 navigation | [Stage 4 README](README.md) · [Task reports and screenshots](Abeer-Task-Reports/) |
+
+## Executive Summary
+
+Mezyad connects three workflows. A seller submits an asset listing for review. An administrator approves it or returns it with a reason. An eligible bidder can take part in the resulting auction and follow its outcome. A single User account can sell and bid on different auctions.
+
+Ghadi Al-Zahrani’s deployed-browser report records five passing journeys covering account access, listing resubmission, public and private auctions, and closure without bids. The commitment steps in that run used Moyasar Test Mode. Abeer Al-Saiari’s reports trace the implementation across the React interface, Express endpoints and PostgreSQL. They identify which conclusions come from code review, prior testing and deployed observations. [Ghadi’s browser test report](E2E_Report.md) · [Abeer’s task reports](Abeer-Task-Reports/)
+
+| Delivery area | Read in this report |
+| --- | --- |
+| Task 0 · Plan and define sprints | [Sprint plan, ownership and dependencies](#task-0-sprint-planning) |
+| Task 1 · Execute development tasks | [Implemented workflows and source control](#task-1-development-and-source-control) |
+| Task 2 · Monitor progress and adjust | [Progress, decisions and metrics](#task-2-progress-and-adjustments) |
+| Task 3 · Conduct sprint reviews and retrospectives | [Demos and review records](#task-3-sprint-reviews-and-retrospectives) |
+| Task 4 · Final integration and QA testing | [Test results, evidence and defects](#task-4-integration-and-qa) |
+| Task 5 · Final deliverables | [Delivery checklist and evidence](#task-5-deliverables) |
+| Deployment and demo | [Live site, hosting and domain](#deployment-and-demo) |
+| Earlier report | [Original implementation snapshot](#original-implementation-snapshot) |
+
+### Project Records in Notion
+
+The task board is the reference for current task ownership and status. The two Stage 4 workspace links are carried over from the team’s README. Use the dated records in those pages when reporting sprint meetings, deadlines or acceptance decisions.
+
+- [Stage 4 task board](https://app.notion.com/p/90d3ecedbaba461cbe3ce7933a409788?v=4020bc42a0808189877c000c5788e36e&source=copy_link)
+- [Stage 4 workspace link](https://app.notion.com/p/Mezyad-Stage-4-4020bc42a08081cbbd02f265ec0605d5?source=copy_link)
+- [Stage 4 weekly workspace link](https://app.notion.com/p/Mezyad-Stage-4-4020bc42a08081198a73f34924d1cb71?source=copy_link)
+
+## Task 0 Sprint Planning
+
+The plan called for four one-week iterations. The checkpoints below are relative to the sprint sequence. Calendar dates and individual commitment dates should be taken from the team’s records when documented.
+
+| Sprint | Planned outcome | Planned contributors | Dependency and acceptance checkpoint |
+| --- | --- | --- | --- |
+| S1 · Foundation | Create the PostgreSQL schema and seed data, set up the app, and deliver registration, login and initial listings. Begin provider research. | Abeer and Tala on database work, Abeer and Ghadi on API work, Aseel and Ghadi on UI work | Schema and connection setup precede authenticated actions. Demonstrate sign-in and a saved listing. |
+| S2 · Marketplace | Review listings, create auctions from approved items, and support private invitations. | Abeer and Ghadi on API work, Aseel and Ghadi on UI work, Tala on QA | S1 sessions and listings precede admin review. Demonstrate approval, auction creation and private access checks. |
+| S3 · Bid integrity | Connect commitment verification, bid eligibility, history and closure. | Abeer and Ghadi on API work, Abeer and Tala on bid integrity, Tala and Aseel on QA | S2 auctions and provider test access precede the full bidding journey. Check valid and rejected bids and the saved outcome. |
+| S4 · Integration | Exercise public and private journeys, review defects and prepare the demo. | Entire team, with Tala and Aseel listed as QA leads in the plan | Integrate the preceding workflows. Collect repeatable browser scenarios and defect evidence. |
+
+The plan treats accounts, listings, moderation, public and private auctions, commitment, bid integrity and results as **Must**. Usability improvements, accessibility and broader regression coverage are **Should**. Additional UX polish follows the core flows. Real transfers, escrow, KYC, anti-sniping and real-time push updates were deferred for this MVP. [Stage 3 baseline](../Stage_3/Report.MD) · [Notion task board](https://app.notion.com/p/90d3ecedbaba461cbe3ce7933a409788?v=4020bc42a0808189877c000c5788e36e&source=copy_link)
+
+| Responsibility | What the role covers | Evidence to reference |
+| --- | --- | --- |
+| Project Manager | Sprint goals, assignments, dependencies, deadlines and decisions when work changes. | Notion task board and dated team records. |
+| Source Control Manager | Branch coordination, review and integration evidence. | Development history and the relevant PR or review for each delivery. |
+| Quality Assurance | Expected outcomes, test execution, defect triage and retest evidence. | E2E report, technical test reports and Bug Tracker. |
+| Technical contributors | Frontend, backend and database implementation, with task-level acceptance evidence. | Task assignment records and relevant task reports. |
+
+The table describes responsibilities. Named formal PM and SCM assignments should come from the team records.
+
+## Task 1 Development and Source Control
+
+### Implemented Workflows
+
+| Workflow | What was delivered | Detailed reports |
+| --- | --- | --- |
+| Account access | Registration, email verification and sign-in connect the UI to the session API. | Abeer’s [FE-01](Abeer-Task-Reports/FE-01.md), [FE-02](Abeer-Task-Reports/FE-02.md) and [DB-06](Abeer-Task-Reports/DB-06.md) · Ghadi’s [E2E-01](E2E_Report.md#e2e-01-registration-verification-sign-in-and-sign-out) |
+| Listings and moderation | The seller submits an item and images. Review metadata records approval or rejection. The owner can revise a rejected item and return it to pending review. | Abeer’s [FE-05](Abeer-Task-Reports/FE-05.md), [FE-06](Abeer-Task-Reports/FE-06.md), [BE-01](Abeer-Task-Reports/BE-01.md), [BE-02](Abeer-Task-Reports/BE-02.md) and [BE-03](Abeer-Task-Reports/BE-03.md) · Ghadi’s [E2E-02](E2E_Report.md#e2e-02-listing-rejection-edit-resubmission-and-approval) |
+| Auction creation and access | Approved items can become public or private auctions. The public catalogue and private invitation path apply different access rules. | Abeer’s [FE-03](Abeer-Task-Reports/FE-03.md), [FE-08](Abeer-Task-Reports/FE-08.md) and [DB-04](Abeer-Task-Reports/DB-04.md) · [Auction creation report](Abeer-Task-Reports/FE-07.md) · [API contracts](FE11_API_Contracts.md) |
+| Commitment and bidding | The checkout and bank-status views communicate the test authorization state. Eligible bids use the current minimum, update the saved price and enter the history. | Abeer’s [FE-12](Abeer-Task-Reports/FE-12.md), [FE-18](Abeer-Task-Reports/FE-18.md), [BE-04](Abeer-Task-Reports/BE-04.md) and [DB-09](Abeer-Task-Reports/DB-09.md) · Ghadi’s [Moyasar testing report](BE14_Testing.md) |
+| Closure and activity | Auction closure records the result, including cases with no winner. Users can navigate to their activity, auctions and bid history. | Abeer’s [FE-10](Abeer-Task-Reports/FE-10.md) and [FE-17](Abeer-Task-Reports/FE-17.md) · [Closure testing](BE15_Testing.md) · Ghadi’s [E2E-05](E2E_Report.md#e2e-05-auction-closes-without-bids) |
+
+### Technical Flow
+
+```mermaid
+flowchart TD
+  A["React browser client"] -->|"REST requests"| B["Express API"]
+  B -->|"Sessions, listings, bids and results"| C[("PostgreSQL")]
+  B -->|"Commitment verification in test mode"| D["Moyasar Test Mode"]
+  B -->|"Validated image writes"| E["Listing image storage"]
+```
+
+The database retains the ten core Stage 3 tables. The setup script applies the base schema, later migrations and the category seed. The bid API locks the auction row and saves the accepted bid and price update in the same transaction. The table constraints and the application rules are documented separately in the database reports. [Schema comparison](Abeer-Task-Reports/DB-01.md) · [Setup and seed](Abeer-Task-Reports/DB-07.md) · [Concurrent price updates](Abeer-Task-Reports/DB-09.md)
+
+### Source Control and Traceability
+
+The planned SCM flow is a feature branch, a pull request, a teammate review and integration after checks. The Development history provides commit-level evidence. Link the specific PR, review or CI result where it exists. A commit shows that a change was recorded. A linked review or test result establishes the corresponding acceptance evidence. [Development commits](https://github.com/Abeerr0/mezyad/commits/Development/) · [Pull requests](https://github.com/Abeerr0/mezyad/pulls)
+
+## Task 2 Progress and Adjustments
+
+| Change or blocker | Team response | Evidence and remaining scope |
+| --- | --- | --- |
+| An official banking sandbox was still pending in the earlier snapshot. | Ghadi documented the provider search and the configuration used to exercise bid rules separately. The later implementation verified commitments through Moyasar Test Mode. | The later report records test authorization outcomes. Access to a separate official Open Banking sandbox is a distinct question. [Earlier provider status](BE14_Status.md) · [Later sandbox tests](BE14_Testing.md) |
+| Image handling and listing corrections needed a complete implementation path. | The backend added type and size checks, normalized storage and coordinated image references with listing writes. The deployed E2E exercise later covered rejected listing correction and approval. | Abeer’s [BE-03](Abeer-Task-Reports/BE-03.md) · Ghadi’s [listing E2E](E2E_Report.md#e2e-02-listing-rejection-edit-resubmission-and-approval) |
+| An approved test commitment did not appear on the bid screen. | The API path used by the frontend was corrected and the flow was retested locally. | The Bug Tracker records the reproduction, fix commit and local retest. [Bug Tracker](Bug_Tracker.md) |
+| Two offers could contend for the same current price. | The implementation serializes writes with a lock on the auction row. The team tracker records a local test-mode check with two equal bids. | The tracker records one accepted offer and one rejection after the minimum changed. Abeer’s later DB-09 review marks its own native PostgreSQL rerun as **Not run**. [Bug Tracker](Bug_Tracker.md) · [DB-09](Abeer-Task-Reports/DB-09.md) |
+
+| Metric | How to report it |
+| --- | --- |
+| Sprint completion | Accepted tasks divided by planned tasks for the same sprint. Use the actual sprint scope from Notion. |
+| Velocity | Accepted story points per sprint, when the team recorded story-point estimates. |
+| Bug resolution | Verified fixes divided by verified reported defects for the same period. Document the retest alongside the fix. |
+| Blocker age | Days from the first recorded blocker to its resolution or the reporting date. |
+
+This summary does not report sprint percentages or velocity because the necessary baseline and accepted counts were not verified. A stand-up record should show the date, participants, completed work, next actions and blockers, with an owner and evidence link where available. [Progress records in Notion](https://app.notion.com/p/Mezyad-Stage-4-4020bc42a08081198a73f34924d1cb71?source=copy_link)
+
+## Task 3 Sprint Reviews and Retrospectives
+
+| Sprint | Planned demonstration | Available technical evidence |
+| --- | --- | --- |
+| S1 · Foundation | Register, verify email, sign in and submit an item. | Ghadi’s [account E2E](E2E_Report.md#e2e-01-registration-verification-sign-in-and-sign-out) and Abeer’s [listing API report](Abeer-Task-Reports/BE-01.md). |
+| S2 · Marketplace | Review a listing, create an auction and enforce invitation-only access. | Ghadi’s [listing E2E](E2E_Report.md#e2e-02-listing-rejection-edit-resubmission-and-approval) and [private-auction E2E](E2E_Report.md#e2e-04-private-auction-access-bidding-and-result). |
+| S3 · Bid integrity | Verify a test commitment, submit competing offers and confirm the outcome. | Ghadi’s [Moyasar test-mode report](BE14_Testing.md), Abeer’s [bid rules](Abeer-Task-Reports/BE-04.md) and the [concurrency evidence notes](Abeer-Task-Reports/DB-09.md). |
+| S4 · Integration | Demonstrate public and private journeys, retest fixes and review release readiness. | Ghadi’s [deployed-browser report](E2E_Report.md) and the [Bug Tracker](Bug_Tracker.md). |
+
+The demo evidence above describes what was tested. For a formal review, attach the dated team record with attendees, demonstrated revision, outcome and action owner. For a retrospective, record what to start, stop and continue, and add an owner, due date and way to verify the improvement. Meeting dates, attendance and retrospective decisions are pending evidence in this summary. [Stage 4 workspace](https://app.notion.com/p/Mezyad-Stage-4-4020bc42a08081cbbd02f265ec0605d5?source=copy_link) · [Weekly workspace](https://app.notion.com/p/Mezyad-Stage-4-4020bc42a08081198a73f34924d1cb71?source=copy_link)
+
+## Task 4 Integration and QA
+
+### Deployed Browser Results
+
+Ghadi Al-Zahrani recorded these manual cases on the deployed site. Authorization steps used Moyasar Test Mode. The result applies to the scenarios in the report. [Test environment and full results](E2E_Report.md)
+
+| Scenario | Recorded result |
+| --- | --- |
+| E2E-01 · Account access | **Pass.** Incorrect code rejected, correct code verified the account and sign-out restored the access gate. |
+| E2E-02 · Listing correction | **Pass.** The listing was rejected, corrected, resubmitted and approved. |
+| E2E-03 · Public auction | **Pass.** A below-minimum bid was rejected, two valid bids were recorded and the losing test hold was released. |
+| E2E-04 · Private auction | **Pass.** Wrong code was rejected, valid code opened access and the test authorization, bid and closing result were confirmed. |
+| E2E-05 · No bids | **Pass.** The auction closed without a winner and the seller received a matching result email. |
+
+### Additional Checks and Limits
+
+| Evidence layer | What it supports | Source |
+| --- | --- | --- |
+| Frontend integration | Earlier React component checks used jsdom, an API and temporary PostgreSQL. They cover their stated scope and revisions. | Abeer’s [FE-13](Abeer-Task-Reports/FE-13.md) · [Run log](evidence/fe13-abeer.txt) |
+| UI feedback | Earlier simulated responses checked distinct loading, empty and network error states. | [AS-08 report](AS08_States.md) · [State checks](evidence/as08-states.txt) |
+| Backend and database | The test inventory maps listing fields, images, sessions, setup and bid behavior to test files and existing results. Tests pending a rerun are labeled. | Abeer’s [BE-05](Abeer-Task-Reports/BE-05.md), [DB-07](Abeer-Task-Reports/DB-07.md) and [DB-09](Abeer-Task-Reports/DB-09.md) |
+| Provider and closure | Earlier manual tests record test-hold outcomes, bid rejection and winner or no-winner closure. | [Commitment tests](BE14_Testing.md) · [Closure tests](BE15_Testing.md) |
+| Defect verification | The tracker keeps reproduction, environment, fix and retest details. Use it to check outstanding items before stating release acceptance. | [Bug Tracker](Bug_Tracker.md) |
+
+The repository includes backend and frontend lockfiles. Database setup is exposed through the backend’s `npm run db:setup` command. `npm run test:postgres` requires native PostgreSQL and a disposable `TEST_DATABASE_URL` ending in `_test`. Building the frontend is separate from running the browser journeys. [Backend scripts](../backend/package.json) · [Setup script](../backend/scripts/setup-db.js) · [PostgreSQL test runner](../backend/scripts/test-postgres.js) · [Frontend scripts](../frontend/package.json)
+
+## Task 5 Deliverables
+
+| Deliverable | Where to review it |
+| --- | --- |
+| Sprint goals, responsibilities and dependencies | [Sprint planning](#task-0-sprint-planning) and [Notion records](#project-records-in-notion) |
+| Delivery, scope changes and SCM evidence | [Development and source control](#task-1-development-and-source-control) and [Progress and adjustments](#task-2-progress-and-adjustments) |
+| Reviews and retrospectives | [Review evidence and meeting records](#task-3-sprint-reviews-and-retrospectives) |
+| Test outcomes, defects and issue follow-up | [Integration and QA](#task-4-integration-and-qa) and [Bug Tracker](Bug_Tracker.md) |
+| Detailed implementation evidence | [Abeer’s frontend, backend and database reports](Abeer-Task-Reports/) and [Ghadi’s end-to-end report](E2E_Report.md) |
+| Platform delivery and demo | [Deployment and demo](#deployment-and-demo) |
+
+## Deployment and Demo
+
+| Item | Documentation |
+| --- | --- |
+| Public site | [https://mezyad1.com/](https://mezyad1.com/) |
+| Render hosting | The team reports using Render. Add the service types, deployed branch or revision, build and start steps, database linkage and deployment screenshot from the team’s settings. |
+| GoDaddy domain | The team reports using GoDaddy for the domain. Add the DNS record types, HTTPS verification and a screenshot with private settings excluded. |
+| Post-deployment checks | Ghadi’s browser report documents the live product journeys and the payment test mode. [E2E evidence](E2E_Report.md) |
+
+### Product Screens
+
+| Screen | What the capture shows |
+| --- | --- |
+| [Auction catalogue](Abeer-Task-Reports/screenshots/FE-03.jpg) | Search, category filtering and the public auction cards. See [FE-03](Abeer-Task-Reports/FE-03.md) for the behavior and known edge case. |
+| [Listing editor](Abeer-Task-Reports/screenshots/FE-05.jpg) | The category step and the listing progress indicator. See [FE-05](Abeer-Task-Reports/FE-05.md) for form and upload evidence. |
+| [Auction result](Abeer-Task-Reports/screenshots/FE-10-result.jpg) | The closed-without-bids result. See [FE-10](Abeer-Task-Reports/FE-10.md) and the corresponding [browser case](E2E_Report.md#e2e-05-auction-closes-without-bids). |
+
+![Mezyad auction catalogue with search and category filtering](Abeer-Task-Reports/screenshots/FE-03.jpg)
+
+*Catalogue view from the deployed desktop interface. The E2E report provides the separate evidence for auction access and acceptance.*
+
+---
+
+## Original Implementation Snapshot
+
+The original report follows. Its dated observations provide the planning and implementation baseline. Use the sections above and their linked evidence for the later delivery status.
+
+---
+
 # MEZYAD
 ## STAGE 4 — MVP DEVELOPMENT & SPRINT EXECUTION
 **Holberton School | Portfolio Project | Engineering Delivery Report**
