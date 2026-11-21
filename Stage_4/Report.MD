@@ -20,7 +20,7 @@ Ghadi Al-Zahrani’s deployed-browser report records five passing journeys cover
 | --- | --- |
 | Task 0 · Plan and define sprints | [Sprint plan, ownership and dependencies](#task-0-sprint-planning) |
 | Task 1 · Execute development tasks | [Implemented workflows and source control](#task-1-development-and-source-control) |
-| Task 2 · Monitor progress and adjust | [Progress, decisions and metrics](#task-2-progress-and-adjustments) |
+| Task 2 · Monitor progress and adjust | [Progress and decisions](#task-2-progress-and-adjustments) |
 | Task 3 · Conduct sprint reviews and retrospectives | [Demos and review records](#task-3-sprint-reviews-and-retrospectives) |
 | Task 4 · Final integration and QA testing | [Test results, evidence and defects](#task-4-integration-and-qa) |
 | Task 5 · Final deliverables | [Delivery checklist and evidence](#task-5-deliverables) |
@@ -29,10 +29,9 @@ Ghadi Al-Zahrani’s deployed-browser report records five passing journeys cover
 
 ### Project Records in Notion
 
-The task board is the reference for current task ownership and status. The two Stage 4 workspace links are carried over from the team’s README. Use the dated records in those pages when reporting sprint meetings, deadlines or acceptance decisions.
+The task board tracks assignments and status. The weekly workspace holds the team’s Stage 4 progress records.
 
-- [Stage 4 task board](https://app.notion.com/p/90d3ecedbaba461cbe3ce7933a409788?v=4020bc42a0808189877c000c5788e36e&source=copy_link)
-- [Stage 4 workspace link](https://app.notion.com/p/Mezyad-Stage-4-4020bc42a08081cbbd02f265ec0605d5?source=copy_link)
+- [Stage 4 task board](https://app.notion.com/p/90d3ecedbaba461cbe3ce7933a409788?v=f0ebf28bea9144329e41627e5631ff57&source=copy_link)
 - [Stage 4 weekly workspace link](https://app.notion.com/p/Mezyad-Stage-4-4020bc42a08081198a73f34924d1cb71?source=copy_link)
 
 ## Task 0 Sprint Planning
@@ -41,12 +40,12 @@ The plan called for four one-week iterations. The checkpoints below are relative
 
 | Sprint | Planned outcome | Planned contributors | Dependency and acceptance checkpoint |
 | --- | --- | --- | --- |
-| S1 · Foundation | Create the PostgreSQL schema and seed data, set up the app, and deliver registration, login and initial listings. Begin provider research. | Abeer and Tala on database work, Abeer and Ghadi on API work, Aseel and Ghadi on UI work | Schema and connection setup precede authenticated actions. Demonstrate sign-in and a saved listing. |
-| S2 · Marketplace | Review listings, create auctions from approved items, and support private invitations. | Abeer and Ghadi on API work, Aseel and Ghadi on UI work, Tala on QA | S1 sessions and listings precede admin review. Demonstrate approval, auction creation and private access checks. |
+| S1 · Foundation | Create the PostgreSQL schema and seed data, set up the app, and deliver registration, login and initial listings. Begin provider research. | Abeer and Tala on database work, Abeer and Ghadi on API work, Abeer on user-facing screens, Aseel on the admin interface | Schema and connection setup precede authenticated actions. Demonstrate sign-in and a saved listing. |
+| S2 · Marketplace | Review listings, create auctions from approved items, and support private invitations. | Abeer and Ghadi on API work, Abeer on user-facing screens, Aseel on the admin interface, Tala on QA | S1 sessions and listings precede admin review. Demonstrate approval, auction creation and private access checks. |
 | S3 · Bid integrity | Connect commitment verification, bid eligibility, history and closure. | Abeer and Ghadi on API work, Abeer and Tala on bid integrity, Tala and Aseel on QA | S2 auctions and provider test access precede the full bidding journey. Check valid and rejected bids and the saved outcome. |
 | S4 · Integration | Exercise public and private journeys, review defects and prepare the demo. | Entire team, with Tala and Aseel listed as QA leads in the plan | Integrate the preceding workflows. Collect repeatable browser scenarios and defect evidence. |
 
-The plan treats accounts, listings, moderation, public and private auctions, commitment, bid integrity and results as **Must**. Usability improvements, accessibility and broader regression coverage are **Should**. Additional UX polish follows the core flows. Real transfers, escrow, KYC, anti-sniping and real-time push updates were deferred for this MVP. [Stage 3 baseline](../Stage_3/Report.MD) · [Notion task board](https://app.notion.com/p/90d3ecedbaba461cbe3ce7933a409788?v=4020bc42a0808189877c000c5788e36e&source=copy_link)
+The plan treats accounts, listings, moderation, public and private auctions, commitment, bid integrity and results as **Must**. Usability improvements, accessibility and broader regression coverage are **Should**. Additional UX polish follows the core flows. Real transfers, escrow, KYC, anti-sniping and real-time push updates were deferred for this MVP. [Stage 3 baseline](../Stage_3/Report.MD) · [Notion task board](https://app.notion.com/p/90d3ecedbaba461cbe3ce7933a409788?v=f0ebf28bea9144329e41627e5631ff57&source=copy_link)
 
 | Responsibility | What the role covers | Evidence to reference |
 | --- | --- | --- |
@@ -94,15 +93,6 @@ The planned SCM flow is a feature branch, a pull request, a teammate review and 
 | An approved test commitment did not appear on the bid screen. | The API path used by the frontend was corrected and the flow was retested locally. | The Bug Tracker records the reproduction, fix commit and local retest. [Bug Tracker](Bug_Tracker.md) |
 | Two offers could contend for the same current price. | The implementation serializes writes with a lock on the auction row. The team tracker records a local test-mode check with two equal bids. | The tracker records one accepted offer and one rejection after the minimum changed. Abeer’s later DB-09 review marks its own native PostgreSQL rerun as **Not run**. [Bug Tracker](Bug_Tracker.md) · [DB-09](Abeer-Task-Reports/DB-09.md) |
 
-| Metric | How to report it |
-| --- | --- |
-| Sprint completion | Accepted tasks divided by planned tasks for the same sprint. Use the actual sprint scope from Notion. |
-| Velocity | Accepted story points per sprint, when the team recorded story-point estimates. |
-| Bug resolution | Verified fixes divided by verified reported defects for the same period. Document the retest alongside the fix. |
-| Blocker age | Days from the first recorded blocker to its resolution or the reporting date. |
-
-This summary does not report sprint percentages or velocity because the necessary baseline and accepted counts were not verified. A stand-up record should show the date, participants, completed work, next actions and blockers, with an owner and evidence link where available. [Progress records in Notion](https://app.notion.com/p/Mezyad-Stage-4-4020bc42a08081198a73f34924d1cb71?source=copy_link)
-
 ## Task 3 Sprint Reviews and Retrospectives
 
 | Sprint | Planned demonstration | Available technical evidence |
@@ -112,7 +102,7 @@ This summary does not report sprint percentages or velocity because the necessar
 | S3 · Bid integrity | Verify a test commitment, submit competing offers and confirm the outcome. | Ghadi’s [Moyasar test-mode report](BE14_Testing.md), Abeer’s [bid rules](Abeer-Task-Reports/BE-04.md) and the [concurrency evidence notes](Abeer-Task-Reports/DB-09.md). |
 | S4 · Integration | Demonstrate public and private journeys, retest fixes and review release readiness. | Ghadi’s [deployed-browser report](E2E_Report.md) and the [Bug Tracker](Bug_Tracker.md). |
 
-The demo evidence above describes what was tested. For a formal review, attach the dated team record with attendees, demonstrated revision, outcome and action owner. For a retrospective, record what to start, stop and continue, and add an owner, due date and way to verify the improvement. Meeting dates, attendance and retrospective decisions are pending evidence in this summary. [Stage 4 workspace](https://app.notion.com/p/Mezyad-Stage-4-4020bc42a08081cbbd02f265ec0605d5?source=copy_link) · [Weekly workspace](https://app.notion.com/p/Mezyad-Stage-4-4020bc42a08081198a73f34924d1cb71?source=copy_link)
+The demo evidence above describes what was tested. For a formal review, attach the dated team record with attendees, demonstrated revision, outcome and action owner. For a retrospective, record what to start, stop and continue, and add an owner, due date and way to verify the improvement. Meeting dates, attendance and retrospective decisions are pending evidence in this summary. [Weekly workspace](https://app.notion.com/p/Mezyad-Stage-4-4020bc42a08081198a73f34924d1cb71?source=copy_link)
 
 ## Task 4 Integration and QA
 
@@ -200,7 +190,7 @@ Mezyad is an auction platform where one registered user can list an asset for sa
 
 The implementation repository now includes a PostgreSQL ten-table migration, Express routes, token-session authentication, a preliminary React interface, initial automated health-test source, and Stage 4 delivery artifacts. The current system is **not yet an accepted end-to-end MVP**: complete React journeys, secure image uploads, verified banking sandbox integration, live-database QA and sprint meeting evidence remain outstanding.
 
-**Evidence index:** [Sprint plan](Sprint_Plan.md) · [Backlog](Product_Backlog.md) · [Progress](Progress_Tracker.md) · [Reviews](Sprint_Reviews.md) · [Retrospectives](Retrospectives.md) · [Testing](Testing_Report.md) · [Bugs](Bug_Tracker.md).
+**Defect evidence:** [Bugs](Bug_Tracker.md).
 
 ---
 
@@ -212,8 +202,8 @@ The team follows **four one-week sprints** consistent with Stage 3 §8.1. Each s
 
 | Sprint | Goal | Deliverable / demo scenario | Primary ownership | Gate |
 |---|---|---|---|---|
-| **S1: Foundation** | Make persistence and account identity possible | Apply PostgreSQL schema; register, log in and save a listing | Abeer + Tala (DB), Abeer + Ghadi (API), Aseel + Ghadi (UI) | Clean migration + tested authenticated request |
-| **S2: Marketplace** | Connect moderation to auction publication | Seller submits → admin reviews → approved listing becomes public/private auction | Abeer + Ghadi (API), Aseel + Ghadi (UI), Tala (QA) | Unauthorized admin access denied; private code enforced |
+| **S1: Foundation** | Make persistence and account identity possible | Apply PostgreSQL schema; register, log in and save a listing | Abeer + Tala (DB), Abeer + Ghadi (API), Abeer (user-facing UI), Aseel (admin UI) | Clean migration + tested authenticated request |
+| **S2: Marketplace** | Connect moderation to auction publication | Seller submits → admin reviews → approved listing becomes public/private auction | Abeer + Ghadi (API), Abeer (user-facing UI), Aseel (admin UI), Tala (QA) | Unauthorized admin access denied; private code enforced |
 | **S3: Bid integrity** | Ensure eligible bids are correct under concurrency | Verified commitment → bid → history → closure/result | Abeer + Ghadi (API), Abeer + Tala (DB), Tala + Aseel (QA) | Competing bids serialized, duplicate request rejected, correct winner |
 | **S4: Integration** | Prove complete, usable workflows | Public/private browser E2E, negative tests, bug fixes, demo | Entire team; Tala + Aseel QA lead | Reproducible test report, no critical defects |
 
@@ -244,7 +234,7 @@ flowchart LR
 
 ## 0.3 Backlog, assignment and acceptance
 
-The actionable [Product Backlog](Product_Backlog.md) maps tasks to sprint, owner, dependency, code location and acceptance evidence. For example:
+The table lists the behavior required to accept each story and the evidence needed to verify it.
 
 | Story | Definition of accepted behavior | Evidence required |
 |---|---|---|
@@ -379,34 +369,15 @@ Initial implementation and documentation were introduced in [Pull Request #1](ht
 
 # TASK 2 — MONITOR PROGRESS AND ADJUST
 
-## 2.1 Stand-up workflow
-
-Each daily stand-up records **date**, **attendees**, **yesterday's verified progress**, **today's plan**, **blockers**, **assigned action** and **linked issue/PR**. The team updates [Progress Tracker](Progress_Tracker.md) using a consistent state model: `TODO → IN PROGRESS → IN REVIEW → DONE`, or `BLOCKED` with reason. No retrospective daily meetings are invented.
-
-## 2.2 Metrics and reporting rules
-
-| Metric | Formula | How it guides decisions |
-|---|---|---|
-| Sprint completion | Accepted tasks ÷ planned tasks × 100 | Detect scope spillover |
-| Velocity | Accepted story points per sprint | Forecast next sprint capacity |
-| Burndown | Remaining planned points each day | Detect blocked or underestimated work |
-| Bug resolution rate | Verified fixed bugs ÷ verified reported bugs × 100 | Detect stabilization progress |
-| Escaped defects | Bugs found after prior acceptance | Improve QA coverage |
-| Blocker age | Days since blocker first recorded | Trigger escalation |
-
-**Actual metrics:** Sprint meetings, accepted task counts, story-point baselines and QA logs have not been verified. No fabricated percentages or burndown charts are shown. The real external blocker is provider access for the banking commitment operation.
-
-## 2.3 Decisions, escalation and corrective action
+## 2.1 Decisions, escalation and corrective action
 
 | Risk | Trigger | Action | Owner |
 |---|---|---|---|
 | Bank sandbox unavailable | Provider access/docs not confirmed by sprint checkpoint | Escalate to mentor/provider; document blocker; retain fail-closed behavior | Abeer + Ghadi |
 | Bid race condition | Parallel requests produce inconsistent price/winner | Stop release; reproduce with concurrent test; fix transaction | Abeer + Tala |
-| Incomplete React screens | Cannot demo a complete workflow | Prioritize Must screens before polish | Aseel + Ghadi |
+| Incomplete React screens | Cannot demo a complete workflow | Prioritize Must screens before polish | Abeer (user-facing screens), Aseel (admin interface) |
 | Unsafe image input | Unsupported/oversized upload accepted | Reject input and add negative tests | Backend + QA |
 | Scope drift | Unapproved stack/feature introduced | Compare with Stage 3 and obtain team approval | Entire team |
-
-**Evidence:** [Progress Tracker](Progress_Tracker.md) contains an explicit status snapshot and a reusable dated stand-up record.
 
 ---
 
@@ -423,11 +394,9 @@ A sprint review is a **demonstration against acceptance criteria**, not a statem
 | S3 | Verify commitment → two competing bids → close → inspect result | Blocked by sandbox; remaining test evidence pending |
 | S4 | End-to-end browser journey including failure states and regression | Pending executed demo |
 
-[Review records and meeting template](Sprint_Reviews.md). No actual mentor comments or attendance are asserted without a source.
-
 ## 3.2 Retrospective structure
 
-For each sprint, discuss **Start / Stop / Continue**, identify one or more specific improvements, and assign an owner and verification date. Examples of **proposed discussion topics**, not historical team quotes: keep database migrations small; stop merging without test evidence; continue explicit API error contracts; add concurrent-bid tests before the demo. Record actual outcomes in [Retrospectives](Retrospectives.md).
+For each sprint, discuss **Start / Stop / Continue**, identify one or more specific improvements, and assign an owner and verification date. Examples of **proposed discussion topics**, not historical team quotes: keep database migrations small; stop merging without test evidence; continue explicit API error contracts; add concurrent-bid tests before the demo.
 
 ---
 
@@ -512,14 +481,13 @@ Classify defects as **Critical** (authorization, data corruption, false financia
 
 | Required deliverable | Direct evidence | Honest status |
 |---|---|---|
-| Sprint Planning | [Sprint Plan](Sprint_Plan.md), [Backlog](Product_Backlog.md), Task 0 above | Documented; calendar dates awaiting confirmation |
-| Sprint Reviews | [Sprint Reviews](Sprint_Reviews.md), Task 3 above | Procedure and scripts prepared; actual minutes pending |
-| Retrospectives | [Retrospectives](Retrospectives.md), Task 3 above | Procedure prepared; actual sessions pending |
+| Sprint Planning | Task 0 above | Documented; calendar dates awaiting confirmation |
+| Sprint Reviews | Task 3 above | Procedure and scripts prepared; actual minutes pending |
+| Retrospectives | Task 3 above | Procedure prepared; actual sessions pending |
 | Source repository | [GitHub main](https://github.com/Abeerr0/mezyad) | Available |
 | SCM / commits | [Merged PR #1](https://github.com/Abeerr0/mezyad/pull/1) | Source history available; peer review not established |
-| Progress / metrics | [Progress Tracker](Progress_Tracker.md) | Measurement framework prepared; actual daily metrics pending |
 | Bugs | [Bug Tracker](Bug_Tracker.md) | Known implementation gaps documented separately from tested defects |
-| QA results | [Testing Report](Testing_Report.md), Task 4 above | Test plan; full execution evidence pending |
+| QA results | Task 4 above | Test plan; full execution evidence pending |
 | Backend | [app.js](../backend/src/app.js) | Initial source committed |
 | Frontend | [main.jsx](../frontend/src/main.jsx) | Partial React source committed |
 | Database | [Schema](../database/migrations/001_schema.sql) | Migration source committed |
@@ -542,12 +510,6 @@ Classify defects as **Critical** (authorization, data corruption, false financia
 | Folder/file | Why it exists |
 |---|---|
 | `Stage_4/Report.MD` | Single authoritative task-by-task Stage 4 submission |
-| `Stage_4/Sprint_Plan.md` | Detailed sprint outcomes and dependencies |
-| `Stage_4/Product_Backlog.md` | Assignable work items and acceptance criteria |
-| `Stage_4/Progress_Tracker.md` | Stand-up records and measurable progress |
-| `Stage_4/Sprint_Reviews.md` | Demo scripts and actual review minutes |
-| `Stage_4/Retrospectives.md` | Continuous-improvement records |
-| `Stage_4/Testing_Report.md` | Executed QA evidence and environment |
 | `Stage_4/Bug_Tracker.md` | Defect triage and retest trail |
 | `backend/` | Express service and tests |
 | `frontend/` | React browser client |
