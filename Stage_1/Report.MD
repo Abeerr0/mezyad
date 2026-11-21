@@ -1,22 +1,21 @@
-# Stage 1 Report: Mezyad — High-Value Asset Auction Platform
+# Mezyad — Stage 1 Report
+## Team Formation and Idea Development
 
-## 1. Executive Summary
+**Project name:** Mezyad (مِزياد)  
+**Planned development period:** Three months
 
-Buying and selling high-value assets online — real estate, rare cars, luxury goods, premium license plates, or purebred camels — involves a real trust and commitment problem. Buyers and sellers are usually strangers, identities are difficult to verify, and bids can be placed with no real commitment behind them. This can lead to non-committal or fake bidding that disrupts auctions, and it leaves both sides uncertain about whether a deal will actually be honored once the auction ends. Without transparent, real-time visibility into the auction state, participants also have limited confidence in what is actually happening at any given moment, and the process after an auction closes is often unclear.
+## Team Formation and Collaboration
 
-**Mezyad** is a web-based auction platform designed to reduce these problems through a structured transaction lifecycle:
+| Team member | Contribution in Stage 1 |
+|---|---|
+| Ghadi Alzhrani | Participated in discussing and evaluating ideas and refining the selected concept. |
+| Abeer Alsayari | Participated in discussing and evaluating ideas and refining the selected concept. |
+| Tala Alhudhaybi | Participated in discussing and evaluating ideas and refining the selected concept. |
+| Aseel Alzhrani | Participated in discussing and evaluating ideas and refining the selected concept. |
 
-```
-Verification → Listing & Review → Auction → Bid Commitment → Auction Closure / Settlement → Handover
-```
+We met in person at the academy over the past two weeks and held some meetings on Discord. We discussed the ideas and made decisions together through mutual agreement.
 
-Rather than functioning as a simple listing-and-messaging platform, Mezyad connects identity verification, listing review, simulated financial commitment mechanisms, real-time bidding, and a defined settlement and handover process into a single coherent workflow.
-
-Mezyad is intended to serve three types of users: bidders who compete for assets, sellers who submit assets for auction, and administrators who review and moderate activity. The team selected this project after evaluating four candidate ideas against a shared set of criteria, because it addressed a meaningful, real-world problem while remaining realistic to build as a web-based MVP within the project timeframe, without depending on physical hardware.
-
-Mezyad is being developed as a graduation MVP/prototype. Identity verification and financial commitment are simulated for this stage, and the project does not claim to provide production-grade banking, legal, or security guarantees. Real integrations of this kind are identified as future opportunities rather than current MVP requirements.
-
----
+Ghadi is interested in **UI/UX design** and would like to work on this area in the upcoming stages of Mezyad.
 
 ## 2. Team Formation
 
@@ -46,352 +45,91 @@ Important decisions — such as which idea to pursue or how a core feature shoul
 
 Together, these practices are intended to keep the team cohesive and effective: everyone stays informed, decisions are shared rather than unilateral, and work can be redistributed as needed without depending on any single member.
 
----
 
-## 3. Research and Brainstorming
+## Ideas We Explored
 
-### 3.1 Research Focus
+We discussed two project ideas: **SentinX: Vanguard** and **Mezyad**. We considered what each idea would do, the main parts needed for an MVP, and whether we could build and test it within three months. The estimated development effort was a major factor in our decision.
 
-Before settling on a direction, the team examined three existing Saudi platforms to understand the local digital transaction and auction landscape: **Saudi Auctions (السعودية للمزادات)**, **Infath Auctions (إنفاذ للمزادات)**, and **Haraj (حراج)**. These platforms were not selected because they are identical to Mezyad, but because together they cover the relevant range of local experiences — a digital auction environment, a formal institutional auction service, and a general marketplace/classifieds model — that helped the team understand common patterns in auction participation and marketplace behavior before defining Mezyad's own scope.
+### SentinX: Vanguard
 
-**Saudi Auctions** was examined as the closest reference to a Saudi digital auction environment. Its public platform presents multiple asset categories, including real estate and vehicles, and describes a participation flow involving registration, funding the bidding amount, and bidding toward a win. The team used it to understand how Saudi users encounter and enter auctions, how participation across multiple asset categories can be structured, and how financial participation concepts can appear within an auction journey.
+SentinX: Vanguard was a simulation based field monitoring system. Its dashboard and live map would show personnel locations and simulated biometric data. The system would analyze the data, detect possible risks, and send alerts. It would also simulate routing a support drone to an incident while avoiding obstacles.
 
-**Infath Auctions**, the electronic auction service referenced by the Saudi government's Infath platform, was examined as a formal, institutional reference point. It illustrates how electronic auction participation can be presented within a structured, procedure-driven context, with clear steps and eligibility expectations. The team used it to understand local expectations around structured electronic auctions, not as a model to replicate — Mezyad is a graduation prototype and is not government-regulated or institutionally equivalent to Infath.
+The intended users were operations leaders in military and security sectors. Defense companies were also considered potential stakeholders.
 
-**Haraj** was examined as a familiar Saudi marketplace/classifieds reference rather than a direct auction competitor. It represents a broad, listing-based model for discovering and posting assets such as vehicles, real estate, electronics, and animals. The team used it to understand how users discover assets and how a general marketplace organizes categories and buyer/seller interaction, and to clarify, by contrast, that Mezyad is intended to move beyond a simple listing-and-contact model toward a structured auction lifecycle involving verification, bidding, commitment, auction closure, settlement, and handover.
+**Strengths:** The idea combined data visualization, risk alerts, and dynamic routing. It could be demonstrated without a physical drone.
 
-| Saudi Example | Why We Examined It | What We Learned / Could Draw From It | Relationship to Mezyad |
-| :--- | :--- | :--- | :--- |
-| Saudi Auctions | Closest reference to a multi-asset digital auction environment | Auction discovery, participation flow, multiple asset categories, bidding/deposit concepts | Auction-oriented reference; Mezyad focuses more explicitly on an end-to-end trust and commitment lifecycle |
-| Infath Auctions | Formal Saudi electronic-auction context | Structured participation, formal procedures, clear auction presentation | Institutional reference; Mezyad is a graduation prototype rather than a government auction service |
-| Haraj | Familiar Saudi marketplace/classified model | Asset discovery, category organization, buyer/seller marketplace behavior | Broader marketplace reference rather than a direct auction competitor |
+**Weaknesses and risks:** We would need to build and connect data simulation, a map, risk detection, alerts, and routing. Testing these parts together would take time. We had not conducted experiments or user testing to validate the idea.
 
-**Research sources:**
+**Why we did not select it:** We estimated that developing and testing the simulation would take longer than our available project period.
 
-* Saudi Auctions — السعودية للمزادات — [https://www.auctions.com.sa/](https://www.auctions.com.sa/)
-* Infath Auctions — إنفاذ للمزادات — [https://infath.gov.sa/ar/electronic-services/infath-auctions/](https://infath.gov.sa/ar/electronic-services/infath-auctions/)
+### Mezyad
 
-Haraj is discussed above as a marketplace example rather than a formal research source.
+Mezyad is an online platform that brings together auctions for high value or rare items and assets. Users would be able to browse listings, view item details, place bids, and see the auction result after bidding ends.
 
-This comparison is not intended to rank the three platforms or to claim that Mezyad is superior to any of them. The goal was to separate general patterns already established in the local market from the specific combination of features Mezyad proposes: identity verification, listing review, simulated bidder commitment, real-time bidding, transparent auction state, auction closure, settlement, and controlled handover, brought together into a single trust-oriented transaction lifecycle.
+We plan to include these auction categories:
 
-### 3.2 Problem Space
+- Camels.
+- Newly built properties that have not sold within the seller’s intended period, including properties completed about two years ago and still unsold.
+- High end handbags and rare collectibles.
+- Distinctive vehicle registration plates.
+- Rare, limited production, or discontinued vehicle models.
 
-Building on this comparison, the team identified recurring concerns around identity, bidding behavior, commitment, real-time auction state, and post-auction clarity. This shows up in a few concrete ways:
+**Strengths:** Mezyad has a clear process from listing an item and receiving bids to announcing the auction result. We can build the core auction functions first and consider additional services later. We believed this approach could be completed within three months, and the academy approved the idea.
 
-* **Identity uncertainty** — buyers and sellers cannot easily verify who they are dealing with.
-* **Non-committal or fake bidding** — a bid can be placed with no real consequence if the bidder backs out, which can disrupt the auction and waste sellers' time.
-* **Weak commitment mechanisms** — there is often no step that meaningfully separates a serious bidder from someone testing the waters.
-* **Unclear real-time auction state** — some marketplace experiences are primarily listing-oriented rather than centered on a synchronized real-time auction state, so participants may lack a reliable, live view of the current price.
-* **Uncertainty after the auction ends** — even when a winning bid is placed, there is often no clear structure for what happens next (settlement, handover, disputes).
+**Weaknesses and risks:** The categories need different listing details. Bids and auction deadlines must be handled accurately. Connecting to Nafath for seller identity verification may take additional time and require meeting its access requirements. We also need to define how ownership of listed items would be checked.
 
-Mezyad is intended to respond to this problem space through a structured digital auction process.
+**Why we selected it:** We considered Mezyad’s core functions more achievable within the available time. The idea also received academy approval.
 
-### 3.3 Mind Mapping
+## Idea Evaluation
 
-The team organized the main problem areas into the following mind-map structure:
+Our original comparison was based on discussion, mainly about feasibility. We did not record numerical scores during those meetings. The following rubric expresses that comparison as scores for this report. Each criterion is scored from **1 to 5**, where 5 is the strongest result. All four criteria have equal weight, for a maximum of **20 points**.
 
-```
-High-Value Transactions
- ├── Trust
- │    └── Identity Verification
- ├── Asset Verification
- │    └── Listing Review / Admin Approval
- ├── Bidding
- │    └── Real-Time Price Updates
- ├── Financial Commitment
- │    └── Security Deposit / Escrow Concept
- ├── Auction Management
- │    └── Timing Rules / Anti-Sniping
- └── Settlement
-      └── Handover / Post-Auction Process
-```
+| Idea | Feasibility | Potential impact | Clarity of MVP scope | Scalability | Total |
+|---|---:|---:|---:|---:|---:|
+| SentinX: Vanguard | 2 | 3 | 3 | 4 | **12/20** |
+| Mezyad | 4 | 3 | 4 | 4 | **15/20** |
 
-This structure made it clear that "trust" is not a single feature — it runs through identity, bidding behavior, financial commitment, and what happens after the auction closes. This understanding shaped the brainstorming that followed.
+SentinX received a lower feasibility score because its simulation components would take more time to connect and test. Mezyad received a higher score because we can begin with its core auction process, although managing bids across five categories remains a challenge.
 
-### 3.4 SCAMPER
+We gave both ideas the same potential impact score because we have not tested either concept with users. Both ideas could also be expanded with more features later.
 
-The team used SCAMPER to explore how the auction experience could be restructured to address the problem space above:
+## Selected MVP Concept: Mezyad
 
-* **Substitute:** Substitute static, open-ended classified listings with time-boxed auction rooms that have a clear start and end.
-* **Combine:** Combine identity verification with a simulated bidder financial commitment step, so that placing a bid requires more than clicking a button.
-* **Adapt:** Adapt anti-sniping concepts used by established online auction platforms — if a bid arrives very close to closing time, the timer extends slightly so the outcome is not decided purely by reaction speed.
-* **Modify:** Modify minimum bid increments and auction rules depending on the category of asset.
-* **Eliminate:** Eliminate unreviewed listings from the public auction flow by requiring administrative approval before any asset becomes visible to bidders.
+### Purpose and Users
 
-### 3.5 How Might We Questions
+We want Mezyad to provide an organized place for auctions across selected categories of high value or rare items, including camels. Users should be able to find information about an item, follow bidding, and see the auction result.
 
-* How might we make high-value online auctions more trustworthy for both buyers and sellers?
-* How might we create meaningful bidder commitment without relying on real financial infrastructure in the MVP?
-* How might we keep auction prices synchronized for everyone participating in real time?
-* How might we handle multiple bids that arrive at nearly the same time fairly?
-* How might we make payment, handover, and post-auction processes clearer for both sides?
+The intended users include sellers, interested buyers, collectors, and rare vehicle enthusiasts. Real estate offices and developers may also list properties that fit the platform’s categories.
 
----
+Our concept is based on bringing these categories and auction steps into one experience. We have not established that no similar platform exists.
 
-## 4. Ideas Explored
+### Proposed Core Features
 
-Four project concepts were seriously discussed before the team selected a direction. Each is documented using the same structure to show that the alternatives were genuinely considered, not dismissed casually.
+- User registration and login.
+- Auction listings with images, descriptions, and category specific details.
+- A starting price and auction start and end times.
+- Browsing auctions by category.
+- Item pages showing the current highest bid.
+- Placing bids while an auction is active.
+- Closing bidding at the scheduled end time.
+- Sending auction results by email.
 
-### 4.1 Aegis-Grid — Dynamic Routing & Distributed Resource Management
+### How the Auction Ends
 
-**What it is:** A logistics platform for routing supply fleets (e.g., delivery or emergency vehicles), built around a pathfinding engine that recalculates routes when obstacles appear.
+Bidding stops at the scheduled end time. The highest accepted bid wins. Mezyad emails the seller and the winner the result and each other's contact details. If there are no bids, only the seller gets an email saying the auction ended without a winner. Payment for the item and handover happen outside Mezyad.
 
-**Problem:** Static routing systems adapt poorly when a fleet encounters an unexpected obstacle in the field, causing delays.
+### Verification and Optional Features
 
-**Proposed solution:** An engine that detects obstacles and automatically recalculates the optimal route for affected vehicles.
+We chose **Nafath** as a proposed way to verify a seller’s identity. We would like to add this integration if its requirements and the available time allow it. We also need to define how a seller would prove ownership of an item, since verifying identity alone does not establish ownership.
 
-**Strengths:** Genuine algorithmic depth in pathfinding and route optimization; clear potential for a technically interesting engine.
+**Apple Pay** is another feature we may add if implementation is feasible. Neither integration is required for the core auction process in the first MVP.
 
-**Weaknesses:** Realistic testing depends on either real vehicle/location data or a substantial simulation layer, which is difficult to make convincing.
+### Expected Outcome and Challenges
 
-**Feasibility:** Buildable at a prototype level, but a credible MVP would require realistic routing and location simulation, which adds significant complexity within the available timeframe.
+The MVP should let users browse the planned categories, review item details, place bids, and see whether an auction ended with a winner or without bids.
 
-**Resources/infrastructure required:** Mapping and location data, and a non-trivial simulation of a moving fleet and its environment.
+Our main challenges are supporting the different information needed by each category and handling bids and deadlines accurately. Building the core auction process first will help us manage the three month development period.
 
-**Main risks:** Simulation realism, mapping/location dependency, and overall scope relative to the timeframe.
+## Decision
 
-**Why rejected:** The idea was technically interesting, but the required simulation and mapping infrastructure would consume significant time and could make the final demo more dependent on synthetic data than on a genuinely interactive product.
-
-### 4.2 Titan-Protocol — Sensitive Facilities Management & Security Control
-
-**What it is:** A security platform modeled on facility control systems, combining an interactive floorplan with an event-driven rule engine that can trigger automated responses (e.g., locking gates, isolating zones).
-
-**Problem:** Traditional security systems mostly raise alarms and wait for a human response, which can be too slow in a genuinely sensitive facility.
-
-**Proposed solution:** A rule engine that automatically executes a sequence of defensive actions when specific conditions are triggered.
-
-**Strengths:** Interesting event-driven architecture; strong potential for a visually compelling demo.
-
-**Weaknesses:** The realism of the demo would be more dependent on realistic sensor/event simulation or hardware infrastructure than the team could confidently provide.
-
-**Feasibility:** The web/software layer is buildable, but the credibility of the product depends heavily on simulating sensor events realistically.
-
-**Resources/infrastructure required:** Sensor/IoT-style event data, a simulated or real testing environment, and event-generation tooling.
-
-**Main risks:** Sensor/event simulation realism, infrastructure dependency, and testing complexity.
-
-**Why rejected:** The team considered it technically interesting, but the sensor/event simulation and infrastructure dependency introduced unnecessary risk for the available project period.
-
-### 4.3 SentinX — Tactical Operations Intelligence & Management System
-
-**What it is:** A command-and-control style platform for tracking field personnel in real time, processing streaming location and status data on an interactive map.
-
-**Problem:** Central command teams often lack real-time visibility into personnel status, which delays response to emerging risks.
-
-**Proposed solution:** A system that ingests streaming data and displays live personnel status and location on a map, backed by a load/stress simulator.
-
-**Strengths:** Real-time data processing challenge; interesting live-map and live-state UI problem.
-
-**Weaknesses:** Realistic GPS, vitals, and field-event data would need to be simulated at scale, and the domain is relatively specialized.
-
-**Feasibility:** Technically feasible at a prototype level, but it carries a higher simulation and scope burden than the other alternatives.
-
-**Resources/infrastructure required:** Simulated telemetry data, mapping integration, and a custom load/event simulator.
-
-**Main risks:** Telemetry simulation realism, overall scope, and the specialized nature of the domain.
-
-**Why rejected:** It was technically feasible, but the simulation and scope burden made it a less favorable choice than Mezyad within the same timeframe.
-
-### 4.4 Mezyad — High-Value Asset Auction Platform (Selected)
-
-**What it is:** A web-based auction platform for high-value assets (real estate, rare vehicles, luxury goods, premium plates, and similar categories), structured around identity verification, bidder commitment, and real-time bidding.
-
-**Problem:** High-value transactions between strangers can suffer from identity uncertainty, weak bidder commitment, unclear real-time auction state, and uncertainty around settlement and handover.
-
-**Proposed solution:** A structured digital auction lifecycle connecting identity verification, listing review, bidder commitment, real-time bidding, auction closure, settlement, and handover.
-
-**Strengths:** Addresses a meaningful, real-world problem; can be demonstrated using realistic user scenarios and simulated asset data rather than large synthetic datasets; strong alignment with core full-stack skills (relational database design, REST APIs, real-time communication); suitable for a four-person CS team; clear potential for future expansion.
-
-**Weaknesses:** Concurrent bidding is a genuine technical challenge; transaction integrity matters throughout the lifecycle; the auction lifecycle has several dependent states; financial workflows require careful simulation and clearly stated boundaries.
-
-**Feasibility:** Very high relative to the alternatives for a web-based MVP — the required components (real-time communication, a relational database, a REST API) are all realistic for the team to design, build, and test within the project timeframe. This does not mean the project is easy: it still requires solving real problems around concurrency, state synchronization, and lifecycle management.
-
-**Resources/infrastructure required:** A relational database and a backend capable of real-time communication. No dependency on physical hardware or external devices.
-
-**Main risks:** Concurrent bids, transaction consistency, real-time synchronization, the settlement lifecycle, and the risk of scope creep if secondary features are treated as equally mandatory to the core MVP.
-
-**Why selected:** Mezyad is achievable within the team's resources and timeframe, but it is not trivial. It offers a meaningful problem, realistic technical depth, and no dependency on physical hardware, making it the strongest fit against the team's evaluation criteria.
-
----
-
-## 5. Idea Evaluation
-
-### 5.1 Evaluation Criteria
-
-| Criterion | Meaning |
-| :--- | :--- |
-| Technical Feasibility | Can a working MVP realistically be built within the project timeframe? |
-| Problem Relevance | Does the idea address a meaningful, identifiable real-world problem? |
-| Team Alignment | Does it fit the team's current skills and available learning capacity? |
-| Scalability | Can the concept reasonably grow beyond the initial MVP? |
-| Demo & User Value | Can its value be clearly and convincingly demonstrated to real users/evaluators? |
-| Resource Feasibility | Can the idea be developed and demonstrated using the team's available software resources, with minimal dependency on external hardware or infrastructure? |
-
-### 5.2 Scoring Rubric
-
-Each criterion is scored from 1 to 5:
-
-| Score | Meaning |
-| :--- | :--- |
-| 1 | Very weak fit / major limitation |
-| 2 | Weak fit / significant limitation |
-| 3 | Moderate fit / manageable limitation |
-| 4 | Strong fit / minor limitation |
-| 5 | Very strong fit / minimal limitation |
-
-For **Resource Feasibility** specifically, a higher score means *less* dependency on external hardware or infrastructure:
-
-| Score | Meaning |
-| :--- | :--- |
-| 1 | Heavily dependent on external hardware, infrastructure, or resources that are difficult to obtain |
-| 2 | Significant external/simulation dependency |
-| 3 | Manageable resource or simulation requirements |
-| 4 | Mostly achievable with available development resources |
-| 5 | Can be developed and demonstrated using available software resources with minimal external dependency |
-
-### 5.3 Evaluation Matrix
-
-| Idea | Technical Feasibility | Problem Relevance | Team Alignment | Scalability | Demo & User Value | Resource Feasibility | Total |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| Aegis-Grid | 2 | 3 | 2 | 3 | 2 | 2 | 14 |
-| Titan-Protocol | 2 | 3 | 2 | 3 | 3 | 1 | 14 |
-| SentinX | 3 | 3 | 3 | 3 | 3 | 2 | 17 |
-| **Mezyad** | **5** | **5** | **4** | **4** | **5** | **5** | **28** |
-
-### 5.4 Evaluation Rationale
-
-**Aegis-Grid:** Technical feasibility is lower because routing and location simulation adds significant complexity. Problem relevance is moderate — the logistics problem is real but less directly demonstrable with the team's available data. Team alignment is lower due to the mapping/simulation burden relative to the team's current experience. Scalability is moderate. Demo/user value is lower within the project timeframe because a convincing demo depends heavily on synthetic data. Resource feasibility is lower due to mapping, location, and simulation dependencies.
-
-**Titan-Protocol:** Technical feasibility is lower because realistic sensor/event simulation is required to make the system credible. Problem relevance is moderate. Team alignment is lower due to the IoT/security-event simulation burden. Scalability is moderate. Demo value is reasonable, since the concept is visually compelling. Resource feasibility is lowest among the four ideas due to its infrastructure dependency.
-
-**SentinX:** Technical feasibility is moderate — the real-time data-handling concept is buildable, but realistic telemetry must be simulated. Problem relevance is moderate. Team alignment is moderate-to-strong, since the real-time and UI work fits the team's interests. Scalability is reasonable. Demo value is reasonable given the interactive map concept. Resource feasibility is lower because of the telemetry simulation required.
-
-**Mezyad:** Technical feasibility is very high for a web-based MVP, since the required components (real-time communication, relational database, REST API) are realistic for the team to build and test with actual data rather than synthetic simulation. Problem relevance is strong, given the clear real-world trust and commitment problem in high-value digital transactions. Team alignment is strong but not perfect, since concurrency and transaction handling still meaningfully stretch the team's current skills. Scalability is good, with a clear path to additional asset categories and features. Demo/user value is strong because the workflow can be demonstrated with realistic scenarios. Resource feasibility is very high because the project does not depend on physical hardware.
-
-The evaluation identified Mezyad as the strongest fit for the team's stated criteria.
-
-### 5.5 Risks and Constraints
-
-| Idea | Main Risks / Constraints |
-| :--- | :--- |
-| Aegis-Grid | Simulation realism, mapping/location dependency, and overall scope. |
-| Titan-Protocol | Sensor/event simulation, infrastructure dependency, and testing complexity. |
-| SentinX | Telemetry simulation, scope, and a relatively specialized domain. |
-| Mezyad | Concurrent bids, transaction consistency, real-time synchronization, the settlement lifecycle, and the risk of scope creep. |
-
-### 5.6 External Feedback
-
-During the evaluation process, the team sought feedback from **Abdullah Aljahdali**. His feedback highlighted the practical constraints associated with ideas that depend heavily on physical infrastructure — particularly the difficulty of providing and testing drones, sensors, and related hardware within the team's available resources and timeframe. This feedback reinforced concerns the team had already identified for Aegis-Grid and Titan-Protocol during its own evaluation, and it was considered together with the team's evaluation criteria before the final decision was made.
-
----
-
-## 6. Decision and Refinement
-
-### 6.1 Final Decision and Reasons for Selection
-
-Following research, brainstorming, evaluation against defined criteria, identification of risks and constraints, and external feedback, the team selected **Mezyad** as the Stage 1 project direction. The decision reflects several combined factors:
-
-* **Feasibility:** the required components (real-time communication, relational database, REST API) are realistic for the team to build and test within the project timeframe, without depending on physical hardware.
-* **Innovation / value:** the project's value comes from exploring these elements as a single, unified workflow focused on trust and commitment across the high-value transaction lifecycle.
-* **Alignment with the team:** the project draws on relational database design, REST APIs, and real-time communication, which fit the team's existing full-stack skill set while still stretching it through concurrency and transaction-integrity challenges.
-* **Potential challenges:** concurrent bidding, transaction consistency, real-time synchronization, and lifecycle/settlement management (detailed in Sections 4.4 and 5.5).
-* **Potential opportunities:** a clear path toward additional asset categories, richer auction mechanisms, and real identity/payment integrations in the future (detailed in Section 6.7).
-
-Feasible does not mean simple — Mezyad still requires solving genuine problems in concurrency, transaction integrity, and lifecycle management.
-
-### 6.2 Problem Statement
-
-High-value online transactions between strangers — such as buying rare vehicles, luxury goods, or unsold real estate — can be limited by weak trust and commitment mechanisms. Bidders may place bids with no real stake behind them, identities can be difficult to verify, and there is often no transparent, real-time view of the current auction state. Even when an auction concludes, what happens next (settlement, handover, disputes) is frequently unclear. Mezyad is intended to address these concerns through a structured digital auction process connecting verification, listing review, bidding, commitment, auction closure, settlement, and handover. Mezyad does not claim to eliminate fraud or guarantee successful transactions; it is designed to reduce the specific weaknesses identified above.
-
-### 6.3 Target Users
-
-* **Buyers / Bidders** — participate in auctions and place committed bids.
-* **Sellers** — submit high-value assets for review and auction.
-* **Administrators** — review listings, monitor auctions, and handle moderation and disputes where applicable.
-
-### 6.4 Selected MVP Concept
-
-Mezyad's core identity is not "a website that lists items and accepts bids" — it is a platform built around the transaction lifecycle and trust mechanisms surrounding high-value auctions:
-
-```
-Verification → Listing & Review → Auction → Bid Commitment → Auction Closure / Settlement → Handover
-```
-
-### 6.5 Core Capabilities
-
-**Core MVP capabilities** (directly reflecting the lifecycle above):
-
-* Registration and role-based access for buyers, sellers, and administrators.
-* Simulated identity verification.
-* Asset listing and administrative review/approval before an item becomes visible.
-* Simulated bidder financial commitment (a security deposit concept) required before bidding.
-* Real-time auction bidding with live price updates for all participants.
-* Bid history and transparent auction state, so the current status of an auction is always clear.
-* Auction timing rules, including anti-sniping behavior near auction close.
-* Auction closure and winner determination.
-* Basic settlement/invoice flow following auction closure.
-* A controlled handover flow marking the transaction as completed.
-
-**Extended / secondary capabilities** (lower priority, included only where time allows, and not required to demonstrate the core MVP concept):
-
-* Basic dispute handling.
-* Seller withdrawal of a listing before auction start.
-* Proxy (automatic) bidding.
-* Notifications for outbid users or auction status changes.
-* Additional auction mechanisms beyond the base rules.
-
-### 6.6 Expected Outcomes
-
-By the end of development, Mezyad is expected to demonstrate:
-
-* a structured, end-to-end high-value auction workflow;
-* real-time bid visibility across all connected participants;
-* stronger bidder commitment through simulated financial mechanisms;
-* a clearer, more transparent auction state at any given moment;
-* a controlled auction lifecycle from listing through closure;
-* a basic settlement and handover flow;
-* a realistic demonstration that does not depend on physical hardware;
-* a reasonable foundation for future expansion.
-
-### 6.7 Opportunities
-
-Beyond the MVP, the team identified several future opportunities:
-
-* Expansion to additional high-value asset categories.
-* Richer auction mechanisms (e.g., reserve prices, sealed bids).
-* Integration with real identity verification services.
-* Integration with real payment/financial services in a future production system.
-* Stronger dispute-resolution workflows.
-* AI-assisted asset valuation as a future enhancement.
-* Additional verification capabilities.
-
-These are explicitly future opportunities and are not part of the current MVP scope.
-
-### 6.8 Constraints
-
-Mezyad is being developed as a graduation MVP/prototype, not a production financial platform. Within the current scope:
-
-* Identity verification is simulated, not connected to a real verification provider.
-* Financial commitment is simulated through mock security deposits, with no real money movement.
-* There is no production banking integration.
-* The project makes no production-grade legal or financial guarantees.
-* The system is designed to demonstrate the workflow and engineering challenges of a trust-oriented auction platform, not to process real transactions.
-
----
-
-## 7. Lessons Learned
-
-* **Feasibility has to be evaluated honestly before committing to an idea.** Aegis-Grid, Titan-Protocol, and SentinX were all technically interesting, but a closer look at what it would actually take to build and test them exposed risks that were not obvious at first glance.
-* **Structured brainstorming (mind mapping, SCAMPER, HMW) helped turn a broad problem into specific, testable ideas**, rather than jumping straight from "trust is a problem" to a single solution.
-* **Resource constraints are a real design input, not an afterthought.** Ideas that depended on hardware or large-scale simulation were consistently harder to justify within the available timeframe, regardless of how interesting they were.
-* **External feedback is useful even when it confirms existing concerns.** Abdullah Aljahdali's feedback did not change the direction, but it validated concerns the team had already raised about hardware-dependent ideas.
-* **Defining MVP boundaries early prevents scope creep later.** Separating core MVP capabilities from extended/secondary ones gives the team a clear baseline to protect once development starts.
-
----
-
-## 8. Transition to Stage 2
-
-At the end of Stage 1, the team has formed and aligned as a cross-functional unit, researched the underlying problem, explored and evaluated four project concepts, and selected Mezyad as the project direction. The target users, MVP concept, core capabilities, expected outcomes, opportunities, and constraints have all been defined at a product level.
-
-Stage 2 will take this decision and formalize it into concrete project planning: objectives, scope, stakeholder considerations, risks, and a project timeline.
+We selected **Mezyad** after comparing its scope and estimated development time with **SentinX: Vanguard**. We believed its core functions could be delivered within three months, and the academy approved the concept. We will use this decision as the starting point for the **Project Charter** in Stage 2.
