@@ -1,5 +1,6 @@
 # Mezyad | مِزياد
 
+<img src="frontend/public/images/mezyad-logo.png" alt="شعار مزياد" width="320">
 Mezyad is a web-based auction platform for high-value and rare assets.
 
 ## Project stages
@@ -21,9 +22,8 @@ Sellers submit asset listings for administrator review. Approved listings may be
 - Node.js / Express REST API
 - PostgreSQL database
 - Periodic REST polling for auction updates
-- Saudi Open Banking sandbox for bid commitment, subject to authorized provider access
+- Moyasar in test mode for bid commitments
 
-The MVP does not process real payments, escrow or asset handover.
 
 ## Team
 
