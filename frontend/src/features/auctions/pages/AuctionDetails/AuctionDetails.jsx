@@ -1,5 +1,6 @@
 // تم التعديل من عبير: يعرض تفاصيل المزاد والصور والخطوه المناسبه للمستخدم
 import { Avatar } from "../../../profile/components/Avatar.jsx";
+import { isAdminPageBlocked } from "../../../admin/admin-access.js";
 import React, { useState } from "react";
 import { Icon, money, dateText } from "../../../../shared/ui/index.jsx";
 import { imageUrl } from "../../../../shared/api/client.js";
@@ -21,6 +22,8 @@ export default function AuctionDetails({ market, id }) {
   const [selected, setSelected] = useState(0);
   const a = state.auction;
   const images = a?.images?.filter(Boolean) || [];
+  const role = market.workspace.user?.role;
+  const canBid = !isAdminPageBlocked(role, "bid");
   const owner = a?.seller_id === market.userId;
   const status = a && displayStatus(a);
   return (
@@ -33,7 +36,7 @@ export default function AuctionDetails({ market, id }) {
       <AuctionState state={state}>
         {a && (
           <>
-            <AuctionNav id={id} current="auction" />
+            <AuctionNav id={id} current="auction" role={role} />
             <AuctionSummary auction={a} />
             <div className="auction-detail-grid">
               <div>
@@ -132,7 +135,7 @@ export default function AuctionDetails({ market, id }) {
                   >
                     شوف النتيجة <Icon />
                   </a>
-                ) : owner ? (
+                ) : !canBid ? null : owner ? (
                   <p className="inline-notice">
                     هذا مزادك تابع العروض؛ المالك ما يزايد على أصله
                   </p>
@@ -151,10 +154,12 @@ export default function AuctionDetails({ market, id }) {
                 >
                   سجل العروض
                 </a>
-                <p className="field-hint">
-                  السعر يتحدّث تلقائيًا يتأكد قبول عرضك بعد إرساله وفق آخر سعر
-                  ووقت المزاد
-                </p>
+                {canBid && (
+                  <p className="field-hint">
+                    السعر يتحدّث تلقائيًا يتأكد قبول عرضك بعد إرساله وفق آخر سعر
+                    ووقت المزاد
+                  </p>
+                )}
                 {state.updated && (
                   <small>
                     آخر تحديث: {state.updated.toLocaleTimeString("ar-SA")}

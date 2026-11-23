@@ -3,6 +3,8 @@ const blockedPages = new Set([
   "edit-listing",
   "create-auction",
   "listings",
+  "activity",
+  "my-auctions",
   "bid",
   "commitment",
   "payment",
@@ -21,7 +23,7 @@ export function canShowMarketplaceActions(role) {
 }
 
 export function canShowAuctionNavPage(role, page) {
-  return !isAdminRole(role) || (page !== "commitment" && page !== "bid");
+  return !isAdminPageBlocked(role, page);
 }
 
 export function canShowAccountSettings(role) {

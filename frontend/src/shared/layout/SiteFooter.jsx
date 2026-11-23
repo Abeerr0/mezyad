@@ -1,7 +1,7 @@
 // تم التعديل من عبير: فوتر مشترك بروابط الموقع
 import React from "react";
 import { Icon } from "../ui/index.jsx";
-export default function SiteFooter({ onFeature }) {
+export default function SiteFooter({ onFeature, showMarketplaceActions }) {
   return (
     <footer className="site-footer">
       <div className="container">
@@ -23,9 +23,9 @@ export default function SiteFooter({ onFeature }) {
           <div>
             <h2>نبدأ من هنا</h2>
             {/* تم التعديل من عبير: نخلي عرض الاصل بمكان واحد ونوجه هنا لشرح خطوات البيع. */}
-            <a href="#/guide">خطوات عرض أصلك</a>
+            {showMarketplaceActions && <a href="#/guide">خطوات عرض أصلك</a>}
             <button onClick={() => onFeature("private")}>دخول مزاد خاص</button>
-            <a href="#/help?topic=bank">عن الالتزام البنكي</a>
+            {showMarketplaceActions && <a href="#/help?topic=bank">عن الالتزام البنكي</a>}
           </div>
           <div className="footer-signature">
             <Icon name="gavel" size={38} />

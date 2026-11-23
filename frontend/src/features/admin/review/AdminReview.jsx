@@ -1,5 +1,13 @@
 import "./admin-review.css";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+
+function updateReviewedItems(overview, item) {
+  const approved = overview.approved.filter(({ id }) => id !== item.id);
+  const rejected = overview.rejected.filter(({ id }) => id !== item.id);
+  (item.status === "APPROVED" ? approved : rejected).unshift(item);
+  return { ...overview, approved, rejected };
+}
+
 export default function AdminReview({ api, token, onUnauthorized }) {
   const itemsApi =
     api.replace(/\/$/, "").replace(/\/api\/v1$/, "") + "/api/v1/items";
@@ -9,6 +17,7 @@ export default function AdminReview({ api, token, onUnauthorized }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [refresh, setRefresh] = useState(0);
   const [selectedId, setSelectedId] = useState(null);
   const [decision, setDecision] = useState("");
@@ -19,9 +28,27 @@ export default function AdminReview({ api, token, onUnauthorized }) {
   const [overview, setOverview] = useState(null);
   const [overviewError, setOverviewError] = useState("");
 
+  const decisionsDuringLoad = useRef(null);
+
+  useEffect(() => {
+    if (!successMessage) return;
+    const timeout = setTimeout(() => setSuccessMessage(""), 3000);
+    return () => clearTimeout(timeout);
+  }, [successMessage]);
+
+  function openTab(nextTab, status = "PENDING_REVIEW") {
+    setSuccessMessage("");
+    setMessage("");
+    setTab(nextTab);
+    setListingStatus(status);
+    setSelectedId(null);
+  }
+
   // هنا نجيب بيانات البطاقات والتبويبات من الطلبات الحقيقيه عشان ما نعرض ارقام من عندنا
   useEffect(() => {
     let active = true;
+    const confirmed = new Map();
+    decisionsDuringLoad.current = confirmed;
     async function loadOverview() {
       setOverviewError("");
       try {
@@ -50,12 +77,17 @@ export default function AdminReview({ api, token, onUnauthorized }) {
         ) {
           throw new Error("تعذّر تحميل إحصاءات المشرف");
         }
-        if (active)
-          setOverview({
-            approved: results[0].data,
-            rejected: results[1].data,
+        if (active) {
+          let nextOverview = {
+            approved: results[0].data.filter((item) => item.status === "APPROVED"),
+            rejected: results[1].data.filter((item) => item.status === "REJECTED"),
             auctions: results[2].data,
-          });
+          };
+          for (const item of confirmed.values()) {
+            nextOverview = updateReviewedItems(nextOverview, item);
+          }
+          setOverview(nextOverview);
+        }
       } catch (error) {
         if (active) {
           setOverview(null);
@@ -65,6 +97,8 @@ export default function AdminReview({ api, token, onUnauthorized }) {
               : error.message,
           );
         }
+      } finally {
+        if (active) decisionsDuringLoad.current = null;
       }
     }
     loadOverview();
@@ -92,9 +126,12 @@ export default function AdminReview({ api, token, onUnauthorized }) {
         if (!Array.isArray(result.data))
           throw new Error("تعذّر تحميل الإعلانات");
         if (active) {
-          setItems(result.data);
+          const pending = result.data.filter(
+            (item) => item.status === "PENDING_REVIEW",
+          );
+          setItems(pending);
           setSelectedId((id) =>
-            id && !result.data.some((item) => item.id === id) ? null : id,
+            id && !pending.some((item) => item.id === id) ? null : id,
           );
         }
       } catch (error) {
@@ -154,24 +191,14 @@ export default function AdminReview({ api, token, onUnauthorized }) {
       setItems((current) =>
         current.filter((oldItem) => oldItem.id !== item.id),
       );
-      setOverview(
-        (current) =>
-          current && {
-            ...current,
-            [decision === "APPROVED" ? "approved" : "rejected"]: [
-              result.data,
-              ...current[
-                decision === "APPROVED" ? "approved" : "rejected"
-              ].filter((oldItem) => oldItem.id !== item.id),
-            ],
-          },
+      decisionsDuringLoad.current?.set(item.id, result.data);
+      setOverview((current) =>
+        current && updateReviewedItems(current, result.data),
       );
-      setTab(decision === "APPROVED" ? "approved" : "rejected");
-      setListingStatus(decision);
-      setSelectedId(null);
+      openTab(decision === "APPROVED" ? "approved" : "rejected", decision);
       setDecision("");
       setReason("");
-      setMessage(
+      setSuccessMessage(
         decision === "APPROVED" ? "تمت الموافقة على الإعلان" : "تم رفض الإعلان",
       );
     } catch (error) {
@@ -205,10 +232,7 @@ export default function AdminReview({ api, token, onUnauthorized }) {
           disabled={busy}
           onClick={() => {
             if (selectedId) setSelectedId(null);
-            else {
-              setTab("dashboard");
-              setListingStatus("PENDING_REVIEW");
-            }
+            else openTab("dashboard");
           }}
           aria-label={
             selectedId ? "العودة إلى الإعلانات" : "العودة إلى لوحة التحكم"
@@ -238,11 +262,7 @@ export default function AdminReview({ api, token, onUnauthorized }) {
               key={key}
               role="tab"
               aria-selected={tab === key}
-              onClick={() => {
-                setTab(key);
-                setListingStatus(status || "PENDING_REVIEW");
-                setSelectedId(null);
-              }}
+              onClick={() => tab !== key && openTab(key, status)}
             >
               {label}
               {count != null ? ` (${count})` : ""}
@@ -313,11 +333,7 @@ export default function AdminReview({ api, token, onUnauthorized }) {
                 <button
                   key={label}
                   className={"admin-stat admin-stat-" + nextTab}
-                  onClick={() => {
-                    setTab(nextTab);
-                    setListingStatus(nextStatus);
-                    setSelectedId(null);
-                  }}
+                  onClick={() => openTab(nextTab, nextStatus)}
                 >
                   <span>{label}</span>
                   <strong>{count}</strong>
@@ -452,7 +468,7 @@ export default function AdminReview({ api, token, onUnauthorized }) {
           )}
         </>
       )}
-      <p role="status">{message}</p>
+      <p role="status">{successMessage}</p>
       {decision && selectedId && (
         <div className="review-modal-backdrop">
           <div

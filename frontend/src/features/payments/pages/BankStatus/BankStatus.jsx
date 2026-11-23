@@ -1,4 +1,5 @@
 // تم التعديل من عبير: يعرض حاله تامين المشاركه والخطوه المطلوبه
+import { isAdminPageBlocked } from "../../../admin/admin-access.js";
 import React from "react";
 import { Icon, dateText } from "../../../../shared/ui/index.jsx";
 import {
@@ -19,6 +20,9 @@ export default function BankStatus({ market, id }) {
     commitment: true,
   });
   const bank = state.commitment;
+  const role = market.workspace.user?.role;
+  const actionPage = bank?.status === "SUCCESS" ? "bid" : "commitment";
+  const showAction = !isAdminPageBlocked(role, actionPage);
   return (
     <AuctionLayout
       market={market}
@@ -28,7 +32,7 @@ export default function BankStatus({ market, id }) {
     >
       <SignInGate market={market}>
         <AuctionState state={state}>
-          <AuctionNav id={id} current="commitment" />
+          <AuctionNav id={id} current="commitment" role={role} />
           <div className="bank-status-card paper-card">
             <div className="bank-emblem">
               <Icon
@@ -63,19 +67,16 @@ export default function BankStatus({ market, id }) {
                 </div>
               </dl>
             )}
-            <div className="form-actions">
+            {showAction && <div className="form-actions">
               {/* تم التعديل من عبير: تحديث البيانات تلقائي بدون زر اضافي. */}
               <a
                 className="button dark"
-                href={auctionLink(
-                  bank?.status === "SUCCESS" ? "bid" : "commitment",
-                  id,
-                )}
+                href={auctionLink(actionPage, id)}
               >
                 {bank?.status === "SUCCESS" ? "للمزايدة" : "ارجع للالتزام"}{" "}
                 <Icon />
               </a>
-            </div>
+            </div>}
           </div>
         </AuctionState>
       </SignInGate>

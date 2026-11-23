@@ -1,4 +1,6 @@
 // تم التعديل من عبير: يجمع الصفحات والحساب والمزاد والهيدر والفوتر بدون تكرار تفاصيلهم
+import { canShowMarketplaceActions, isAdminPageBlocked } from "../features/admin/admin-access.js";
+import { ADMIN_HREF, ADMIN_PAGE, accountDestination } from "../features/admin/admin-navigation.js";
 import SiteHeader from "../shared/layout/SiteHeader.jsx";
 import SiteFooter from "../shared/layout/SiteFooter.jsx";
 import { useAutoRefresh } from "../shared/hooks/useAutoRefresh.js";
@@ -85,10 +87,17 @@ function readRoute() {
 
 // تم التعديل من عبير: نحفظ مسار الصفحه بالفاصل # عشان الروابط والرجوع تشتغل بدون مكتبه اضافيه.
 export default function App() {
-  const [route, setRoute] = useState(readRoute);
+  const [requestedRoute, setRoute] = useState(readRoute);
   // تم التعديل من عبير: الموقع يفتح ببياناته الحقيقيه؛ ملف PREVIEW وحده مخصص للتجربه.
   const demo = location.pathname.endsWith("/PREVIEW.html");
   const workspace = useWorkspace(demo);
+  const role = workspace.user?.role;
+  const redirectActivity = requestedRoute.page === "activity" && isAdminPageBlocked(role, requestedRoute.page);
+  const route = redirectActivity
+    ? { page: ADMIN_PAGE, params: new URLSearchParams() }
+    : requestedRoute;
+  const blocked = isAdminPageBlocked(role, route.page);
+  const showMarketplaceActions = canShowMarketplaceActions(role);
   const market = useMarket(workspace);
   const [catalog, setCatalog] = useState({
     auctions: [],
@@ -115,6 +124,12 @@ export default function App() {
     window.addEventListener("hashchange", onRoute);
     return () => window.removeEventListener("hashchange", onRoute);
   }, []);
+  useEffect(() => {
+    if (redirectActivity && readRoute().page === "activity") {
+      history.replaceState(history.state, "", ADMIN_HREF);
+      setRoute(readRoute());
+    }
+  }, [redirectActivity]);
   useEffect(() => {
     document.title = (pageTitles[route.page] || "غير موجودة") + " | مزياد";
     window.scrollTo({
@@ -215,13 +230,14 @@ export default function App() {
       return;
     }
     if (type === "sell") {
+      if (!showMarketplaceActions) return;
       location.hash = workspace.user
         ? "/create-listing"
         : "/login?next=%2Fcreate-listing";
       return;
     }
     if (type === "account") {
-      location.hash = workspace.user ? "/activity" : "/login";
+      location.hash = workspace.user ? accountDestination(role, "/activity") : "/login";
       return;
     }
   }
@@ -251,6 +267,7 @@ export default function App() {
     retry: () => setRefresh((n) => n + 1),
     onOpen: openAuction,
     onFeature,
+    showMarketplaceActions,
   };
   return (
     <>
@@ -286,7 +303,12 @@ export default function App() {
       />
       <Notices />
       <main id="main-content" ref={mainRef} tabIndex={-1}>
-        <div
+        {blocked ? (
+          <section className="container state-panel">
+            <p role="alert">هذي الصفحة غير متاحة لحساب الإدارة.</p>
+            <a className="button dark" href={ADMIN_HREF}>لوحة الإدارة</a>
+          </section>
+        ) : <div
           key={route.page + "-" + demo + "-" + (route.params.get("id") || "")}
         >
           {/* تم التعديل من عبير: نربط صفحات المنافسه والمتابعه بنفس حساب المستخدم. */}
@@ -337,15 +359,15 @@ export default function App() {
                   {route.page === "create-auction" && (
             <CreateAuction workspace={workspace} params={route.params} />
           )}
-          {route.page === "admin" && (
+          {route.page === ADMIN_PAGE && (
             <AdminDashboard workspace={workspace} />
           )}
-        </div>
+        </div>}
         {route.page === "home" && <Home {...common} />}
         {route.page === "auctions" && (
           <Browse {...common} category={category} status={status} />
         )}
-        {route.page === "guide" && <Guide onFeature={onFeature} />}
+        {route.page === "guide" && <Guide onFeature={onFeature} showMarketplaceActions={showMarketplaceActions} />}
         {route.page === "help" && (
           <Help topic={route.params.get("topic") || ""} />
         )}
@@ -358,11 +380,11 @@ export default function App() {
             </a>
           </div>
         )}
-        {!["activity", "listings", "profile", "my-auctions"].includes(
+        {!blocked && !["activity", "listings", "profile", "my-auctions"].includes(
           route.page,
         ) && <BrandScene page={route.page} />}
       </main>
-      <SiteFooter onFeature={onFeature} />
+      <SiteFooter onFeature={onFeature} showMarketplaceActions={showMarketplaceActions} />
     </>
   );
 }

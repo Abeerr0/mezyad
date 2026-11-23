@@ -1,4 +1,5 @@
 // تم التعديل من عبير: يعرض نتيجه المزاد بعد الاغلاق
+import { isAdminPageBlocked } from "../../../admin/admin-access.js";
 import React from "react";
 import {
   Icon,
@@ -19,6 +20,7 @@ import {
 
 // تم التعديل من عبير: النتيجه من السيرفر فقط، وما نعلن فوز من السعر او انتهاء العداد.
 export default function AuctionResult({ market, id }) {
+  const role = market.workspace.user?.role;
   const state = useAuction(market, id);
   const a = state.auction,
     r = a?.result;
@@ -42,7 +44,7 @@ export default function AuctionResult({ market, id }) {
       <AuctionState state={state}>
         {a && (
           <>
-            <AuctionNav id={id} current="auction-result" />
+            <AuctionNav id={id} current="auction-result" role={role} />
             <section
               className={"result-paper " + (r?.isWinner ? "is-winner" : "")}
             >
@@ -80,7 +82,7 @@ export default function AuctionResult({ market, id }) {
               {r?.winner_bid_id && !market.userId && (
                 <p>سجّل دخولك عشان تعرف نتيجة مشاركتك</p>
               )}
-              {r?.isWinner && (
+              {r?.isWinner && !isAdminPageBlocked(role, "payment") && (
                 <a className="pay-trigger" href="#/payment">
                   مراجعة الدفع <Icon name="lock" />
                 </a>

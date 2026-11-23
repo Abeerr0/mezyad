@@ -1,4 +1,6 @@
 // تم التعديل من عبير: يسجل الدخول ويرجع المستخدم للصفحه المطلوبه
+import { isAdminRole } from "../../../admin/admin-access.js";
+import { accountDestination } from "../../../admin/admin-navigation.js";
 import Button from "../../../../shared/ui/Button.jsx";
 import { notify } from "../../../../shared/components/InteractionUI.jsx";
 import {
@@ -38,7 +40,7 @@ export default function Login({ workspace, params }) {
       const user = await workspace.login(email.trim().toLowerCase(), password);
       notify("حياك في مزادك");
       setPassword("");
-      location.hash = destination;
+      location.hash = accountDestination(user.role, destination);
     } catch (err) {
       if (err.code === "EMAIL_NOT_VERIFIED") setVerifying(true);
       setError(err.message);
@@ -61,7 +63,7 @@ export default function Login({ workspace, params }) {
             );
             setVerifying(false);
             setPassword("");
-            location.hash = destination;
+            location.hash = accountDestination(user.role, destination);
           }}
         />
       )}
@@ -81,8 +83,8 @@ export default function Login({ workspace, params }) {
           <Icon name="check" />
           <h2>أنت داخل بحسابك</h2>
           <p>{workspace.user.name}</p>
-          <a className="button dark" href={"#/activity"}>
-            {"الذهاب لنشاطي"} <Icon />
+          <a className="button dark" href={"#" + accountDestination(workspace.user.role, "/activity")}>
+            {isAdminRole(workspace.user.role) ? "الذهاب للإدارة" : "الذهاب لنشاطي"} <Icon />
           </a>
         </div>
       ) : (

@@ -2,6 +2,7 @@
 import Button from "../../../../shared/ui/Button.jsx";
 import "./Profile.css";
 import { Avatar, avatarCells } from "../../components/Avatar.jsx";
+import { canShowAccountSettings } from "../../../admin/admin-access.js";
 import React, { useState } from "react";
 import { AccountLayout } from "../../../account/components/account-components.jsx";
 import { Icon } from "../../../../shared/ui/index.jsx";
@@ -196,7 +197,7 @@ export default function Profile({ workspace }) {
             <p role="status">{avatarMessage}</p>
           </section>
           {/* تم التعديل من عبير: الاسم قابل للتعديل والبريد ثابت والامان بنفس كرت الحساب. */}
-          <section className="paper-card profile-settings">
+          {canShowAccountSettings(workspace.user.role) && <section className="paper-card profile-settings">
             <div className="section-heading">
               <div>
                 <p className="eyebrow">حسابك تحت يدك</p>
@@ -381,7 +382,7 @@ export default function Profile({ workspace }) {
                 {message}
               </p>
             )}
-          </section>
+          </section>}
         </>
       )}
     </AccountLayout>

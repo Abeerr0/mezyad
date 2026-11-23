@@ -5,7 +5,7 @@ import { Auctioneer, Icon } from "../../../../shared/ui/index.jsx";
 import { guideSteps } from "../../../../shared/data/site-data.js";
 
 // تم التعديل من عبير: نفس الحساب يقدر يبيع ويزايد ونشرح كل رحله بتبويب مستقل.
-export default function Guide({ onFeature }) {
+export default function Guide({ onFeature, showMarketplaceActions }) {
   const [role, setRole] = useState("bidder");
   return (
     <div className="guide-page">
@@ -27,7 +27,7 @@ export default function Guide({ onFeature }) {
               <br />
               حساب واحد يكفيك للبيع والمزايدة
             </p>
-            <div
+            {showMarketplaceActions && <div
               className="segment"
               role="group"
               aria-label={"اختيار رحلة الاستخدام"}
@@ -44,7 +44,7 @@ export default function Guide({ onFeature }) {
               >
                 أبغى أعرض أصل <Icon name="image" size={18} />
               </button>
-            </div>
+            </div>}
           </div>
           <div className="guide-art">
             <div className="art-ring" />
@@ -140,9 +140,9 @@ export default function Guide({ onFeature }) {
         <section className="guide-cta">
           <p className="eyebrow">الخطوة الجاية لك</p>
           <h2>
-            {role === "bidder" ? "جاهز تشوف اللي يستحق؟" : "عندك أصل له قصة؟"}
+            {(!showMarketplaceActions || role === "bidder") ? "جاهز تشوف اللي يستحق؟" : "عندك أصل له قصة؟"}
           </h2>
-          {role === "bidder" ? (
+          {!showMarketplaceActions || role === "bidder" ? (
             <a href="#/auctions" className="button dark">
               استكشف المزادات <Icon />
             </a>

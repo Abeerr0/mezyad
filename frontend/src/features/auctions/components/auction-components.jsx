@@ -1,4 +1,5 @@
 // تم التعديل من عبير: ملف auction-components يجمع العناصر المرتبطه بهالجزء عشان نستدعيها بدون تكرار
+import { canShowAuctionNavPage } from "../../admin/admin-access.js";
 import React from "react";
 import {
   Icon,
@@ -88,7 +89,7 @@ export function SignInGate({ market, children }) {
     </div>
   );
 }
-export function AuctionNav({ id, current }) {
+export function AuctionNav({ id, current, role }) {
   return (
     <nav className="auction-tabs" aria-label={"صفحات المزاد"}>
       {[
@@ -97,7 +98,7 @@ export function AuctionNav({ id, current }) {
         ["bid", "قدّم عرضك"],
         ["bid-history", "سجل العروض"],
         ["auction-result", "النتيجة"],
-      ].map(([page, label]) => (
+      ].filter(([page]) => canShowAuctionNavPage(role, page)).map(([page, label]) => (
         <a
           key={page}
           href={auctionLink(page, id)}

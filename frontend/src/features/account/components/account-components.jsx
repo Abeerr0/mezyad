@@ -3,7 +3,7 @@ import "./account-components.css";
 import { Avatar } from "../../profile/components/Avatar.jsx";
 import React, { useState } from "react";
 import { Auctioneer, Icon } from "../../../shared/ui/index.jsx";
-import { ADMIN_ACCOUNT_LINKS } from "../../admin/admin-navigation.js";
+import { ADMIN_ACCOUNT_LINKS, accountBreadcrumbHref } from "../../admin/admin-navigation.js";
 import { isAdminRole } from "../../admin/admin-access.js";
 export const listingLabels = {
   PENDING_REVIEW: "قيد المراجعة",
@@ -111,7 +111,7 @@ const accountLinks = isAdminRole(workspace.user?.role)
         <p className="breadcrumb">
           <a href="#/">الرئيسية</a>
           <span>/</span>
-          <a href="#/activity">حسابي</a>
+          <a href={accountBreadcrumbHref(workspace.user.role)}>حسابي</a>
           <span>/</span>
           {title}
         </p>

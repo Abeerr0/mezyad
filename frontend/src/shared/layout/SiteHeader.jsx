@@ -7,6 +7,7 @@ import {
 } from "../../features/admin/admin-navigation.js";
 import {
   canShowMarketplaceActions,
+  isAdminRole,
 } from "../../features/admin/admin-access.js";
 export default function SiteHeader({
   menu,
@@ -59,7 +60,7 @@ export default function SiteHeader({
             ) : (
               <Icon name="user" size={17} />
             )}
-            <span>{workspace.user ? "مزاداتي" : "تسجيل الدخول"}</span>
+            <span>{workspace.user ? (isAdminRole(workspace.user.role) ? "الإدارة" : "مزاداتي") : "تسجيل الدخول"}</span>
           </button>
 {canShowMarketplaceActions(workspace.user?.role) &&
   ![

@@ -16,6 +16,7 @@ export default function Home({
   retry,
   onOpen,
   onFeature,
+  showMarketplaceActions,
 }) {
   const featured = auctions.filter((a) => a.status === "ACTIVE").slice(0, 3);
   return (
@@ -46,9 +47,11 @@ export default function Home({
               <a className="button gold" href="#/auctions">
                 استكشف المزادات <Icon />
               </a>
-              <button className="hero-sell" onClick={() => onFeature("sell")}>
-                عندك أصل مميز؟ <span>اعرضه هنا</span>
-              </button>
+              {showMarketplaceActions && (
+                <button className="hero-sell" onClick={() => onFeature("sell")}>
+                  عندك أصل مميز؟ <span>اعرضه هنا</span>
+                </button>
+              )}
             </div>
           </div>
           <div className="hero-caption">
