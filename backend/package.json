@@ -22,5 +22,8 @@
     "multer": "^2.4.0",
     "pg": "^8.13.1",
     "sharp": "^0.34.5"
+  },
+  "allowScripts": {
+    "sharp@0.34.5": true
   }
 }
