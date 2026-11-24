@@ -5,7 +5,7 @@
 **School:** Holberton School  
 **Stage:** 4 — MVP Development
 
-This stage covers our sprint plan, development work, progress, team reviews, and testing. We used GitHub for code and Notion for task tracking. Detailed technical work is linked below instead of repeated here.
+This stage covers our sprint plan, development work, progress, team reviews, and testing. We used GitHub for code and Notion for task tracking. Detailed technical work is linked below.
 
 ## Task 0 — Plan and Define Sprints
 
