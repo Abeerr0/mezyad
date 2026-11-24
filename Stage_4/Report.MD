@@ -1,9 +1,5 @@
 # Mezyad — Stage 4 Report
-
-**Project:** Mezyad — Online Auction Platform  
 **Team:** Abeer Al-Saiari, Ghadi Al-Zahrani, Aseel Al-Zahrani, Tala Al-Hudaibi  
-**School:** Holberton School  
-**Stage:** 4 — MVP Development
 
 This stage covers our sprint plan, development work, progress, team reviews, and testing. We used GitHub for code and Notion for task tracking. Detailed technical work is linked below.
 
