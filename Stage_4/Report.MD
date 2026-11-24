@@ -24,7 +24,7 @@ Account and listing work came before auction and bidding work. Team members and 
 
 ## Task 1 — Execute Development Tasks
 
-We built Mezyad using **React** for the user interface, **Express** for the API, and **PostgreSQL** for data. We divided the work into features and connected them during development.
+We built Mezyad using **React** for the user interface, **Node.js and Express** for the backend, and **PostgreSQL** for data. We also used the **Nodemailer** library to send verification emails and auction notifications. We divided the work into features and connected them during development.
 
 | Area | What we completed | Evidence |
 | --- | --- | --- |
@@ -34,10 +34,6 @@ We built Mezyad using **React** for the user interface, **Express** for the API,
 | Bidding | Eligible users can complete a test commitment, submit a bid, and view bid history. The backend checks the bid and updates the saved price. | [FE-12](Abeer-Task-Reports/FE-12.md), [FE-18](Abeer-Task-Reports/FE-18.md), [BE-04](Abeer-Task-Reports/BE-04.md), [DB-09](Abeer-Task-Reports/DB-09.md) |
 | Results and account pages | The website displays auction outcomes, user activity, personal auctions, and help pages. | [FE-10](Abeer-Task-Reports/FE-10.md), [FE-16](Abeer-Task-Reports/FE-16.md), [FE-17](Abeer-Task-Reports/FE-17.md), [FE-19](Abeer-Task-Reports/FE-19.md) |
 | Integration and shared UI | Shared components and API helpers connect pages, account data, and auction data. | [FE-14](Abeer-Task-Reports/FE-14.md), [FE-20](Abeer-Task-Reports/FE-20.md), [FE-21](Abeer-Task-Reports/FE-21.md), [AS-08](Abeer-Task-Reports/AS-08.md), [AS-09](Abeer-Task-Reports/AS-09.md) |
-
-The table describes the main implemented work. Some individual reports still note items to fix or test, so a working feature does not mean every detail is finished. More implementation details are in [Abeer's task reports](Abeer-Task-Reports/) and [Ghadi's backend reports](Ghadi%20Task%20reports/).
-
-We kept the work on the [Development branch](https://github.com/Abeerr0/mezyad/tree/Development). The [commit history](https://github.com/Abeerr0/mezyad/commits/Development) and [pull requests](https://github.com/Abeerr0/mezyad/pulls) show the recorded changes.
 
 ## Task 2 — Monitor Progress and Adjust
 
