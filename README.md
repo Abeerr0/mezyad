@@ -34,3 +34,41 @@ Abeer Al-Saiari · Ghadi Al-Zahrani · Aseel Al-Zahrani · Tala Al-Hudaibi
 - [Backend](backend/)
 - [Frontend](frontend/)
 - [Database](database/)
+
+## Run locally
+
+Requires Node.js 24, npm, and Docker Desktop for the local PostgreSQL database.
+
+### Backend
+
+From the repository root, start PostgreSQL and create the backend environment file (first setup only):
+
+```bash
+docker compose up -d db
+cp .env.example backend/.env
+```
+
+Set `JWT_SECRET` and any required local credentials in `backend/.env`. Do not commit this file.
+
+```bash
+cd backend
+npm ci
+npm run db:setup
+npm run dev
+```
+
+Backend: `http://localhost:3000`
+
+### Frontend
+
+Open a **second terminal** in the repository root:
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+Frontend: `http://localhost:5173`
+
+For more backend environment details, see [backend setup](backend/README.md).
