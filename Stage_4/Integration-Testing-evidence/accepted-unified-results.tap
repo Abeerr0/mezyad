@@ -1,0 +1,360 @@
+TAP version 13
+# Subtest: BID-01: authentication, UUID and money validation reject invalid requests
+ok 1 - BID-01: authentication, UUID and money validation reject invalid requests
+  ---
+  duration_ms: 906.2203
+  type: 'test'
+  ...
+# Subtest: QA-03A: owner cannot bid even with a synthetic SUCCESS commitment
+ok 2 - QA-03A: owner cannot bid even with a synthetic SUCCESS commitment
+  ---
+  duration_ms: 36.0772
+  type: 'test'
+  ...
+# Subtest: QA-03B: the same USER can own an auction and bid in another owner's auction
+ok 3 - QA-03B: the same USER can own an auction and bid in another owner's auction
+  ---
+  duration_ms: 53.6262
+  type: 'test'
+  ...
+# Subtest: BID-02: missing, PENDING and FAILED commitments cannot authorize bids
+ok 4 - BID-02: missing, PENDING and FAILED commitments cannot authorize bids
+  ---
+  duration_ms: 60.4661
+  type: 'test'
+  ...
+# Subtest: QA-18: first bid at starting price is accepted and price/history update together
+ok 5 - QA-18: first bid at starting price is accepted and price/history update together
+  ---
+  duration_ms: 40.1643
+  type: 'test'
+  ...
+# Subtest: QA-08: first bid below starting price is rejected without changing price
+ok 6 - QA-08: first bid below starting price is rejected without changing price
+  ---
+  duration_ms: 27.7416
+  type: 'test'
+  ...
+# Subtest: QA-19: later bid enforces increment; exact increment is accepted
+ok 7 - QA-19: later bid enforces increment; exact increment is accepted
+  ---
+  duration_ms: 66.9532
+  type: 'test'
+  ...
+# Subtest: BID-03: decimal increments retain exact cents without floating point drift
+ok 8 - BID-03: decimal increments retain exact cents without floating point drift
+  ---
+  duration_ms: 71.5068
+  type: 'test'
+  ...
+# Subtest: QA-11: scheduled, expired and CLOSED auctions reject bids using server state/time
+ok 9 - QA-11: scheduled, expired and CLOSED auctions reject bids using server state/time
+  ---
+  duration_ms: 89.3772
+  type: 'test'
+  ...
+# Subtest: QA-09: a retried request UUID accepts at most one bid
+ok 10 - QA-09: a retried request UUID accepts at most one bid
+  ---
+  duration_ms: 41.0838
+  type: 'test'
+  ...
+# Subtest: QA-09 concurrent replay: two waiting requests with the same UUID produce one accepted bid
+ok 11 - QA-09 concurrent replay: two waiting requests with the same UUID produce one accepted bid
+  ---
+  duration_ms: 83.5163
+  type: 'test'
+  ...
+# Subtest: QA-10: two simultaneous same-price bids serialize; loser sees the updated price
+ok 12 - QA-10: two simultaneous same-price bids serialize; loser sees the updated price
+  ---
+  duration_ms: 87.4437
+  type: 'test'
+  ...
+# Subtest: BID-04: reused request UUID across auctions rolls back the losing auction price
+ok 13 - BID-04: reused request UUID across auctions rolls back the losing auction price
+  ---
+  duration_ms: 40.5493
+  type: 'test'
+  ...
+# API error P0001
+# Subtest: BID-05: database failure after bid insertion rolls back bid and price atomically
+ok 14 - BID-05: database failure after bid insertion rolls back bid and price atomically
+  ---
+  duration_ms: 44.6666
+  type: 'test'
+  ...
+# Subtest: BID-06 / QA-11: bid waiting on a row lock revalidates the deadline after the lock
+ok 15 - BID-06 / QA-11: bid waiting on a row lock revalidates the deadline after the lock
+  ---
+  duration_ms: 56.4343
+  type: 'test'
+  ...
+# Subtest: BID-07: private grant plus synthetic commitment permits a bid; history stays auction-specific
+ok 16 - BID-07: private grant plus synthetic commitment permits a bid; history stays auction-specific
+  ---
+  duration_ms: 68.128
+  type: 'test'
+  ...
+# Subtest: QA-12: ended auction without bids closes with a null winner
+ok 17 - QA-12: ended auction without bids closes with a null winner
+  ---
+  duration_ms: 26.7924
+  type: 'test'
+  ...
+# Subtest: CLOSE-01: highest accepted bid determines winner and belongs to that auction
+ok 18 - CLOSE-01: highest accepted bid determines winner and belongs to that auction
+  ---
+  duration_ms: 61.0117
+  type: 'test'
+  ...
+# Subtest: QA-13: repeated and concurrent detail requests preserve one stable closure result
+ok 19 - QA-13: repeated and concurrent detail requests preserve one stable closure result
+  ---
+  duration_ms: 88.7514
+  type: 'test'
+  ...
+# Subtest: QA-23: no page visit is needed to reject late bids; next detail access finalizes result
+ok 20 - QA-23: no page visit is needed to reject late bids; next detail access finalizes result
+  ---
+  duration_ms: 42.1335
+  type: 'test'
+  ...
+# Subtest: CLOSE-02: active auction detail request does not close it prematurely
+ok 21 - CLOSE-02: active auction detail request does not close it prematurely
+  ---
+  duration_ms: 22.8542
+  type: 'test'
+  ...
+# API error P0001
+# Subtest: CLOSE-03: failure while storing result rolls back CLOSED status; later access can retry
+ok 22 - CLOSE-03: failure while storing result rolls back CLOSED status; later access can retry
+  ---
+  duration_ms: 43.622
+  type: 'test'
+  ...
+# Subtest: CLOSE-04: queued bid and closure after deadline cannot create a late winner
+ok 23 - CLOSE-04: queued bid and closure after deadline cannot create a late winner
+  ---
+  duration_ms: 107.0532
+  type: 'test'
+  ...
+# Subtest: CLOSE-05: bid validated before deadline commits before waiting closure and becomes the winner
+ok 24 - CLOSE-05: bid validated before deadline commits before waiting closure and becomes the winner
+  ---
+  duration_ms: 2143.6204
+  type: 'test'
+  ...
+# Subtest: INT-PAYMENT: simulated provider authorization persists once and a real API bid uses it
+ok 25 - INT-PAYMENT: simulated provider authorization persists once and a real API bid uses it
+  ---
+  duration_ms: 859.7158
+  type: 'test'
+  ...
+# Subtest: INT-PAYMENT-FAIL: unavailable provider and wrong metadata cannot create an authorized commitment
+ok 26 - INT-PAYMENT-FAIL: unavailable provider and wrong metadata cannot create an authorized commitment
+  ---
+  duration_ms: 34.0442
+  type: 'test'
+  ...
+# Subtest: INT-RESULT-MAIL: persisted result reaches isolated mail transport and repeat processing is idempotent
+ok 27 - INT-RESULT-MAIL: persisted result reaches isolated mail transport and repeat processing is idempotent
+  ---
+  duration_ms: 42.9711
+  type: 'test'
+  ...
+# Subtest: INT-FRONTEND: actual API client through Vite proxy and Backend persists listing in isolated PostgreSQL
+ok 28 - INT-FRONTEND: actual API client through Vite proxy and Backend persists listing in isolated PostgreSQL
+  ---
+  duration_ms: 1403.9481
+  type: 'test'
+  ...
+# Subtest: UPLOAD: multipart listing saves decoded images and category fields; links require valid signatures
+ok 29 - UPLOAD: multipart listing saves decoded images and category fields; links require valid signatures
+  ---
+  duration_ms: 825.824
+  type: 'test'
+  ...
+# Subtest: QA-22: spoofed MIME, wrong extension, corrupt image, oversized file and too many images are rejected without leftovers
+ok 30 - QA-22: spoofed MIME, wrong extension, corrupt image, oversized file and too many images are rejected without leftovers
+  ---
+  duration_ms: 82.9155
+  type: 'test'
+  ...
+# Subtest: UPLOAD rollback: a second corrupt image removes the first saved file and rolls back the listing
+ok 31 - UPLOAD rollback: a second corrupt image removes the first saved file and rolls back the listing
+  ---
+  duration_ms: 41.078
+  type: 'test'
+  ...
+# Subtest: QA-17 images: only rejected owner can replace photos and fields; old files removed after commit
+ok 32 - QA-17 images: only rejected owner can replace photos and fields; old files removed after commit
+  ---
+  duration_ms: 75.2327
+  type: 'test'
+  ...
+# Subtest: private listing image URL is absent from public discovery and unauthorized private details
+ok 33 - private listing image URL is absent from public discovery and unauthorized private details
+  ---
+  duration_ms: 456.8023
+  type: 'test'
+  ...
+# Subtest: canonical categoryFields and images persist on create and resubmission; invalid aliases make no change
+ok 34 - canonical categoryFields and images persist on create and resubmission; invalid aliases make no change
+  ---
+  duration_ms: 60.2945
+  type: 'test'
+  ...
+# Subtest: DB-08: seller and admin lists return the correct listing images and review state
+ok 35 - DB-08: seller and admin lists return the correct listing images and review state
+  ---
+  duration_ms: 72.1847
+  type: 'test'
+  ...
+# Subtest: invalid UUID paths return 400 JSON instead of database errors
+ok 36 - invalid UUID paths return 400 JSON instead of database errors
+  ---
+  duration_ms: 923.2285
+  type: 'test'
+  ...
+# Subtest: QA-05 rate limit: repeated guesses are blocked and grant remains absent
+ok 37 - QA-05 rate limit: repeated guesses are blocked and grant remains absent
+  ---
+  duration_ms: 116.002
+  type: 'test'
+  ...
+# Subtest: private commitment GET requires grant even when a synthetic row already exists
+ok 38 - private commitment GET requires grant even when a synthetic row already exists
+  ---
+  duration_ms: 27.6922
+  type: 'test'
+  ...
+# Subtest: scheduled auctions become active without a bid; expired list status and final detail agree
+ok 39 - scheduled auctions become active without a bid; expired list status and final detail agree
+  ---
+  duration_ms: 62.9216
+  type: 'test'
+  ...
+# Subtest: admin can monitor private auctions; anonymous and USER cannot request all scope
+ok 40 - admin can monitor private auctions; anonymous and USER cannot request all scope
+  ---
+  duration_ms: 33.0781
+  type: 'test'
+  ...
+# Subtest: review requires nonblank reason and rejects overlong text; history validates paging
+ok 41 - review requires nonblank reason and rejects overlong text; history validates paging
+  ---
+  duration_ms: 44.0344
+  type: 'test'
+  ...
+# Subtest: private invitation failures use the same response for missing and hidden auctions
+ok 42 - private invitation failures use the same response for missing and hidden auctions
+  ---
+  duration_ms: 30.3012
+  type: 'test'
+  ...
+# Subtest: LIST-01: authenticated owner creates a JSON listing in PENDING_REVIEW with category fields
+ok 43 - LIST-01: authenticated owner creates a JSON listing in PENDING_REVIEW with category fields
+  ---
+  duration_ms: 1010.4673
+  type: 'test'
+  ...
+# Subtest: LIST-02: missing auth and invalid listing fields do not create listings
+ok 44 - LIST-02: missing auth and invalid listing fields do not create listings
+  ---
+  duration_ms: 36.501
+  type: 'test'
+  ...
+# Subtest: LIST-03: only owner or ADMIN can read an individual listing; lists are owner-scoped
+ok 45 - LIST-03: only owner or ADMIN can read an individual listing; lists are owner-scoped
+  ---
+  duration_ms: 36.282
+  type: 'test'
+  ...
+# Subtest: QA-03: USER cannot review; ADMIN approval records reviewer and review time
+ok 46 - QA-03: USER cannot review; ADMIN approval records reviewer and review time
+  ---
+  duration_ms: 23.7654
+  type: 'test'
+  ...
+# Subtest: QA-17: rejection includes reason; owner resubmission clears the prior review
+ok 47 - QA-17: rejection includes reason; owner resubmission clears the prior review
+  ---
+  duration_ms: 27.1676
+  type: 'test'
+  ...
+# Subtest: LIST-04: another user cannot resubmit a rejected listing; approved auction listing is locked
+ok 48 - LIST-04: another user cannot resubmit a rejected listing; approved auction listing is locked
+  ---
+  duration_ms: 31.8641
+  type: 'test'
+  ...
+# Subtest: QA-04: pending/rejected listings and another owner's approved listing cannot be auctioned
+ok 49 - QA-04: pending/rejected listings and another owner's approved listing cannot be auctioned
+  ---
+  duration_ms: 23.4263
+  type: 'test'
+  ...
+# Subtest: AUCT-01: auction starts at starting price; invalid money/schedule and duplicate item are rejected
+ok 50 - AUCT-01: auction starts at starting price; invalid money/schedule and duplicate item are rejected
+  ---
+  duration_ms: 36.5909
+  type: 'test'
+  ...
+# Subtest: PRIVATE-01: private creation returns code only to owner, stores a hash and stays out of discovery
+ok 51 - PRIVATE-01: private creation returns code only to owner, stores a hash and stays out of discovery
+  ---
+  duration_ms: 742.8855
+  type: 'test'
+  ...
+# Subtest: QA-05: wrong private invitation code creates no access grant
+ok 52 - QA-05: wrong private invitation code creates no access grant
+  ---
+  duration_ms: 15.1409
+  type: 'test'
+  ...
+# Subtest: PRIVATE-02: correct invitation grants access idempotently; owner cannot join as bidder
+ok 53 - PRIVATE-02: correct invitation grants access idempotently; owner cannot join as bidder
+  ---
+  duration_ms: 51.2163
+  type: 'test'
+  ...
+# Subtest: QA-06: direct private details/history/bidding/commitment require an access grant
+ok 54 - QA-06: direct private details/history/bidding/commitment require an access grant
+  ---
+  duration_ms: 47.0093
+  type: 'test'
+  ...
+# Subtest: COMMIT-01: browser SUCCESS without paymentId is rejected and creates no commitment
+ok 55 - COMMIT-01: browser SUCCESS without paymentId is rejected and creates no commitment
+  ---
+  duration_ms: 28.9695
+  type: 'test'
+  ...
+# Subtest: COMMIT-02: commitment status is scoped to the caller and owner cannot initiate
+ok 56 - COMMIT-02: commitment status is scoped to the caller and owner cannot initiate
+  ---
+  duration_ms: 25.0179
+  type: 'test'
+  ...
+# Subtest: QA-21 API only: My Activity includes own listing/auction and bids in another auction
+ok 57 - QA-21 API only: My Activity includes own listing/auction and bids in another auction
+  ---
+  duration_ms: 43.5995
+  type: 'test'
+  ...
+# Subtest: DB-06: login stores only a session hash, expiry and logout revoke access
+ok 58 - DB-06: login stores only a session hash, expiry and logout revoke access
+  ---
+  duration_ms: 3223.9108
+  type: 'test'
+  ...
+1..58
+# tests 58
+# suites 0
+# pass 58
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 17071.8257

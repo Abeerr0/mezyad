@@ -1,0 +1,3 @@
+node --import ./integration/bootstrap.js --test --test-concurrency=1 --test-reporter=tap --test-name-pattern=. ./integration/tests/sessions.test.js ./integration/tests/marketplace.test.js ./integration/tests/marketplace-fixes.test.js ./integration/tests/listing-images.test.js ./integration/tests/bidding-closure.test.js ./integration/tests/boundaries.test.js
+Only matching files selected; no --test-force-exit.
+Backend binds an OS-assigned IPv4 port; Vite proxy override exists in integration/serve-preview.js only.

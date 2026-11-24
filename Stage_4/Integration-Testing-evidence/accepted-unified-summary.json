@@ -1,0 +1,28 @@
+{
+  "commit": "be227e22e82368609b527d19ee8ccbe94c7ef889",
+  "selectedFiles": [
+    "./integration/tests/sessions.test.js",
+    "./integration/tests/marketplace.test.js",
+    "./integration/tests/marketplace-fixes.test.js",
+    "./integration/tests/listing-images.test.js",
+    "./integration/tests/bidding-closure.test.js",
+    "./integration/tests/boundaries.test.js"
+  ],
+  "backendPort": 64113,
+  "frontendPort": 64111,
+  "tests": 58,
+  "passed": 58,
+  "failed": 0,
+  "skipped": 0,
+  "cancelled": 0,
+  "testProcess": {
+    "code": 0,
+    "signal": null
+  },
+  "serviceProcess": {
+    "code": 0,
+    "signal": null
+  },
+  "runnerError": null,
+  "forcedExit": false
+}
