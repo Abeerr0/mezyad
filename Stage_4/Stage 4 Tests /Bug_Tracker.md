@@ -7,8 +7,8 @@
 | ID | Severity if shipped | Gap | Owner | Verification gate | Status |
 |---|---|---|---|---|---|
 | GAP-01 | High | Secure listing image upload/validation missing | Backend + UI | Backend upload tests; frontend acceptance still required | Backend verified; UI open |
-| GAP-02 | High | Seller/admin/private/bidding React journeys incomplete | Aseel, Ghadi | QA-14–16/21 | Open |
-| GAP-03 | Critical blocker | Genuine bank sandbox commitment unverified | Abeer, Ghadi | QA-07 + provider evidence | Blocked |
+| GAP-02 | High | Seller/admin/private/bidding React journeys incomplete | Abeer | QA-14–16/21 | Open |
+| GAP-03 | Critical blocker | Genuine bank sandbox commitment unverified |  Ghadi | QA-07 + provider evidence | Blocked |
 | GAP-04 | High | Concurrency and closure untested against PostgreSQL | Abeer, Tala; QA | Native PostgreSQL: 77/77 backend tests | Personal backend verified; team QA pending |
 | GAP-05 | Medium | Private access brute-force protection needs verification | Backend + QA | marketplace-fixes.test.js: repeated guesses return 429 without a grant | Backend verified; team QA pending |
 
