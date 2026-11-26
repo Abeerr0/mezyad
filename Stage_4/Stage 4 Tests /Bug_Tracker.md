@@ -25,12 +25,6 @@ The table above records earlier concerns, not confirmed bugs. The following chec
 
 ## Verified runtime bugs
 
-| ID | Environment and reproduction | Expected / observed | Fix and retest |
-|---|---|---|---|
-| BUG-ABEER-01 | Node.js 24.22.1; call validMoney(10000000.03) in the original money.js | Valid two-decimal amount accepted / returned false | Parse decimal parts into integer cents. New money regression passes; native PostgreSQL suite: 77 passed, 0 failed, 0 skipped on 2026-10-24. |
-
-These results cover this personal backend; they do not establish a complete frontend journey or real bank sandbox integration.
-
 ### BUG-01: The bid screen did not recognize an approved commitment
 
 | Field | Details |
@@ -43,6 +37,49 @@ These results cover this personal backend; they do not establish a complete fron
 | Fix | Corrected the API path in `frontend/src/features/auctions/hooks/useMarket.js`. [Fix commit](https://github.com/Abeerr0/mezyad/commit/f2f791fc71fc9dc10ae55461916e836003b9178d) |
 | Manual retest | I tested the fix on a local copy. Mezyad recognized the approved test commitment and recorded a valid bid. |
 | Status | Fixed and verified locally. |
+
+
+### BUG-02: Incorrect Monetary Amount Validation
+
+| Field | Details |
+| --- | --- |
+| BUG ID / Title | BUG-02 — Incorrect Monetary Amount Validation |
+| Severity | High |
+| Environment and commit SHA | Node.js 24.22.1 — [Original version](https://github.com/Abeerr0/mezyad/blob/c7700721e3c5bedab404245e4e102b26b964ee8b/backend/src/money.js#L1-L6) |
+| Preconditions | A valid monetary amount containing two decimal places. |
+| Steps to reproduce | Call `validMoney(10000000.03)` using the original implementation. |
+| Expected | The function accepts the amount and returns `true`. |
+| Actual | The function returned `false` for a valid amount. |
+| Root cause | Floating-point precision errors when multiplying decimal amounts by 100. |
+| Impact | Valid auction prices and bid amounts could be rejected. |
+| Owner | Abeer |
+| Fix | Convert monetary amounts into integer halalas by separating the whole and fractional parts. |
+| Fix PR/commit | [Fixed validation — money.js](https://github.com/Abeerr0/mezyad/blob/Development/backend/src/money.js#L1-L9) · [Integer conversion — money.js](https://github.com/Abeerr0/mezyad/blob/Development/backend/src/money.js#L11-L23) |
+| Retest date/result | 24 October 2026 — Recorded results: 77 passed, 0 failed, 0 skipped. [Regression test code](https://github.com/Abeerr0/mezyad/blob/Development/backend/tests/money.test.js#L15-L24) |
+| State | Verified locally. |
+
+
+
+### BUG-03: User Session Lost After Page Refresh
+
+| Field | Details |
+| --- | --- |
+| BUG ID / Title | BUG-03 — User Session Lost After Page Refresh |
+| Severity | Medium |
+| Environment and commit SHA | React frontend — [Original version](https://github.com/Abeerr0/mezyad/blob/8d259d8615e54e92b660fba2e91d4b9f04c8c35c/frontend/src/main.jsx) |
+| Preconditions | The user is successfully logged into Mezyad. |
+| Steps to reproduce | Log in with valid credentials and refresh the browser page. |
+| Expected | The user remains authenticated while the session is valid. |
+| Actual | Authentication data was stored only in React state, which resets on page refresh. Identified through source review. |
+| Root cause | Authentication data was not persisted outside `useState`. |
+| Impact | Users could lose their login state and experience interruptions during authenticated workflows. |
+| Owner | Abeer |
+| Fix | Store authentication data in `sessionStorage`, restore it on page load, and clear it when the session ends. |
+| Fix PR/commit | [Session restoration — useWorkspace.js](https://github.com/Abeerr0/mezyad/blob/Development/frontend/src/features/account/hooks/useWorkspace.js#L64-L75) · [Session persistence — useWorkspace.js](https://github.com/Abeerr0/mezyad/blob/Development/frontend/src/features/account/hooks/useWorkspace.js#L76-L87) · [Expired session handling](https://github.com/Abeerr0/mezyad/blob/Development/frontend/src/features/account/hooks/useWorkspace.js#L89-L103) |
+| Retest date/result | 26 November 2026 — Source code verified. Browser retest pending. |
+| State | Fixed. |
+
+
 
 
 ## Defect entry template
