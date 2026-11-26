@@ -46,7 +46,7 @@ We followed task status in Notion and used the bug tracker to record problems an
 | Two bids could arrive at the same time | Used database transactions and row locking to protect the auction price. |
 | Official banking sandbox was not available | Used **Moyasar Test Mode** to test the commitment flow. This is not a real bank integration. |
 
-Evidence: [Notion task board](https://app.notion.com/p/90d3ecedbaba461cbe3ce7933a409788?v=f0ebf28bea9144329e41627e5631ff57&source=copy_link) · [Bug Tracker](Stage%204%20Tests%20/Bug_Tracker.md).
+Evidence: [Notion task board](https://app.notion.com/p/90d3ecedbaba461cbe3ce7933a409788?v=f0ebf28bea9144329e41627e5631ff57&source=copy_link) · [Bug Tracker](Stage%204%20Tests/Bug_Tracker.md).
 
 ## Task 3 — Conduct Sprint Reviews and Retrospectives
 
@@ -55,11 +55,11 @@ We used the weekly goals to check which features were ready and which issues nee
 | Week | What we checked | Evidence |
 | --- | --- | --- |
 | Week 1 | Database setup, accounts, and shared pages | [Week 1 plan](https://app.notion.com/p/Mezyad-Stage-4-4020bc42a08081198a73f34924d1cb71?source=copy_link) · [FE-01](Abeer-Task-Reports/FE-01.md) |
-| Week 2 | Login, listings, and admin review | [FE-02](Abeer-Task-Reports/FE-02.md) · [Listing review test](Stage%204%20Tests%20/E2E%20Test%20/E2E_Report.md) |
+| Week 2 | Login, listings, and admin review | [FE-02](Abeer-Task-Reports/FE-02.md) · [Listing review test](Stage%204%20Tests/E2E%20Test/E2E_Report.md) |
 | Week 3 | Listing corrections and auction rules | [BE-02](Abeer-Task-Reports/BE-02.md) · [DB-04](Abeer-Task-Reports/DB-04.md) |
 | Week 4 | Core auction, bidding, and result flows | [FE-12](Abeer-Task-Reports/FE-12.md) · [BE-04](Abeer-Task-Reports/BE-04.md) |
 | Week 5 | Commitment and frontend/API integration | [FE-18](Abeer-Task-Reports/FE-18.md) · [FE-20](Abeer-Task-Reports/FE-20.md) |
-| Week 6 | Testing and fixing issues | [Integration report](Integration_Testing_Report.md) · [E2E report](Stage%204%20Tests%20/E2E%20Test%20/E2E_Report.md) |
+| Week 6 | Testing and fixing issues | [Integration report](Integration_Testing_Report.md) · [E2E report](Stage%204%20Tests/E2E%20Test/E2E_Report.md) |
 
 **What went well:** The main user journeys were connected and tested.  
 **Challenges:** Payment provider access, API path errors, and simultaneous bids.  
@@ -75,11 +75,11 @@ We used unit tests, integration tests, and end-to-end (E2E) tests to check the M
 
 | Test type | What it checked | Recorded evidence |
 | --- | --- | --- |
-| Unit tests | Individual backend functions and selected admin behavior | [Unit Test](./Stage%204%20Tests%20/Unit%20Test/)· [BE-05](Abeer-Task-Reports/BE-05.md) |
+| Unit tests | Individual backend functions and selected admin behavior | [Unit Test](./Stage%204%20Tests/Unit%20Test/)· [BE-05](Abeer-Task-Reports/BE-05.md) |
 | Integration tests | Frontend, backend, database, and main workflows together | [Integration report](Integration_Testing_Report.md) · [Results](Integration-Testing-evidence/accepted-unified-summary.json): **58 passed, 0 failed** in the recorded isolated run |
-| E2E tests | Registration, listing review, public/private auctions, and closure | [E2E report](Stage%204%20Tests%20/E2E%20Test%20/E2E_Report.md): **5 scenarios passed** in the recorded browser run |
+| E2E tests | Registration, listing review, public/private auctions, and closure | [E2E report](Stage%204%20Tests/E2E%20Test/E2E_Report.md): **5 scenarios passed** in the recorded browser run |
 
-The E2E payment steps used **Moyasar Test Mode**. These results apply to the documented test runs, not every possible case or future version. Problems and fixes are listed in the [Bug Tracker](Stage%204%20Tests%20/Bug_Tracker.md).
+The E2E payment steps used **Moyasar Test Mode**. These results apply to the documented test runs, not every possible case or future version. Problems and fixes are listed in the [Bug Tracker](Stage%204%20Tests/Bug_Tracker.md).
 
 ## Task 5 — Deliverables
 
@@ -88,10 +88,10 @@ The E2E payment steps used **Moyasar Test Mode**. These results apply to the doc
 | Sprint planning and tasks | [Six-week plan](https://app.notion.com/p/Mezyad-Stage-4-4020bc42a08081198a73f34924d1cb71?source=copy_link) · [Notion task board](https://app.notion.com/p/90d3ecedbaba461cbe3ce7933a409788?v=f0ebf28bea9144329e41627e5631ff57&source=copy_link) |
 | Sprint reviews and retrospectives | [Task 3 summary](#task-3--conduct-sprint-reviews-and-retrospectives) · [Team workspace](https://app.notion.com/p/Mezyad-Stage-4-4020bc42a08081198a73f34924d1cb71?source=copy_link) |
 | Source repository | [GitHub — Development](https://github.com/Abeerr0/mezyad/tree/Development) |
-| Bug tracking | [Bug Tracker](Stage%204%20Tests%20/Bug_Tracker.md) |
-| Unit testing | [Unit Test](./Stage%204%20Tests%20/Unit%20Test/)· [BE-05](Abeer-Task-Reports/BE-05.md) |
+| Bug tracking | [Bug Tracker](Stage%204%20Tests/Bug_Tracker.md) |
+| Unit testing | [Unit Test](./Stage%204%20Tests/Unit%20Test/)· [BE-05](Abeer-Task-Reports/BE-05.md) |
 | Integration testing | [Integration report](Integration_Testing_Report.md) |
-| E2E testing | [E2E report](Stage%204%20Tests%20/E2E%20Test%20/E2E_Report.md) |
+| E2E testing | [E2E report](Stage%204%20Tests/E2E%20Test/E2E_Report.md) |
 | Production environment | [Mezyad website](https://mezyad1.com/) |
 
 **Hosting:** Render  

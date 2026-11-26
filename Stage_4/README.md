@@ -8,8 +8,8 @@ This folder contains the development reports, testing records, and evidence for 
 - [README.md](README.md) — This guide to the Stage 4 files.
 - [Abeer-Task-Reports/](Abeer-Task-Reports/) — Abeer’s reports regarding her tasks
 - [Ghadi Task reports/](./Ghadi%20Task%20reports/) — Ghadi task reports.
-- [E2E_Report.md](E2E_Report.md) — Manual end-to-end testing of the main user journeys.
-- [Bug_Tracker.md](Bug_Tracker.md) — Reported bugs, fixes, and verification notes.
+- [E2E_Report.md](Stage%204%20Tests/E2E%20Test/E2E_Report.md) — Manual end-to-end testing of the main user journeys.
+- [Bug_Tracker.md](Stage%204%20Tests/Bug_Tracker.md) — Reported bugs, fixes, and verification notes.
 - [FE13_Aseel_Testing.md](FE13_Aseel_Testing.md)  [evidence/](evidence/) — Aseel’s files related to her tasks
 
 ## Project Links
