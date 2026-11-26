@@ -37,6 +37,7 @@ The table above records earlier concerns, not confirmed bugs. The following chec
 | Fix | Corrected the API path in `frontend/src/features/auctions/hooks/useMarket.js`. [Fix commit](https://github.com/Abeerr0/mezyad/commit/f2f791fc71fc9dc10ae55461916e836003b9178d) |
 | Manual retest | I tested the fix on a local copy. Mezyad recognized the approved test commitment and recorded a valid bid. |
 | Status | Fixed and verified locally. |
+| Owner | Ghadi |
 
 
 ### BUG-02: Incorrect Monetary Amount Validation
